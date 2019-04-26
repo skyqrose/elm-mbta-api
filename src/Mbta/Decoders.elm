@@ -13,10 +13,10 @@ module Mbta.Decoders exposing
     , vehicleIdDecoder
     )
 
-import Mbta exposing (..)
 import Iso8601
 import Json.Decode as Decode
 import Json.Decode.Pipeline as Pipeline
+import Mbta exposing (..)
 
 
 resourceIdDecoder : Decode.Decoder ResourceId

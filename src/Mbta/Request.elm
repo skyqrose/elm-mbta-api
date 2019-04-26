@@ -1,10 +1,10 @@
 module Mbta.Request exposing (getStops)
 
-import Mbta.Decoders
-import Mbta as Mbta
-import Mbta.Url
 import Http
 import Json.Decode as Decode
+import Mbta as Mbta
+import Mbta.Decoders
+import Mbta.Url
 
 
 getStops : (Result Http.Error (List Mbta.Stop) -> msg) -> List Mbta.StopId -> Cmd msg

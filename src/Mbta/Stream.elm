@@ -9,13 +9,13 @@ port module Mbta.Stream exposing
     , update
     )
 
-import Mbta.Decoders
-import Mbta exposing (..)
-import Mbta.Url
 import AssocList as Dict
 import Data exposing (..)
 import Json.Decode as Decode
 import Json.Encode
+import Mbta exposing (..)
+import Mbta.Decoders
+import Mbta.Url
 import Time
 
 
