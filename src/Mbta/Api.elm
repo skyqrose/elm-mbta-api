@@ -1,10 +1,25 @@
-module Mbta.Request exposing (getStops)
+module Mbta.Api exposing (ApiKey(..), Config, Host(..), getStops)
 
 import Http
 import Json.Decode as Decode
 import Mbta as Mbta
 import Mbta.Decoders
 import Mbta.Url
+
+
+type Host
+    = Default
+    | CustomUrl String
+
+
+type ApiKey
+    = ApiKey String
+
+
+type alias Config =
+    { host : Host
+    , apiKey : ApiKey
+    }
 
 
 getStops : (Result Http.Error (List Mbta.Stop) -> msg) -> List Mbta.StopId -> Cmd msg

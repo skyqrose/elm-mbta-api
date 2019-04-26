@@ -167,6 +167,7 @@ type alias Route =
     , longName : String
     , description : String
     , fareClass : String
+
     -- TODO pair direction name and destination
     , directionNames : Maybe { d0 : String, d1 : String }
     , directionDestinations : Maybe { d0 : String, d1 : String }
@@ -240,6 +241,7 @@ type alias Service =
     , startDate : ServiceDate
     , endDate : ServiceDate
     , validDays : List Int
+
     -- TODO better format for added/removed
     -- Remove illegal states where lists are different lengths
     , addedDates : List ServiceDate
@@ -517,7 +519,10 @@ type alias ActivePeriod =
     }
 
 
+
 -- TODO most are probably optional
+
+
 type alias InformedEntity =
     { routeType : RouteType
     , routeId : RouteId
