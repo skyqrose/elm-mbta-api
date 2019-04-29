@@ -6,8 +6,7 @@
     "version": "0.0.1",
     "exposed-modules": [
         "Mbta",
-        "Mbta.Api",
-        "Mbta.Stream"
+        "Mbta.Api"
     ],
     "elm-version": "0.19.0 <= v < 0.20.0",
     "dependencies": {
