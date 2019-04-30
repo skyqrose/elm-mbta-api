@@ -15,7 +15,8 @@ import Url.Builder
 
 type Host
     = Default
-    | CustomUrl String
+    | SameOrigin (List String)
+    | CustomHost String
 
 
 type ApiKey
@@ -29,35 +30,35 @@ type alias Config =
     }
 
 
-hostUrl : Host -> String
-hostUrl host =
-    case host of
-        Default ->
-            "https://api-v3.mbta.com"
+url : Config -> List String -> String
+url config path =
+    let
+        apiKeyQueryParams =
+            case config.apiKey of
+                NoApiKey ->
+                    []
 
-        CustomUrl url ->
-            url
+                ApiKey key ->
+                    [ Url.Builder.string "api_key" key ]
 
+        urlExceptParams : List Url.Builder.QueryParameter -> String
+        urlExceptParams =
+            case config.host of
+                Default ->
+                    Url.Builder.crossOrigin "https://api-v3.mbta.com" path
 
-apiKeyQueryParams : ApiKey -> List Url.Builder.QueryParameter
-apiKeyQueryParams apiKey =
-    case apiKey of
-        NoApiKey ->
-            []
+                SameOrigin apiPath ->
+                    Url.Builder.absolute (apiPath ++ path)
 
-        ApiKey key ->
-            [ Url.Builder.string "api_key" key ]
+                CustomHost customHost ->
+                    Url.Builder.crossOrigin "https://api-v3.mbta.com" path
+    in
+    urlExceptParams apiKeyQueryParams
 
 
 getCustomId : (Result Http.Error resource -> msg) -> Config -> (JsonApi.Resource -> Decoder resource) -> String -> String -> Cmd msg
 getCustomId toMsg config resourceDecoder path id =
     let
-        url =
-            Url.Builder.crossOrigin
-                (hostUrl config.host)
-                [ path, id ]
-                (apiKeyQueryParams config.apiKey)
-
         decoder =
             JsonApi.resourceDecoder
                 |> Decode.andThen
@@ -67,7 +68,7 @@ getCustomId toMsg config resourceDecoder path id =
                 |> Decode.field "data"
     in
     Http.get
-        { url = url
+        { url = url config [ path, id ]
         , expect = Http.expectJson toMsg decoder
         }
 
@@ -75,12 +76,6 @@ getCustomId toMsg config resourceDecoder path id =
 getCustomList : (Result Http.Error (List resource) -> msg) -> Config -> (JsonApi.Resource -> Decoder resource) -> String -> Cmd msg
 getCustomList toMsg config resourceDecoder path =
     let
-        url =
-            Url.Builder.crossOrigin
-                (hostUrl config.host)
-                [ path ]
-                (apiKeyQueryParams config.apiKey)
-
         decoder =
             JsonApi.resourceDecoder
                 |> Decode.andThen
@@ -91,7 +86,7 @@ getCustomList toMsg config resourceDecoder path =
                 |> Decode.field "data"
     in
     Http.get
-        { url = url
+        { url = url config [ path ]
         , expect = Http.expectJson toMsg decoder
         }
 
