@@ -122,21 +122,19 @@ finish =
 
 id : (ResourceId -> Decoder id) -> Decoder ( Resource, id -> rest ) -> Decoder ( Resource, rest )
 id idDecoder_ =
-    Decode.andThen
-        (\( resource, rest ) ->
+    custom
+        (\resource ->
             idDecoder_ resource.id
-                |> Decode.map (\id_ -> ( resource, rest id_ ))
         )
 
 
 relationshipOne : String -> (ResourceId -> Decoder relatedId) -> Decoder ( Resource, relatedId -> rest ) -> Decoder ( Resource, rest )
 relationshipOne relationshipName relatedIdDecoder =
-    Decode.andThen
-        (\( resource, rest ) ->
+    custom
+        (\resource ->
             case Dict.get relationshipName resource.relationships of
                 Just (One relatedResourceId) ->
                     relatedIdDecoder relatedResourceId
-                        |> Decode.map (\relatedId -> ( resource, rest relatedId ))
 
                 _ ->
                     Decode.fail ("Expected resource to have exactly one relationship " ++ relationshipName)
@@ -145,39 +143,33 @@ relationshipOne relationshipName relatedIdDecoder =
 
 relationshipMaybe : String -> (ResourceId -> Decoder relatedId) -> Decoder ( Resource, Maybe relatedId -> rest ) -> Decoder ( Resource, rest )
 relationshipMaybe relationshipName relatedIdDecoder =
-    Decode.andThen
-        (\( resource, rest ) ->
-            let
-                maybeRelatedIdDecoder =
-                    case Dict.get relationshipName resource.relationships of
-                        Just (One relatedResourceId) ->
-                            relatedIdDecoder relatedResourceId
-                                |> Decode.map Just
+    custom
+        (\resource ->
+            case Dict.get relationshipName resource.relationships of
+                Just (One relatedResourceId) ->
+                    relatedIdDecoder relatedResourceId
+                        |> Decode.map Just
 
-                        Just OneEmpty ->
-                            Decode.succeed Nothing
+                Just OneEmpty ->
+                    Decode.succeed Nothing
 
-                        Nothing ->
-                            Decode.succeed Nothing
+                Nothing ->
+                    Decode.succeed Nothing
 
-                        _ ->
-                            Decode.fail ("Expected resource to have exactly one relationship " ++ relationshipName)
-            in
-            maybeRelatedIdDecoder
-                |> Decode.map (\maybeRelatedId -> ( resource, rest maybeRelatedId ))
+                _ ->
+                    Decode.fail ("Expected resource to have exactly one relationship " ++ relationshipName)
         )
 
 
 relationshipMany : String -> (ResourceId -> Decoder relatedId) -> Decoder ( Resource, List relatedId -> rest ) -> Decoder ( Resource, rest )
 relationshipMany relationshipName relatedIdDecoder =
-    Decode.andThen
-        (\( resource, rest ) ->
+    custom
+        (\resource ->
             case Dict.get relationshipName resource.relationships of
                 Just (Many relatedResourceIds) ->
                     relatedResourceIds
                         |> List.map relatedIdDecoder
                         |> all
-                        |> Decode.map (\relatedIds -> ( resource, rest relatedIds ))
 
                 _ ->
                     Decode.fail ("Expected resource to have a list of relationships " ++ relationshipName)
@@ -186,13 +178,13 @@ relationshipMany relationshipName relatedIdDecoder =
 
 attribute : String -> Decoder attribute -> Decoder ( Resource, attribute -> rest ) -> Decoder ( Resource, rest )
 attribute attributeName attributeDecoder =
-    Decode.andThen
-        (\( resource, rest ) ->
+    custom
+        (\resource ->
             case Dict.get attributeName resource.attributes of
                 Just attributeJson ->
                     case Decode.decodeValue attributeDecoder attributeJson of
                         Ok attribute_ ->
-                            Decode.succeed ( resource, rest attribute_ )
+                            Decode.succeed attribute_
 
                         Err error ->
                             Decode.fail (Decode.errorToString error)
