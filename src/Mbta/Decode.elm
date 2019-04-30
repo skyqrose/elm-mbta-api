@@ -1,0 +1,71 @@
+module Mbta.Decode exposing
+    ( stop
+    , stopId
+    )
+
+import Dict
+import Json.Decode as Decode exposing (Decoder)
+import Json.Decode.Pipeline as Pipeline
+import JsonApi
+import Mbta exposing (..)
+
+
+latLng : JsonApi.Resource -> Decoder LatLng
+latLng resource =
+    JsonApi.decode resource LatLng
+        |> JsonApi.attribute "latitude" Decode.float
+        |> JsonApi.attribute "longitude" Decode.float
+        |> JsonApi.finish
+
+
+wheelchairAccessible : Decoder WheelchairAccessible
+wheelchairAccessible =
+    enum Decode.int
+        [ ( 0, Accessible_0_NoInformation )
+        , ( 0, Accessible_1_Accessible )
+        , ( 0, Accessible_2_Inaccessible )
+        ]
+
+
+stopId : JsonApi.ResourceId -> Decoder StopId
+stopId =
+    JsonApi.idDecoder "stop" StopId
+
+
+stop : JsonApi.Resource -> Decoder Stop
+stop resource =
+    JsonApi.decode resource Stop
+        |> JsonApi.id stopId
+        |> JsonApi.attribute "name" Decode.string
+        |> JsonApi.attribute "description" (Decode.nullable Decode.string)
+        |> JsonApi.relationshipMaybe "parent_station" stopId
+        |> JsonApi.attribute "platform_code" (Decode.nullable Decode.string)
+        |> JsonApi.attribute "platform_name" (Decode.nullable Decode.string)
+        |> JsonApi.attribute "location_type" locationType
+        |> JsonApi.custom latLng
+        |> JsonApi.attribute "address" (Decode.nullable Decode.string)
+        |> JsonApi.attribute "wheelchair_boarding" wheelchairAccessible
+        |> JsonApi.finish
+
+
+locationType : Decoder LocationType
+locationType =
+    enum Decode.int
+        [ ( 0, LocationType_0_Stop )
+        , ( 1, LocationType_1_Station )
+        , ( 2, LocationType_2_Entrance )
+        ]
+
+
+enum : Decoder comparable -> List ( comparable, a ) -> Decoder a
+enum primitiveDecoder cases =
+    primitiveDecoder
+        |> Decode.andThen
+            (\primitive ->
+                case Dict.get primitive (Dict.fromList cases) of
+                    Just result ->
+                        Decode.succeed result
+
+                    Nothing ->
+                        Decode.fail "unrecognized case"
+            )
