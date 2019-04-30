@@ -3,6 +3,7 @@ module Mbta.Decode exposing
     , stopId
     )
 
+import DecodeHelpers
 import Dict
 import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Pipeline as Pipeline
@@ -20,7 +21,7 @@ latLng resource =
 
 wheelchairAccessible : Decoder WheelchairAccessible
 wheelchairAccessible =
-    enum Decode.int
+    DecodeHelpers.enum Decode.int
         [ ( 0, Accessible_0_NoInformation )
         , ( 0, Accessible_1_Accessible )
         , ( 0, Accessible_2_Inaccessible )
@@ -50,22 +51,8 @@ stop resource =
 
 locationType : Decoder LocationType
 locationType =
-    enum Decode.int
+    DecodeHelpers.enum Decode.int
         [ ( 0, LocationType_0_Stop )
         , ( 1, LocationType_1_Station )
         , ( 2, LocationType_2_Entrance )
         ]
-
-
-enum : Decoder comparable -> List ( comparable, a ) -> Decoder a
-enum primitiveDecoder cases =
-    primitiveDecoder
-        |> Decode.andThen
-            (\primitive ->
-                case Dict.get primitive (Dict.fromList cases) of
-                    Just result ->
-                        Decode.succeed result
-
-                    Nothing ->
-                        Decode.fail "unrecognized case"
-            )

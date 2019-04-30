@@ -16,6 +16,7 @@ module JsonApi exposing
     , resourceDecoder
     )
 
+import DecodeHelpers
 import Dict exposing (Dict)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Pipeline as Pipeline
@@ -169,7 +170,7 @@ relationshipMany relationshipName relatedIdDecoder =
                 Just (Many relatedResourceIds) ->
                     relatedResourceIds
                         |> List.map relatedIdDecoder
-                        |> all
+                        |> DecodeHelpers.all
 
                 _ ->
                     Decode.fail ("Expected resource to have a list of relationships " ++ relationshipName)
@@ -201,13 +202,3 @@ custom decoder =
             decoder resource
                 |> Decode.map (\x -> ( resource, rest x ))
         )
-
-
-{-| Combines decoders into a list if all of them succeed.
--}
-all : List (Decoder a) -> Decoder (List a)
-all decoders =
-    List.foldl
-        (Decode.map2 (::))
-        (Decode.succeed [])
-        decoders
