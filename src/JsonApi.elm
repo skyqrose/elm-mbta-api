@@ -1,5 +1,6 @@
 module JsonApi exposing
     ( Attributes
+    , Document
     , Relationship
     , Relationships
     , Resource
@@ -7,6 +8,8 @@ module JsonApi exposing
     , attribute
     , custom
     , decode
+    , documentManyDecoder
+    , documentOneDecoder
     , id
     , idDecoder
     , relationshipMany
@@ -23,6 +26,11 @@ import Json.Decode.Pipeline as Pipeline
 
 
 -- TODO make these types opaque
+
+
+type alias Document howManyResources =
+    { data : howManyResources
+    }
 
 
 type alias ResourceId =
@@ -51,6 +59,21 @@ type Relationship
     | OneEmpty
     | One ResourceId
     | Many (List ResourceId)
+
+
+documentOneDecoder : Decoder (Document Resource)
+documentOneDecoder =
+    resourceDecoder
+        |> Decode.field "data"
+        |> Decode.map (\resource -> { data = resource })
+
+
+documentManyDecoder : Decoder (Document (List Resource))
+documentManyDecoder =
+    resourceDecoder
+        |> Decode.list
+        |> Decode.field "data"
+        |> Decode.map (\resources -> { data = resources })
 
 
 resourceDecoder : Decoder Resource

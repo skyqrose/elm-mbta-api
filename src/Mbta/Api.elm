@@ -4,6 +4,7 @@ module Mbta.Api exposing
     , Host(..)
     )
 
+import DecodeHelpers
 import Http
 import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Pipeline as Pipeline
@@ -60,12 +61,11 @@ getCustomId : (Result Http.Error resource -> msg) -> Config -> (JsonApi.Resource
 getCustomId toMsg config resourceDecoder path id =
     let
         decoder =
-            JsonApi.resourceDecoder
+            JsonApi.documentOneDecoder
                 |> Decode.andThen
-                    (\resource ->
-                        resourceDecoder resource
+                    (\document ->
+                        resourceDecoder document.data
                     )
-                |> Decode.field "data"
     in
     Http.get
         { url = url config [ path, id ]
@@ -77,13 +77,13 @@ getCustomList : (Result Http.Error (List resource) -> msg) -> Config -> (JsonApi
 getCustomList toMsg config resourceDecoder path =
     let
         decoder =
-            JsonApi.resourceDecoder
+            JsonApi.documentManyDecoder
                 |> Decode.andThen
-                    (\resource ->
-                        resourceDecoder resource
+                    (\document ->
+                        document.data
+                            |> List.map resourceDecoder
+                            |> DecodeHelpers.all
                     )
-                |> Decode.list
-                |> Decode.field "data"
     in
     Http.get
         { url = url config [ path ]
