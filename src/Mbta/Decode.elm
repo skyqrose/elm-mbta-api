@@ -12,11 +12,10 @@ import Mbta exposing (..)
 
 
 latLng : JsonApi.Resource -> Decoder LatLng
-latLng resource =
-    JsonApi.decode resource LatLng
+latLng =
+    JsonApi.decode LatLng
         |> JsonApi.attribute "latitude" Decode.float
         |> JsonApi.attribute "longitude" Decode.float
-        |> JsonApi.finish
 
 
 wheelchairAccessible : Decoder WheelchairAccessible
@@ -34,19 +33,22 @@ stopId =
 
 
 stop : JsonApi.Resource -> Decoder Stop
-stop resource =
-    JsonApi.decode resource Stop
-        |> JsonApi.id stopId
+stop =
+    JsonApi.decode Stop
+        --|> JsonApi.id stopId
+        |> JsonApi.custom (\resource -> Decode.fail "xx")
         |> JsonApi.attribute "name" Decode.string
         |> JsonApi.attribute "description" (Decode.nullable Decode.string)
-        |> JsonApi.relationshipMaybe "parent_station" stopId
+        --|> JsonApi.relationshipMaybe "parent_station" stopId
+        |> JsonApi.custom (\resource -> Decode.fail "xx")
         |> JsonApi.attribute "platform_code" (Decode.nullable Decode.string)
         |> JsonApi.attribute "platform_name" (Decode.nullable Decode.string)
-        |> JsonApi.attribute "location_type" locationType
+        --|> JsonApi.attribute "location_type" locationType
+        |> JsonApi.custom (\resource -> Decode.fail "xx")
         |> JsonApi.custom latLng
         |> JsonApi.attribute "address" (Decode.nullable Decode.string)
-        |> JsonApi.attribute "wheelchair_boarding" wheelchairAccessible
-        |> JsonApi.finish
+        --|> JsonApi.attribute "wheelchair_boarding" wheelchairAccessible
+        |> JsonApi.custom (\resource -> Decode.fail "xx")
 
 
 locationType : Decoder LocationType

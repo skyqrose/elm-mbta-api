@@ -7,7 +7,6 @@ module JsonApi exposing
     , attribute
     , custom
     , decode
-    , finish
     , id
     , idDecoder
     , relationshipMany
@@ -111,17 +110,12 @@ idDecoder typeString idConstructor resourceId =
 -- For decoding resources into more specific types
 
 
-decode : Resource -> constructor -> Decoder ( Resource, constructor )
-decode resource constructor =
-    Decode.succeed ( resource, constructor )
+decode : constructor -> Resource -> Decoder constructor
+decode constructor =
+    \resource -> Decode.succeed constructor
 
 
-finish : Decoder ( Resource, result ) -> Decoder result
-finish =
-    Decode.map Tuple.second
-
-
-id : (ResourceId -> Decoder id) -> Decoder ( Resource, id -> rest ) -> Decoder ( Resource, rest )
+id : (ResourceId -> Decoder id) -> (Resource -> Decoder (id -> rest)) -> Resource -> Decoder rest
 id idDecoder_ =
     custom
         (\resource ->
@@ -129,7 +123,7 @@ id idDecoder_ =
         )
 
 
-relationshipOne : String -> (ResourceId -> Decoder relatedId) -> Decoder ( Resource, relatedId -> rest ) -> Decoder ( Resource, rest )
+relationshipOne : String -> (ResourceId -> Decoder relatedId) -> (Resource -> Decoder (relatedId -> rest)) -> Resource -> Decoder rest
 relationshipOne relationshipName relatedIdDecoder =
     custom
         (\resource ->
@@ -142,7 +136,7 @@ relationshipOne relationshipName relatedIdDecoder =
         )
 
 
-relationshipMaybe : String -> (ResourceId -> Decoder relatedId) -> Decoder ( Resource, Maybe relatedId -> rest ) -> Decoder ( Resource, rest )
+relationshipMaybe : String -> (ResourceId -> Decoder relatedId) -> (Resource -> Decoder (Maybe relatedId -> rest)) -> Resource -> Decoder rest
 relationshipMaybe relationshipName relatedIdDecoder =
     custom
         (\resource ->
@@ -162,7 +156,7 @@ relationshipMaybe relationshipName relatedIdDecoder =
         )
 
 
-relationshipMany : String -> (ResourceId -> Decoder relatedId) -> Decoder ( Resource, List relatedId -> rest ) -> Decoder ( Resource, rest )
+relationshipMany : String -> (ResourceId -> Decoder relatedId) -> (Resource -> Decoder (List relatedId -> rest)) -> Resource -> Decoder rest
 relationshipMany relationshipName relatedIdDecoder =
     custom
         (\resource ->
@@ -177,7 +171,7 @@ relationshipMany relationshipName relatedIdDecoder =
         )
 
 
-attribute : String -> Decoder attribute -> Decoder ( Resource, attribute -> rest ) -> Decoder ( Resource, rest )
+attribute : String -> Decoder attribute -> (Resource -> Decoder (attribute -> rest)) -> Resource -> Decoder rest
 attribute attributeName attributeDecoder =
     custom
         (\resource ->
@@ -195,10 +189,10 @@ attribute attributeName attributeDecoder =
         )
 
 
-custom : (Resource -> Decoder a) -> Decoder ( Resource, a -> rest ) -> Decoder ( Resource, rest )
-custom decoder =
-    Decode.andThen
-        (\( resource, rest ) ->
-            decoder resource
-                |> Decode.map (\x -> ( resource, rest x ))
-        )
+custom : (Resource -> Decoder a) -> (Resource -> Decoder (a -> rest)) -> Resource -> Decoder rest
+custom decoder constructorDecoder =
+    \resource ->
+        Decode.map2
+            (\x consructor -> consructor x)
+            (decoder resource)
+            (constructorDecoder resource)
