@@ -4,7 +4,16 @@ import Dict
 import Json.Decode as Decode exposing (Decoder)
 
 
-{-| -}
+{-| Map a fixed number of potential values, e.g. string constants, onto elm values
+
+    fruitDecoder : Decoder Fruit.Fruit
+    fruitDecoder =
+        enumDecoder string
+            [ ( "apple", Fruit.Apple )
+            , ( "orange", Fruit.Orange )
+            ]
+
+-}
 enum : Decoder comparable -> List ( comparable, a ) -> Decoder a
 enum primitiveDecoder cases =
     primitiveDecoder
@@ -23,7 +32,7 @@ enum primitiveDecoder cases =
 -}
 all : List (Decoder a) -> Decoder (List a)
 all decoders =
-    List.foldl
+    List.foldr
         (Decode.map2 (::))
         (Decode.succeed [])
         decoders
