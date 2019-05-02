@@ -1,22 +1,43 @@
 module JsonApi exposing
-    ( Attributes
-    , Document
-    , Relationship
-    , Relationships
+    ( Document
     , Resource
     , ResourceId
     , attribute
     , custom
     , decode
-    , documentManyDecoder
-    , documentOneDecoder
+    , decoderMany
+    , decoderOne
     , id
     , idDecoder
     , relationshipMany
     , relationshipMaybe
     , relationshipOne
-    , resourceDecoder
     )
+
+{-| This module serves as a middle point between the raw json in JSON API
+and the Elm types for the data you get out of it.
+
+    type BookId
+        = BookId String
+
+    type alias Book =
+        { id : BookId
+        , author : AuthorId
+        , title : String
+        }
+
+    bookIdDecoder : ResourceId -> Decoder BookId
+    bookIdDecoder =
+        idDecoder "book" BookId
+
+    bookDecoder : Resource -> Decoder Book
+    bookDecoder resource =
+        decode resource
+            |> id bookIdDecoder
+            |> relationshipOne "author" authorIdDecoder
+            |> attribute "title" Decode.string
+
+-}
 
 import DecodeHelpers
 import Dict exposing (Dict)
@@ -28,9 +49,14 @@ import Json.Decode.Pipeline as Pipeline
 -- TODO make these types opaque
 
 
-type alias Document howManyResources =
-    { data : howManyResources
+type alias Document data =
+    { data : data
     }
+
+
+type NumResources
+    = OneResource Resource
+    | ManyResources (List Resource)
 
 
 type alias ResourceId =
@@ -61,19 +87,17 @@ type Relationship
     | Many (List ResourceId)
 
 
-documentOneDecoder : Decoder (Document Resource)
-documentOneDecoder =
-    resourceDecoder
+documentDecoder : Decoder (Document NumResources)
+documentDecoder =
+    Decode.oneOf
+        [ resourceDecoder
+            |> Decode.map OneResource
+        , resourceDecoder
+            |> Decode.list
+            |> Decode.map ManyResources
+        ]
         |> Decode.field "data"
-        |> Decode.map (\resource -> { data = resource })
-
-
-documentManyDecoder : Decoder (Document (List Resource))
-documentManyDecoder =
-    resourceDecoder
-        |> Decode.list
-        |> Decode.field "data"
-        |> Decode.map (\resources -> { data = resources })
+        |> Decode.map (\data -> { data = data })
 
 
 resourceDecoder : Decoder Resource
@@ -111,6 +135,10 @@ resourceIdDecoder =
         |> Pipeline.required "id" Decode.string
 
 
+
+-- For decoding resources into more specific types
+
+
 idDecoder : String -> (String -> id) -> ResourceId -> Decoder id
 idDecoder typeString idConstructor resourceId =
     if resourceId.resourceType == typeString then
@@ -127,10 +155,6 @@ idDecoder typeString idConstructor resourceId =
                 , typeString
                 ]
             )
-
-
-
--- For decoding resources into more specific types
 
 
 decode : constructor -> Resource -> Decoder constructor
@@ -219,3 +243,39 @@ custom decoder constructorDecoder =
             (\x consructor -> consructor x)
             (decoder resource)
             (constructorDecoder resource)
+
+
+
+-- Run it
+
+
+decoderOne : (Resource -> Decoder a) -> Decoder (Document a)
+decoderOne decoder =
+    documentDecoder
+        |> Decode.andThen
+            (\document ->
+                case document.data of
+                    OneResource resource ->
+                        decoder resource
+
+                    ManyResources resources ->
+                        Decode.fail "expected a single resource but got many"
+            )
+        |> Decode.map (\data -> { data = data })
+
+
+decoderMany : (Resource -> Decoder a) -> Decoder (Document (List a))
+decoderMany decoder =
+    documentDecoder
+        |> Decode.andThen
+            (\document ->
+                case document.data of
+                    OneResource resource ->
+                        Decode.fail "expected a list of resources but got one"
+
+                    ManyResources resources ->
+                        resources
+                            |> List.map decoder
+                            |> DecodeHelpers.all
+            )
+        |> Decode.map (\data -> { data = data })

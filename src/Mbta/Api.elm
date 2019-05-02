@@ -59,35 +59,17 @@ url config path =
 
 getCustomId : (Result Http.Error resource -> msg) -> Config -> (JsonApi.Resource -> Decoder resource) -> String -> String -> Cmd msg
 getCustomId toMsg config resourceDecoder path id =
-    let
-        decoder =
-            JsonApi.documentOneDecoder
-                |> Decode.andThen
-                    (\document ->
-                        resourceDecoder document.data
-                    )
-    in
     Http.get
         { url = url config [ path, id ]
-        , expect = Http.expectJson toMsg decoder
+        , expect = Http.expectJson toMsg (JsonApi.decoderOne resourceDecoder)
         }
 
 
 getCustomList : (Result Http.Error (List resource) -> msg) -> Config -> (JsonApi.Resource -> Decoder resource) -> String -> Cmd msg
 getCustomList toMsg config resourceDecoder path =
-    let
-        decoder =
-            JsonApi.documentManyDecoder
-                |> Decode.andThen
-                    (\document ->
-                        document.data
-                            |> List.map resourceDecoder
-                            |> DecodeHelpers.all
-                    )
-    in
     Http.get
         { url = url config [ path ]
-        , expect = Http.expectJson toMsg decoder
+        , expect = Http.expectJson toMsg (JsonApi.decoderMany resourceDecoder)
         }
 
 
