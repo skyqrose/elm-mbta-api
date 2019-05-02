@@ -1,8 +1,9 @@
-module DecodeHelpersTest exposing (suite)
+module JsonApiTest exposing (suite)
 
 import DecodeHelpers
 import Expect
-import Json.Decode as Decode
+import Json.Decode as Decode exposing (Decoder)
+import JsonApi exposing (..)
 import Test exposing (..)
 
 
@@ -20,6 +21,7 @@ type alias Book =
     , title : String
     , sequel : Maybe BookId
     }
+
 
 type alias Author =
     { id : AuthorId
@@ -45,15 +47,17 @@ bookDecoder =
         |> attribute "title" Decode.string
         |> relationshipMaybe "sequel" bookIdDecoder
 
+
 authorDecoder : Resource -> Decoder Author
 authorDecoder =
     decode Author
         |> id authorIdDecoder
         |> relationshipMany "books" bookIdDecoder
 
+
 booksJson : String
 booksJson =
-   """
+    """
 {
     "data": [
         {
@@ -91,11 +95,12 @@ booksJson =
 }
 """
 
+
 authorJson : String
 authorJson =
     """
 {
-    "data": [
+    "data":
         {
             "id": "author1",
             "type": "author",
@@ -113,15 +118,15 @@ authorJson =
                 ]
             }
         }
-    ]
 }
 """
+
 
 badTypeJson : String
 badTypeJson =
     """
 {
-    "data": [
+    "data":
         {
             "id": "author1",
             "type": "not author",
@@ -130,7 +135,6 @@ badTypeJson =
                 "books": []
             }
         }
-    ]
 }
 """
 
@@ -138,14 +142,43 @@ badTypeJson =
 suite : Test
 suite =
     describe "JsonApi"
-        [ describe "enum" <|
-            [ test "decodes a value" <|
-                \() ->
-                    "\"apple\""
-                        |> Decode.decodeString fruitDecoder
-                        |> Expect.equal (Ok Apple)
-            , todo "decodes book with id, attributes, relationshipOne, relationshipMaybe"
-            , todo "decodes author with id, relationshipMany"
-            , todo "catches mismatched id types"
-            ]
+        [ test "decodeMany with id, attributes, relationshipOne, relationshipMaybe" <|
+            \() ->
+                Decode.decodeString
+                    (decoderMany bookDecoder)
+                    booksJson
+                    |> Expect.equal
+                        (Ok
+                            [ { id = BookId "book1"
+                              , author = AuthorId "author1"
+                              , title = "Book 1"
+                              , sequel = Just (BookId "book2")
+                              }
+                            , { id = BookId "book2"
+                              , author = AuthorId "author1"
+                              , title = "Book 2"
+                              , sequel = Nothing
+                              }
+                            ]
+                        )
+        , test "decodeOne with id, relationshipMany" <|
+            \() ->
+                Decode.decodeString
+                    (decoderOne authorDecoder)
+                    authorJson
+                    |> Expect.equal
+                        (Ok
+                            { id = AuthorId "author1"
+                            , books =
+                                [ BookId "book1"
+                                , BookId "book2"
+                                ]
+                            }
+                        )
+        , test "catches mismatched id types" <|
+            \() ->
+                Decode.decodeString
+                    (decoderOne authorDecoder)
+                    badTypeJson
+                    |> Expect.err
         ]

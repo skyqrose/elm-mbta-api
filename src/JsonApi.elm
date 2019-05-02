@@ -1,6 +1,5 @@
 module JsonApi exposing
-    ( Document
-    , Resource
+    ( Resource
     , ResourceId
     , attribute
     , custom
@@ -49,12 +48,7 @@ import Json.Decode.Pipeline as Pipeline
 -- TODO make these types opaque
 
 
-type alias Document data =
-    { data : data
-    }
-
-
-type NumResources
+type Data
     = OneResource Resource
     | ManyResources (List Resource)
 
@@ -87,8 +81,8 @@ type Relationship
     | Many (List ResourceId)
 
 
-documentDecoder : Decoder (Document NumResources)
-documentDecoder =
+dataDecoder : Decoder Data
+dataDecoder =
     Decode.oneOf
         [ resourceDecoder
             |> Decode.map OneResource
@@ -97,7 +91,6 @@ documentDecoder =
             |> Decode.map ManyResources
         ]
         |> Decode.field "data"
-        |> Decode.map (\data -> { data = data })
 
 
 resourceDecoder : Decoder Resource
@@ -249,27 +242,26 @@ custom decoder constructorDecoder =
 -- Run it
 
 
-decoderOne : (Resource -> Decoder a) -> Decoder (Document a)
+decoderOne : (Resource -> Decoder a) -> Decoder a
 decoderOne decoder =
-    documentDecoder
+    dataDecoder
         |> Decode.andThen
-            (\document ->
-                case document.data of
+            (\data ->
+                case data of
                     OneResource resource ->
                         decoder resource
 
                     ManyResources resources ->
                         Decode.fail "expected a single resource but got many"
             )
-        |> Decode.map (\data -> { data = data })
 
 
-decoderMany : (Resource -> Decoder a) -> Decoder (Document (List a))
+decoderMany : (Resource -> Decoder a) -> Decoder (List a)
 decoderMany decoder =
-    documentDecoder
+    dataDecoder
         |> Decode.andThen
-            (\document ->
-                case document.data of
+            (\data ->
+                case data of
                     OneResource resource ->
                         Decode.fail "expected a list of resources but got one"
 
@@ -278,4 +270,3 @@ decoderMany decoder =
                             |> List.map decoder
                             |> DecodeHelpers.all
             )
-        |> Decode.map (\data -> { data = data })
