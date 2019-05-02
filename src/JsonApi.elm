@@ -75,10 +75,10 @@ type alias Relationships =
 
 
 type Relationship
-    = NoData
-    | OneEmpty
-    | One ResourceId
-    | Many (List ResourceId)
+    = RelationshipOneEmpty
+    | RelationshipOne ResourceId
+    | RelationshipManyEmpty
+    | RelationshipMany (List ResourceId)
 
 
 dataDecoder : Decoder Data
@@ -110,13 +110,13 @@ relationshipDecoder =
             (\maybeDataValue ->
                 case maybeDataValue of
                     Nothing ->
-                        Decode.succeed NoData
+                        Decode.succeed RelationshipManyEmpty
 
                     Just dataValue ->
                         Decode.oneOf
-                            [ Decode.null OneEmpty
-                            , Decode.map One resourceIdDecoder
-                            , Decode.map Many (Decode.list resourceIdDecoder)
+                            [ Decode.null RelationshipOneEmpty
+                            , Decode.map RelationshipOne resourceIdDecoder
+                            , Decode.map RelationshipMany (Decode.list resourceIdDecoder)
                             ]
             )
 
@@ -168,7 +168,7 @@ relationshipOne relationshipName relatedIdDecoder =
     custom
         (\resource ->
             case Dict.get relationshipName resource.relationships of
-                Just (One relatedResourceId) ->
+                Just (RelationshipOne relatedResourceId) ->
                     relatedIdDecoder relatedResourceId
 
                 _ ->
@@ -181,33 +181,60 @@ relationshipMaybe relationshipName relatedIdDecoder =
     custom
         (\resource ->
             case Dict.get relationshipName resource.relationships of
-                Just (One relatedResourceId) ->
+                Just (RelationshipOne relatedResourceId) ->
                     relatedIdDecoder relatedResourceId
                         |> Decode.map Just
 
-                Just OneEmpty ->
+                Just RelationshipOneEmpty ->
                     Decode.succeed Nothing
 
                 Nothing ->
                     Decode.succeed Nothing
 
-                _ ->
-                    Decode.fail ("Expected resource to have exactly one relationship " ++ relationshipName)
+                Just _ ->
+                    Decode.fail
+                        (String.concat
+                            [ "Expected resource to have exactly one relationship "
+                            , relationshipName
+                            , ", but got a list"
+                            ]
+                        )
         )
 
 
 relationshipMany : String -> (ResourceId -> Decoder relatedId) -> (Resource -> Decoder (List relatedId -> rest)) -> Resource -> Decoder rest
 relationshipMany relationshipName relatedIdDecoder =
+    let
+        fail : String -> Decoder a
+        fail message =
+            Decode.fail
+                (String.concat
+                    [ "Expected resource to have a list of relationships "
+                    , relationshipName
+                    , ", but "
+                    , message
+                    ]
+                )
+    in
     custom
         (\resource ->
             case Dict.get relationshipName resource.relationships of
-                Just (Many relatedResourceIds) ->
+                Just (RelationshipMany relatedResourceIds) ->
                     relatedResourceIds
                         |> List.map relatedIdDecoder
                         |> DecodeHelpers.all
 
-                _ ->
-                    Decode.fail ("Expected resource to have a list of relationships " ++ relationshipName)
+                Nothing ->
+                    fail "it was missing"
+
+                Just RelationshipManyEmpty ->
+                    fail "it was missing"
+
+                Just RelationshipOneEmpty ->
+                    fail "only got one"
+
+                Just (RelationshipOne _) ->
+                    fail "only got one"
         )
 
 
