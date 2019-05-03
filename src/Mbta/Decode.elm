@@ -35,20 +35,16 @@ stopId =
 stop : JsonApi.Resource -> Decoder Stop
 stop =
     JsonApi.decode Stop
-        --|> JsonApi.id stopId
-        |> JsonApi.custom (\resource -> Decode.fail "xx")
+        |> JsonApi.id stopId
         |> JsonApi.attribute "name" Decode.string
         |> JsonApi.attribute "description" (Decode.nullable Decode.string)
-        --|> JsonApi.relationshipMaybe "parent_station" stopId
-        |> JsonApi.custom (\resource -> Decode.fail "xx")
+        |> JsonApi.relationshipMaybe "parent_station" stopId
         |> JsonApi.attribute "platform_code" (Decode.nullable Decode.string)
         |> JsonApi.attribute "platform_name" (Decode.nullable Decode.string)
-        --|> JsonApi.attribute "location_type" locationType
-        |> JsonApi.custom (\resource -> Decode.fail "xx")
+        |> JsonApi.attribute "location_type" locationType
         |> JsonApi.custom latLng
         |> JsonApi.attribute "address" (Decode.nullable Decode.string)
-        --|> JsonApi.attribute "wheelchair_boarding" wheelchairAccessible
-        |> JsonApi.custom (\resource -> Decode.fail "xx")
+        |> JsonApi.attribute "wheelchair_boarding" wheelchairAccessible
 
 
 locationType : Decoder LocationType
