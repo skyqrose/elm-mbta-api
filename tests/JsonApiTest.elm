@@ -68,12 +68,16 @@ booksJson =
             },
             "relationships": {
                 "sequel": {
-                    "type": "book",
-                    "id": "book2"
+                    "data": {
+                        "type": "book",
+                        "id": "book2"
+                    }
                 },
                 "author": {
-                    "type": "author",
-                    "id": "author 1"
+                    "data": {
+                        "type": "author",
+                        "id": "author1"
+                    }
                 }
             }
         },
@@ -84,10 +88,14 @@ booksJson =
                 "title": "Book 2"
             },
             "relationships": {
-                "sequel": null,
+                "sequel": {
+                    "data": null
+                },
                 "author": {
-                    "type": "author",
-                    "id": "author1"
+                    "data": {
+                        "type": "author",
+                        "id": "author1"
+                    }
                 }
             }
         }
@@ -106,16 +114,18 @@ authorJson =
             "type": "author",
             "attributes": {},
             "relationships": {
-                "books": [
-                    {
-                        "type": "book",
-                        "id": "book1"
-                    },
-                    {
-                        "type": "book",
-                        "id": "book2"
-                    }
-                ]
+                "books": {
+                    "data": [
+                        {
+                            "type": "book",
+                            "id": "book1"
+                        },
+                        {
+                            "type": "book",
+                            "id": "book2"
+                        }
+                    ]
+                }
             }
         }
 }
@@ -132,7 +142,9 @@ badTypeJson =
             "type": "not author",
             "attributes": {},
             "relationships": {
-                "books": []
+                "books": {
+                    "data": []
+                }
             }
         }
 }

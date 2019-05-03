@@ -101,24 +101,21 @@ resourceDecoder =
         |> Pipeline.required "relationships" (Decode.dict relationshipDecoder)
 
 
+
+--|> Pipeline.required "relationships" (Decode.dict (Decode.succeed RelationshipOneEmpty))
+
+
 relationshipDecoder : Decoder Relationship
 relationshipDecoder =
-    Decode.value
-        |> Decode.field "data"
-        |> Decode.maybe
-        |> Decode.andThen
-            (\maybeDataValue ->
-                case maybeDataValue of
-                    Nothing ->
-                        Decode.succeed RelationshipManyEmpty
-
-                    Just dataValue ->
-                        Decode.oneOf
-                            [ Decode.null RelationshipOneEmpty
-                            , Decode.map RelationshipOne resourceIdDecoder
-                            , Decode.map RelationshipMany (Decode.list resourceIdDecoder)
-                            ]
-            )
+    Decode.oneOf
+        [ Decode.field "data" <|
+            Decode.oneOf
+                [ Decode.null RelationshipOneEmpty
+                , Decode.map RelationshipOne resourceIdDecoder
+                , Decode.map RelationshipMany (Decode.list resourceIdDecoder)
+                ]
+        , Decode.succeed RelationshipManyEmpty
+        ]
 
 
 resourceIdDecoder : Decoder ResourceId
