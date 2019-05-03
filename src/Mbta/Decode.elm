@@ -22,8 +22,8 @@ wheelchairAccessible : Decoder WheelchairAccessible
 wheelchairAccessible =
     DecodeHelpers.enum Decode.int
         [ ( 0, Accessible_0_NoInformation )
-        , ( 0, Accessible_1_Accessible )
-        , ( 0, Accessible_2_Inaccessible )
+        , ( 1, Accessible_1_Accessible )
+        , ( 2, Accessible_2_Inaccessible )
         ]
 
 
