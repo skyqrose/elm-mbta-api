@@ -330,9 +330,9 @@ type BlockId
 
 
 type BikesAllowed
-    = Bikes_NoInformation
-    | Bikes_Allowed
-    | Bikes_NotAllowed
+    = Bikes_0_NoInformation
+    | Bikes_1_Allowed
+    | Bikes_2_NotAllowed
 
 
 type VehicleId

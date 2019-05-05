@@ -1,6 +1,6 @@
 module Mbta.Decode exposing
     ( stop
-    , stopId
+    , trip
     , vehicle
     )
 
@@ -63,6 +63,21 @@ routeId =
     JsonApi.idDecoder "route" RouteId
 
 
+routePatternId : JsonApi.ResourceId -> Decoder RoutePatternId
+routePatternId =
+    JsonApi.idDecoder "route_pattern" RoutePatternId
+
+
+serviceId : JsonApi.ResourceId -> Decoder ServiceId
+serviceId =
+    JsonApi.idDecoder "service" ServiceId
+
+
+shapeId : JsonApi.ResourceId -> Decoder ShapeId
+shapeId =
+    JsonApi.idDecoder "shape" ShapeId
+
+
 stopId : JsonApi.ResourceId -> Decoder StopId
 stopId =
     JsonApi.idDecoder "stop" StopId
@@ -95,6 +110,36 @@ locationType =
 tripId : JsonApi.ResourceId -> Decoder TripId
 tripId =
     JsonApi.idDecoder "trip" TripId
+
+
+trip : JsonApi.Resource -> Decoder Trip
+trip =
+    JsonApi.decode Trip
+        |> id tripId
+        |> relationshipOne "service" serviceId
+        |> relationshipOne "route" routeId
+        |> attribute "direction_id" directionId
+        |> relationshipOne "route_pattern" routePatternId
+        |> attribute "name" Decode.string
+        |> attribute "headsign" Decode.string
+        |> relationshipOne "shape" shapeId
+        |> attribute "wheelchair_accessible" wheelchairAccessible
+        |> attribute "bikes_allowed" bikesAllowed
+        |> attribute "block_id" blockId
+
+
+blockId : Decoder BlockId
+blockId =
+    Decode.map BlockId Decode.string
+
+
+bikesAllowed : Decoder BikesAllowed
+bikesAllowed =
+    DecodeHelpers.enum Decode.int
+        [ ( 0, Bikes_0_NoInformation )
+        , ( 1, Bikes_1_Allowed )
+        , ( 2, Bikes_2_NotAllowed )
+        ]
 
 
 vehicleId : JsonApi.ResourceId -> Decoder VehicleId
