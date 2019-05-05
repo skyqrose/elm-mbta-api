@@ -349,7 +349,7 @@ type alias Vehicle =
     , stopSequence : StopSequence
     , currentStatus : CurrentStatus
     , latLng : LatLng
-    , speed : Float
+    , speed : Maybe Float
     , bearing : Int
     , updatedAt : Time.Posix
     }
