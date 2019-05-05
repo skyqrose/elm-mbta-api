@@ -48,11 +48,6 @@ import Json.Decode.Pipeline as Pipeline
 -- TODO make these types opaque
 
 
-type Data
-    = OneResource Resource
-    | ManyResources (List Resource)
-
-
 type alias ResourceId =
     { resourceType : String
     , id : String
@@ -79,18 +74,6 @@ type Relationship
     | RelationshipOne ResourceId
     | RelationshipManyEmpty
     | RelationshipMany (List ResourceId)
-
-
-dataDecoder : Decoder Data
-dataDecoder =
-    Decode.oneOf
-        [ resourceDecoder
-            |> Decode.map OneResource
-        , resourceDecoder
-            |> Decode.list
-            |> Decode.map ManyResources
-        ]
-        |> Decode.field "data"
 
 
 resourceDecoder : Decoder Resource
@@ -268,29 +251,19 @@ custom decoder constructorDecoder =
 
 decoderOne : (Resource -> Decoder a) -> Decoder a
 decoderOne decoder =
-    dataDecoder
-        |> Decode.andThen
-            (\data ->
-                case data of
-                    OneResource resource ->
-                        decoder resource
-
-                    ManyResources resources ->
-                        Decode.fail "expected a single resource but got many"
-            )
+    resourceDecoder
+        |> Decode.field "data"
+        |> Decode.andThen decoder
 
 
 decoderMany : (Resource -> Decoder a) -> Decoder (List a)
 decoderMany decoder =
-    dataDecoder
+    resourceDecoder
+        |> Decode.list
+        |> Decode.field "data"
         |> Decode.andThen
-            (\data ->
-                case data of
-                    OneResource resource ->
-                        Decode.fail "expected a list of resources but got one"
-
-                    ManyResources resources ->
-                        resources
-                            |> List.map decoder
-                            |> DecodeHelpers.all
+            (\resources ->
+                resources
+                    |> List.map decoder
+                    |> DecodeHelpers.all
             )
