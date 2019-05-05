@@ -11,7 +11,7 @@ module Mbta.Decode exposing
 import DecodeHelpers
 import Dict
 import Iso8601
-import Json.Decode as Decode exposing (Decoder)
+import Json.Decode as Decode
 import JsonApi
     exposing
         ( attribute
@@ -24,19 +24,19 @@ import JsonApi
 import Mbta exposing (..)
 
 
-color : Decoder Color
+color : Decode.Decoder Color
 color =
     Decode.map Color Decode.string
 
 
-latLng : JsonApi.Resource -> Decoder LatLng
+latLng : JsonApi.Decoder LatLng
 latLng =
     JsonApi.decode LatLng
         |> attribute "latitude" Decode.float
         |> attribute "longitude" Decode.float
 
 
-currentStatus : Decoder CurrentStatus
+currentStatus : Decode.Decoder CurrentStatus
 currentStatus =
     DecodeHelpers.enum Decode.string
         [ ( "INCOMING_AT", IncomingAt )
@@ -45,7 +45,7 @@ currentStatus =
         ]
 
 
-directionId : Decoder DirectionId
+directionId : Decode.Decoder DirectionId
 directionId =
     DecodeHelpers.enum Decode.int
         [ ( 0, D0 )
@@ -53,7 +53,7 @@ directionId =
         ]
 
 
-routeType : Decoder RouteType
+routeType : Decode.Decoder RouteType
 routeType =
     DecodeHelpers.enum Decode.int
         [ ( 0, RouteType_0_LightRail )
@@ -64,17 +64,17 @@ routeType =
         ]
 
 
-serviceDate : Decoder ServiceDate
+serviceDate : Decode.Decoder ServiceDate
 serviceDate =
     Decode.map ServiceDate Decode.string
 
 
-stopSequence : Decoder StopSequence
+stopSequence : Decode.Decoder StopSequence
 stopSequence =
     Decode.map StopSequence Decode.int
 
 
-wheelchairAccessible : Decoder WheelchairAccessible
+wheelchairAccessible : Decode.Decoder WheelchairAccessible
 wheelchairAccessible =
     DecodeHelpers.enum Decode.int
         [ ( 0, Accessible_0_NoInformation )
@@ -83,12 +83,12 @@ wheelchairAccessible =
         ]
 
 
-routeId : JsonApi.ResourceId -> Decoder RouteId
+routeId : JsonApi.IdDecoder RouteId
 routeId =
     JsonApi.idDecoder "route" RouteId
 
 
-route : JsonApi.Resource -> Decoder Route
+route : JsonApi.Decoder Route
 route =
     JsonApi.decode Route
         |> id routeId
@@ -103,7 +103,7 @@ route =
         |> attribute "color" color
 
 
-routeDirections : JsonApi.Resource -> Decoder (Maybe RouteDirections)
+routeDirections : JsonApi.Decoder (Maybe RouteDirections)
 routeDirections =
     (JsonApi.decode Tuple.pair
         |> attribute "direction_names" (Decode.nullable (Decode.list Decode.string))
@@ -128,12 +128,12 @@ routeDirections =
             )
 
 
-routePatternId : JsonApi.ResourceId -> Decoder RoutePatternId
+routePatternId : JsonApi.IdDecoder RoutePatternId
 routePatternId =
     JsonApi.idDecoder "route_pattern" RoutePatternId
 
 
-routePattern : JsonApi.Resource -> Decoder RoutePattern
+routePattern : JsonApi.Decoder RoutePattern
 routePattern =
     JsonApi.decode RoutePattern
         |> id routePatternId
@@ -146,7 +146,7 @@ routePattern =
         |> relationshipOne "representative_trip" tripId
 
 
-routePatternTypicality : Decoder RoutePatternTypicality
+routePatternTypicality : Decode.Decoder RoutePatternTypicality
 routePatternTypicality =
     DecodeHelpers.enum Decode.int
         [ ( 0, RoutePatternTypicality_0_NotDefined )
@@ -157,12 +157,12 @@ routePatternTypicality =
         ]
 
 
-serviceId : JsonApi.ResourceId -> Decoder ServiceId
+serviceId : JsonApi.IdDecoder ServiceId
 serviceId =
     JsonApi.idDecoder "service" ServiceId
 
 
-service : JsonApi.Resource -> Decoder Service
+service : JsonApi.Decoder Service
 service =
     JsonApi.decode Service
         |> id serviceId
@@ -177,7 +177,7 @@ service =
         |> custom (changedDates "removed_dates" "removed_dates_notes")
 
 
-scheduleType : Decoder ScheduleType
+scheduleType : Decode.Decoder ScheduleType
 scheduleType =
     DecodeHelpers.enum Decode.string
         [ ( "Weekday", ScheduleType_Weekday )
@@ -187,7 +187,7 @@ scheduleType =
         ]
 
 
-serviceTypicality : Decoder ServiceTypicality
+serviceTypicality : Decode.Decoder ServiceTypicality
 serviceTypicality =
     DecodeHelpers.enum Decode.int
         [ ( 0, ServiceTypicality_0_NotDefined )
@@ -199,7 +199,7 @@ serviceTypicality =
         ]
 
 
-changedDates : String -> String -> (JsonApi.Resource -> Decoder (List ChangedDate))
+changedDates : String -> String -> JsonApi.Decoder (List ChangedDate)
 changedDates datesAttribute notesAttribute =
     (JsonApi.decode Tuple.pair
         |> attribute datesAttribute (Decode.list serviceDate)
@@ -227,12 +227,12 @@ changedDates datesAttribute notesAttribute =
             )
 
 
-shapeId : JsonApi.ResourceId -> Decoder ShapeId
+shapeId : JsonApi.IdDecoder ShapeId
 shapeId =
     JsonApi.idDecoder "shape" ShapeId
 
 
-shape : JsonApi.Resource -> Decoder Shape
+shape : JsonApi.Decoder Shape
 shape =
     JsonApi.decode Shape
         |> id shapeId
@@ -244,12 +244,12 @@ shape =
         |> attribute "polyline" Decode.string
 
 
-stopId : JsonApi.ResourceId -> Decoder StopId
+stopId : JsonApi.IdDecoder StopId
 stopId =
     JsonApi.idDecoder "stop" StopId
 
 
-stop : JsonApi.Resource -> Decoder Stop
+stop : JsonApi.Decoder Stop
 stop =
     JsonApi.decode Stop
         |> id stopId
@@ -264,7 +264,7 @@ stop =
         |> attribute "wheelchair_boarding" wheelchairAccessible
 
 
-locationType : Decoder LocationType
+locationType : Decode.Decoder LocationType
 locationType =
     DecodeHelpers.enum Decode.int
         [ ( 0, LocationType_0_Stop )
@@ -273,12 +273,12 @@ locationType =
         ]
 
 
-tripId : JsonApi.ResourceId -> Decoder TripId
+tripId : JsonApi.IdDecoder TripId
 tripId =
     JsonApi.idDecoder "trip" TripId
 
 
-trip : JsonApi.Resource -> Decoder Trip
+trip : JsonApi.Decoder Trip
 trip =
     JsonApi.decode Trip
         |> id tripId
@@ -294,12 +294,12 @@ trip =
         |> attribute "block_id" blockId
 
 
-blockId : Decoder BlockId
+blockId : Decode.Decoder BlockId
 blockId =
     Decode.map BlockId Decode.string
 
 
-bikesAllowed : Decoder BikesAllowed
+bikesAllowed : Decode.Decoder BikesAllowed
 bikesAllowed =
     DecodeHelpers.enum Decode.int
         [ ( 0, Bikes_0_NoInformation )
@@ -308,12 +308,12 @@ bikesAllowed =
         ]
 
 
-vehicleId : JsonApi.ResourceId -> Decoder VehicleId
+vehicleId : JsonApi.IdDecoder VehicleId
 vehicleId =
     JsonApi.idDecoder "vehicle" VehicleId
 
 
-vehicle : JsonApi.Resource -> Decoder Vehicle
+vehicle : JsonApi.Decoder Vehicle
 vehicle =
     JsonApi.decode Vehicle
         |> id vehicleId

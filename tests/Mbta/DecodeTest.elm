@@ -2,14 +2,14 @@ module Mbta.DecodeTest exposing (suite)
 
 import DecodeHelpers
 import Expect
-import Json.Decode exposing (Decoder)
+import Json.Decode
 import JsonApi
 import Mbta exposing (..)
 import Mbta.Decode
 import Test exposing (..)
 
 
-testOne : String -> String -> String -> (JsonApi.Resource -> Decoder a) -> Test
+testOne : String -> String -> String -> JsonApi.Decoder a -> Test
 testOne description url json decoder =
     test description <|
         \() ->
@@ -18,7 +18,7 @@ testOne description url json decoder =
                 |> Expect.ok
 
 
-testMany : String -> String -> String -> (JsonApi.Resource -> Decoder a) -> Test
+testMany : String -> String -> String -> JsonApi.Decoder a -> Test
 testMany description url json decoder =
     test description <|
         \() ->

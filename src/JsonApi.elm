@@ -1,6 +1,6 @@
 module JsonApi exposing
-    ( Resource
-    , ResourceId
+    ( Decoder
+    , IdDecoder
     , attribute
     , custom
     , decode
@@ -25,33 +25,33 @@ and the Elm types for the data you get out of it.
         , title : String
         }
 
-    bookIdDecoder : ResourceId -> Decoder BookId
+    bookIdDecoder : IdDecoder BookId
     bookIdDecoder =
         idDecoder "book" BookId
 
-    bookDecoder : Resource -> Decoder Book
+    bookDecoder : Decoder Book
     bookDecoder resource =
         decode resource
             |> id bookIdDecoder
             |> relationshipOne "author" authorIdDecoder
             |> attribute "title" Decode.string
 
+    Http.get
+        { url = url
+        , expect = expectJson toMsg (decoderOne bookDecoder)
+        }
+
 -}
 
 import DecodeHelpers
 import Dict exposing (Dict)
-import Json.Decode as Decode exposing (Decoder)
+import Json.Decode as Decode
 import Json.Decode.Pipeline as Pipeline
 
 
 
--- TODO make these types opaque
-{- TODO
-   make "Resource -> Decoder a" opaque, remove expose Resource
-
-   map2 instead of Tuple.Pair >> andThen
-
--}
+-- TODO map2 instead of Tuple.Pair >> andThen
+-- Internal Document Format
 
 
 type alias ResourceId =
@@ -82,7 +82,7 @@ type Relationship
     | RelationshipMany (List ResourceId)
 
 
-resourceDecoder : Decoder Resource
+resourceDecoder : Decode.Decoder Resource
 resourceDecoder =
     Decode.succeed Resource
         |> Pipeline.custom resourceIdDecoder
@@ -90,11 +90,7 @@ resourceDecoder =
         |> Pipeline.optional "relationships" (Decode.dict relationshipDecoder) Dict.empty
 
 
-
---|> Pipeline.required "relationships" (Decode.dict (Decode.succeed RelationshipOneEmpty))
-
-
-relationshipDecoder : Decoder Relationship
+relationshipDecoder : Decode.Decoder Relationship
 relationshipDecoder =
     Decode.oneOf
         [ Decode.field "data" <|
@@ -107,7 +103,7 @@ relationshipDecoder =
         ]
 
 
-resourceIdDecoder : Decoder ResourceId
+resourceIdDecoder : Decode.Decoder ResourceId
 resourceIdDecoder =
     Decode.succeed ResourceId
         |> Pipeline.required "type" Decode.string
@@ -115,10 +111,20 @@ resourceIdDecoder =
 
 
 
--- For decoding resources into more specific types
+-- Pipeline for decoding internal resources into more specific types
 
 
-idDecoder : String -> (String -> id) -> ResourceId -> Decoder id
+{-| -}
+type alias Decoder a =
+    Resource -> Decode.Decoder a
+
+
+type alias IdDecoder a =
+    ResourceId -> Decode.Decoder a
+
+
+{-| -}
+idDecoder : String -> (String -> id) -> IdDecoder id
 idDecoder typeString idConstructor resourceId =
     if resourceId.resourceType == typeString then
         Decode.succeed (idConstructor resourceId.id)
@@ -136,12 +142,12 @@ idDecoder typeString idConstructor resourceId =
             )
 
 
-decode : constructor -> Resource -> Decoder constructor
+decode : constructor -> Decoder constructor
 decode constructor =
     \resource -> Decode.succeed constructor
 
 
-id : (ResourceId -> Decoder id) -> (Resource -> Decoder (id -> rest)) -> Resource -> Decoder rest
+id : IdDecoder id -> Decoder (id -> rest) -> Decoder rest
 id idDecoder_ =
     custom
         (\resource ->
@@ -149,7 +155,7 @@ id idDecoder_ =
         )
 
 
-relationshipOne : String -> (ResourceId -> Decoder relatedId) -> (Resource -> Decoder (relatedId -> rest)) -> Resource -> Decoder rest
+relationshipOne : String -> IdDecoder relatedId -> Decoder (relatedId -> rest) -> Decoder rest
 relationshipOne relationshipName relatedIdDecoder =
     custom
         (\resource ->
@@ -162,7 +168,7 @@ relationshipOne relationshipName relatedIdDecoder =
         )
 
 
-relationshipMaybe : String -> (ResourceId -> Decoder relatedId) -> (Resource -> Decoder (Maybe relatedId -> rest)) -> Resource -> Decoder rest
+relationshipMaybe : String -> IdDecoder relatedId -> Decoder (Maybe relatedId -> rest) -> Decoder rest
 relationshipMaybe relationshipName relatedIdDecoder =
     custom
         (\resource ->
@@ -188,10 +194,10 @@ relationshipMaybe relationshipName relatedIdDecoder =
         )
 
 
-relationshipMany : String -> (ResourceId -> Decoder relatedId) -> (Resource -> Decoder (List relatedId -> rest)) -> Resource -> Decoder rest
+relationshipMany : String -> IdDecoder relatedId -> Decoder (List relatedId -> rest) -> Decoder rest
 relationshipMany relationshipName relatedIdDecoder =
     let
-        fail : String -> Decoder a
+        fail : String -> Decode.Decoder a
         fail message =
             Decode.fail
                 (String.concat
@@ -224,7 +230,7 @@ relationshipMany relationshipName relatedIdDecoder =
         )
 
 
-attribute : String -> Decoder attribute -> (Resource -> Decoder (attribute -> rest)) -> Resource -> Decoder rest
+attribute : String -> Decode.Decoder attribute -> Decoder (attribute -> rest) -> Decoder rest
 attribute attributeName attributeDecoder =
     custom
         (\resource ->
@@ -242,7 +248,7 @@ attribute attributeName attributeDecoder =
         )
 
 
-custom : (Resource -> Decoder a) -> (Resource -> Decoder (a -> rest)) -> Resource -> Decoder rest
+custom : Decoder a -> Decoder (a -> rest) -> Decoder rest
 custom decoder constructorDecoder =
     \resource ->
         Decode.map2
@@ -255,14 +261,14 @@ custom decoder constructorDecoder =
 -- Run it
 
 
-decoderOne : (Resource -> Decoder a) -> Decoder a
+decoderOne : Decoder a -> Decode.Decoder a
 decoderOne decoder =
     resourceDecoder
         |> Decode.field "data"
         |> Decode.andThen decoder
 
 
-decoderMany : (Resource -> Decoder a) -> Decoder (List a)
+decoderMany : Decoder a -> Decode.Decoder (List a)
 decoderMany decoder =
     resourceDecoder
         |> Decode.list

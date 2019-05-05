@@ -6,8 +6,6 @@ module Mbta.Api exposing
 
 import DecodeHelpers
 import Http
-import Json.Decode as Decode exposing (Decoder)
-import Json.Decode.Pipeline as Pipeline
 import JsonApi
 import Mbta exposing (..)
 import Mbta.Decode
@@ -57,7 +55,7 @@ url config path =
     urlExceptParams apiKeyQueryParams
 
 
-getCustomId : (Result Http.Error resource -> msg) -> Config -> (JsonApi.Resource -> Decoder resource) -> String -> String -> Cmd msg
+getCustomId : (Result Http.Error resource -> msg) -> Config -> JsonApi.Decoder resource -> String -> String -> Cmd msg
 getCustomId toMsg config resourceDecoder path id =
     Http.get
         { url = url config [ path, id ]
@@ -65,7 +63,7 @@ getCustomId toMsg config resourceDecoder path id =
         }
 
 
-getCustomList : (Result Http.Error (List resource) -> msg) -> Config -> (JsonApi.Resource -> Decoder resource) -> String -> Cmd msg
+getCustomList : (Result Http.Error (List resource) -> msg) -> Config -> JsonApi.Decoder resource -> String -> Cmd msg
 getCustomList toMsg config resourceDecoder path =
     Http.get
         { url = url config [ path ]

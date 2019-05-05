@@ -2,7 +2,7 @@ module JsonApiTest exposing (suite)
 
 import DecodeHelpers
 import Expect
-import Json.Decode as Decode exposing (Decoder)
+import Json.Decode
 import JsonApi exposing (..)
 import Test exposing (..)
 
@@ -29,26 +29,26 @@ type alias Author =
     }
 
 
-bookIdDecoder : ResourceId -> Decoder BookId
+bookIdDecoder : IdDecoder BookId
 bookIdDecoder =
     idDecoder "book" BookId
 
 
-authorIdDecoder : ResourceId -> Decoder AuthorId
+authorIdDecoder : IdDecoder AuthorId
 authorIdDecoder =
     idDecoder "author" AuthorId
 
 
-bookDecoder : Resource -> Decoder Book
+bookDecoder : Decoder Book
 bookDecoder =
     decode Book
         |> id bookIdDecoder
         |> relationshipOne "author" authorIdDecoder
-        |> attribute "title" Decode.string
+        |> attribute "title" Json.Decode.string
         |> relationshipMaybe "sequel" bookIdDecoder
 
 
-authorDecoder : Resource -> Decoder Author
+authorDecoder : Decoder Author
 authorDecoder =
     decode Author
         |> id authorIdDecoder
@@ -156,7 +156,7 @@ suite =
     describe "JsonApi"
         [ test "decodeMany with id, attributes, relationshipOne, relationshipMaybe" <|
             \() ->
-                Decode.decodeString
+                Json.Decode.decodeString
                     (decoderMany bookDecoder)
                     booksJson
                     |> Expect.equal
@@ -175,7 +175,7 @@ suite =
                         )
         , test "decodeOne with id, relationshipMany" <|
             \() ->
-                Decode.decodeString
+                Json.Decode.decodeString
                     (decoderOne authorDecoder)
                     authorJson
                     |> Expect.equal
@@ -189,7 +189,7 @@ suite =
                         )
         , test "catches mismatched id types" <|
             \() ->
-                Decode.decodeString
+                Json.Decode.decodeString
                     (decoderOne authorDecoder)
                     badTypeJson
                     |> Expect.err
