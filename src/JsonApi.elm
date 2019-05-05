@@ -46,6 +46,12 @@ import Json.Decode.Pipeline as Pipeline
 
 
 -- TODO make these types opaque
+{- TODO
+   make "Resource -> Decoder a" opaque, remove expose Resource
+
+   map2 instead of Tuple.Pair >> andThen
+
+-}
 
 
 type alias ResourceId =

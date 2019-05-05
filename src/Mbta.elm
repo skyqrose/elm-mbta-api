@@ -60,6 +60,7 @@ import Time
 
 
 -- Util
+-- TODO use avh4/elm-color instead
 
 
 type Color
