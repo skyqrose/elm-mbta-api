@@ -240,9 +240,6 @@ type alias Service =
     , startDate : ServiceDate
     , endDate : ServiceDate
     , validDays : List Int
-
-    -- TODO better format for added/removed
-    -- Remove illegal states where lists are different lengths
     , addedDates : List ChangedDate
     , removedDates : List ChangedDate
     }
