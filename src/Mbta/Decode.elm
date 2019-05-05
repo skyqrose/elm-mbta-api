@@ -1,5 +1,6 @@
 module Mbta.Decode exposing
-    ( stop
+    ( shape
+    , stop
     , trip
     , vehicle
     )
@@ -76,6 +77,18 @@ serviceId =
 shapeId : JsonApi.ResourceId -> Decoder ShapeId
 shapeId =
     JsonApi.idDecoder "shape" ShapeId
+
+
+shape : JsonApi.Resource -> Decoder Shape
+shape =
+    JsonApi.decode Shape
+        |> id shapeId
+        |> attribute "name" Decode.string
+        |> relationshipOne "route" routeId
+        |> attribute "direction_id" directionId
+        |> relationshipMany "stops" stopId
+        |> attribute "priority" Decode.int
+        |> attribute "polyline" Decode.string
 
 
 stopId : JsonApi.ResourceId -> Decoder StopId
