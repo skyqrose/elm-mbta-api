@@ -1,5 +1,7 @@
 module Mbta.Decode exposing
-    ( service
+    ( route
+    , routePattern
+    , service
     , shape
     , stop
     , trip
@@ -20,6 +22,11 @@ import JsonApi
         , relationshipOne
         )
 import Mbta exposing (..)
+
+
+color : Decoder Color
+color =
+    Decode.map Color Decode.string
 
 
 latLng : JsonApi.Resource -> Decoder LatLng
@@ -43,6 +50,17 @@ directionId =
     DecodeHelpers.enum Decode.int
         [ ( 0, D0 )
         , ( 1, D1 )
+        ]
+
+
+routeType : Decoder RouteType
+routeType =
+    DecodeHelpers.enum Decode.int
+        [ ( 0, RouteType_0_LightRail )
+        , ( 1, RouteType_1_HeavyRail )
+        , ( 2, RouteType_2_CommuterRail )
+        , ( 3, RouteType_3_Bus )
+        , ( 4, RouteType_4_Ferry )
         ]
 
 
@@ -70,9 +88,73 @@ routeId =
     JsonApi.idDecoder "route" RouteId
 
 
+route : JsonApi.Resource -> Decoder Route
+route =
+    JsonApi.decode Route
+        |> id routeId
+        |> attribute "type" routeType
+        |> attribute "short_name" Decode.string
+        |> attribute "long_name" Decode.string
+        |> attribute "description" Decode.string
+        |> attribute "fare_class" Decode.string
+        |> custom routeDirections
+        |> attribute "sort_order" Decode.int
+        |> attribute "text_color" color
+        |> attribute "color" color
+
+
+routeDirections : JsonApi.Resource -> Decoder (Maybe RouteDirections)
+routeDirections =
+    (JsonApi.decode Tuple.pair
+        |> attribute "direction_names" (Decode.nullable (Decode.list Decode.string))
+        |> attribute "direction_destinations" (Decode.nullable (Decode.list Decode.string))
+    )
+        >> Decode.andThen
+            (\( names, destinations ) ->
+                case ( names, destinations ) of
+                    ( Just [ d0_name, d1_name ], Just [ d0_destination, d1_destination ] ) ->
+                        Decode.succeed
+                            (Just
+                                { d0 = { name = d0_name, destination = d0_destination }
+                                , d1 = { name = d1_name, destination = d1_destination }
+                                }
+                            )
+
+                    ( Nothing, Nothing ) ->
+                        Decode.succeed Nothing
+
+                    _ ->
+                        Decode.fail "expected exactly 2 direction_names and exactly 2 direction_destinations"
+            )
+
+
 routePatternId : JsonApi.ResourceId -> Decoder RoutePatternId
 routePatternId =
     JsonApi.idDecoder "route_pattern" RoutePatternId
+
+
+routePattern : JsonApi.Resource -> Decoder RoutePattern
+routePattern =
+    JsonApi.decode RoutePattern
+        |> id routePatternId
+        |> relationshipOne "route" routeId
+        |> attribute "direction_id" directionId
+        |> attribute "name" Decode.string
+        |> attribute "typicality" routePatternTypicality
+        |> attribute "time_desc" (Decode.nullable Decode.string)
+        |> attribute "sort_order" Decode.int
+        |> relationshipOne "representative_trip" tripId
+
+
+routePatternTypicality : Decoder RoutePatternTypicality
+routePatternTypicality =
+    DecodeHelpers.enum Decode.int
+        [ ( 0, RoutePatternTypicality_0_NotDefined )
+        , ( 1, RoutePatternTypicality_1_Typical )
+        , ( 2, RoutePatternTypicality_2_Deviation )
+        , ( 3, RoutePatternTypicality_3_Atypical )
+        , ( 4, RoutePatternTypicality_4_Diversion )
+        ]
 
 
 serviceId : JsonApi.ResourceId -> Decoder ServiceId

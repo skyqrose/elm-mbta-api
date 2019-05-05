@@ -27,6 +27,8 @@ module Mbta exposing
     , PredictionId(..)
     , PredictionScheduleRelationship(..)
     , Route
+    , RouteDirection
+    , RouteDirections
     , RouteId(..)
     , RoutePattern
     , RoutePatternId(..)
@@ -166,13 +168,22 @@ type alias Route =
     , longName : String
     , description : String
     , fareClass : String
-
-    -- TODO pair direction name and destination
-    , directionNames : Maybe { d0 : String, d1 : String }
-    , directionDestinations : Maybe { d0 : String, d1 : String }
+    , directions : Maybe RouteDirections
     , sortOrder : Int
     , textColor : Color
     , color : Color
+    }
+
+
+type alias RouteDirections =
+    { d0 : RouteDirection
+    , d1 : RouteDirection
+    }
+
+
+type alias RouteDirection =
+    { name : String
+    , destination : String
     }
 
 

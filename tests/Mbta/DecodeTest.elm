@@ -69,6 +69,77 @@ suite =
                 """
                 Mbta.Decode.shape
             ]
+        , describe "route"
+            [ testOne
+                "bus"
+                "/routes/741"
+                """
+                {"data":{"attributes":{"color":"7C878E","description":"Key Bus","direction_destinations":["Logan Airport","South Station"],"direction_names":["Outbound","Inbound"],"fare_class":"Rapid Transit","long_name":"Logan Airport - South Station","short_name":"SL1","sort_order":10051,"text_color":"FFFFFF","type":3},"id":"741","links":{"self":"/routes/741"},"relationships":{"line":{"data":{"id":"line-SLWaterfront","type":"line"}},"route_patterns":{}},"type":"route"},"jsonapi":{"version":"1.0"}}
+                """
+                Mbta.Decode.route
+            , testOne
+                "subway"
+                "/routes/Blue"
+                """
+                {"data":{"attributes":{"color":"003DA5","description":"Rapid Transit","direction_destinations":["Bowdoin","Wonderland"],"direction_names":["West","East"],"fare_class":"Rapid Transit","long_name":"Blue Line","short_name":"","sort_order":10040,"text_color":"FFFFFF","type":1},"id":"Blue","links":{"self":"/routes/Blue"},"relationships":{"line":{"data":{"id":"line-Blue","type":"line"}},"route_patterns":{}},"type":"route"},"jsonapi":{"version":"1.0"}}
+                """
+                Mbta.Decode.route
+            , testOne
+                "commuter rail"
+                "/routes/CR-Franklin"
+                """
+                {"data":{"attributes":{"color":"80276C","description":"Commuter Rail","direction_destinations":["Forge Park/495","South Station"],"direction_names":["Outbound","Inbound"],"fare_class":"Commuter Rail","long_name":"Franklin Line","short_name":"","sort_order":20004,"text_color":"FFFFFF","type":2},"id":"CR-Franklin","links":{"self":"/routes/CR-Franklin"},"relationships":{"line":{"data":{"id":"line-Franklin","type":"line"}},"route_patterns":{}},"type":"route"},"jsonapi":{"version":"1.0"}}
+                """
+                Mbta.Decode.route
+            , testOne
+                "ferry"
+                "/routes/Boat-F1"
+                """
+                {"data":{"attributes":{"color":"008EAA","description":"Ferry","direction_destinations":["Hingham or Hull","Long Wharf"],"direction_names":["Outbound","Inbound"],"fare_class":"Ferry","long_name":"Hingham/Hull Ferry","short_name":"","sort_order":30002,"text_color":"FFFFFF","type":4},"id":"Boat-F1","links":{"self":"/routes/Boat-F1"},"relationships":{"line":{"data":null},"route_patterns":{}},"type":"route"},"jsonapi":{"version":"1.0"}}
+                """
+                Mbta.Decode.route
+            , testOne
+                "with include"
+                "/routes/116?include=line,route_patterns"
+                """
+                {"data":{"attributes":{"color":"FFC72C","description":"Key Bus","direction_destinations":["Wonderland","Maverick"],"direction_names":["Outbound","Inbound"],"fare_class":"Local Bus","long_name":"Wonderland - Maverick via Revere Street","short_name":"116","sort_order":51160,"text_color":"000000","type":3},"id":"116","links":{"self":"/routes/116"},"relationships":{"line":{"data":{"id":"line-114116117","type":"line"}},"route_patterns":{"data":[{"id":"116-4-0","type":"route_pattern"},{"id":"116-4-1","type":"route_pattern"},{"id":"116-9-0","type":"route_pattern"}]}},"type":"route"},"included":[{"attributes":{"direction_id":0,"name":"Wonderland Station via Revere Street","sort_order":51160000,"time_desc":null,"typicality":1},"id":"116-4-0","links":{"self":"/route-patterns/116-4-0"},"relationships":{"representative_trip":{"data":{"id":"40100493","type":"trip"}},"route":{"data":{"id":"116","type":"route"}}},"type":"route_pattern"},{"attributes":{"direction_id":1,"name":"Maverick via Revere","sort_order":51160100,"time_desc":null,"typicality":1},"id":"116-4-1","links":{"self":"/route-patterns/116-4-1"},"relationships":{"representative_trip":{"data":{"id":"40100744","type":"trip"}},"route":{"data":{"id":"116","type":"route"}}},"type":"route_pattern"},{"attributes":{"direction_id":0,"name":"Wonderland Station via Revere Street","sort_order":51160099,"time_desc":"Sunday early mornings only","typicality":3},"id":"116-9-0","links":{"self":"/route-patterns/116-9-0"},"relationships":{"representative_trip":{"data":{"id":"40080148","type":"trip"}},"route":{"data":{"id":"116","type":"route"}}},"type":"route_pattern"},{"attributes":{"color":"FFC72C","long_name":"Wonderland or Chelsea - Maverick","short_name":"114/116/117","sort_order":51140,"text_color":"000000"},"id":"line-114116117","links":{"self":"/lines/line-114116117"},"relationships":{"routes":{}},"type":"line"}],"jsonapi":{"version":"1.0"}}
+                """
+                Mbta.Decode.route
+            , testMany
+                "many with include"
+                "/routes?filter[stop]=place-state"
+                """
+                {"data":[{"attributes":{"color":"ED8B00","description":"Rapid Transit","direction_destinations":["Forest Hills","Oak Grove"],"direction_names":["South","North"],"fare_class":"Rapid Transit","long_name":"Orange Line","short_name":"","sort_order":10020,"text_color":"FFFFFF","type":1},"id":"Orange","links":{"self":"/routes/Orange"},"relationships":{"line":{"data":{"id":"line-Orange","type":"line"}},"route_patterns":{}},"type":"route"},{"attributes":{"color":"003DA5","description":"Rapid Transit","direction_destinations":["Bowdoin","Wonderland"],"direction_names":["West","East"],"fare_class":"Rapid Transit","long_name":"Blue Line","short_name":"","sort_order":10040,"text_color":"FFFFFF","type":1},"id":"Blue","links":{"self":"/routes/Blue"},"relationships":{"line":{"data":{"id":"line-Blue","type":"line"}},"route_patterns":{}},"type":"route"},{"attributes":{"color":"FFC72C","description":"Commuter Bus","direction_destinations":["North Burlington","Downtown Boston"],"direction_names":["Outbound","Inbound"],"fare_class":"Outer Express","long_name":"North Burlington - Downtown Boston","short_name":"352","sort_order":53520,"text_color":"000000","type":3},"id":"352","links":{"self":"/routes/352"},"relationships":{"line":{"data":{"id":"line-352","type":"line"}},"route_patterns":{}},"type":"route"},{"attributes":{"color":"FFC72C","description":"Commuter Bus","direction_destinations":["Burlington","Downtown Boston"],"direction_names":["Outbound","Inbound"],"fare_class":"Outer Express","long_name":"Burlington - Downtown Boston","short_name":"354","sort_order":53540,"text_color":"000000","type":3},"id":"354","links":{"self":"/routes/354"},"relationships":{"line":{"data":{"id":"line-354","type":"line"}},"route_patterns":{}},"type":"route"}],"jsonapi":{"version":"1.0"}}
+                """
+                Mbta.Decode.route
+            ]
+        , describe "routePattern"
+            [ testOne
+                "one"
+                "https://api-v3.mbta.com/route-patterns/Boat-F1-0-0"
+                """
+                {"data":{"attributes":{"direction_id":0,"name":"Long Wharf - Hingham via Logan Airport & Hull","sort_order":30002000,"time_desc":null,"typicality":1},"id":"Boat-F1-0-0","links":{"self":"/route-patterns/Boat-F1-0-0"},"relationships":{"representative_trip":{"data":{"id":"Boat-F1-1100-Long-Weekday","type":"trip"}},"route":{"data":{"id":"Boat-F1","type":"route"}}},"type":"route_pattern"},"jsonapi":{"version":"1.0"}}
+                """
+                Mbta.Decode.routePattern
+
+            {-
+               disabled due to bug in api. https://app.asana.com/0/695227265423458/1121247532991446
+               , testOne
+                   "with includes"
+                   "https://api-v3.mbta.com/route-patterns/Boat-F1-0-0?include=route,representative_trip"
+                   """
+                   {"data":{"attributes":{"direction_id":0,"name":"Long Wharf - Hingham via Logan Airport & Hull","sort_order":30002000,"time_desc":null,"typicality":1},"id":"Boat-F1-0-0","links":{"self":"/route-patterns/Boat-F1-0-0"},"relationships":{"representative_trip":{"data":[{"id":"Boat-F1-1100-Long-Weekday","type":"trip"}]},"route":{"data":{"id":"Boat-F1","type":"route"}}},"type":"route_pattern"},"included":[{"attributes":{"color":"008EAA","description":"Ferry","direction_destinations":["Hingham or Hull","Long Wharf"],"direction_names":["Outbound","Inbound"],"fare_class":"Ferry","long_name":"Hingham/Hull Ferry","short_name":"","sort_order":30002,"text_color":"FFFFFF","type":4},"id":"Boat-F1","links":{"self":"/routes/Boat-F1"},"relationships":{"line":{"data":null},"route_patterns":{}},"type":"route"},{"attributes":{"bikes_allowed":1,"block_id":"B-08","direction_id":0,"headsign":"Hingham via Logan Airport & Hull","name":"","wheelchair_accessible":1},"id":"Boat-F1-1100-Long-Weekday","links":{"self":"/trips/Boat-F1-1100-Long-Weekday"},"relationships":{"route":{"data":{"id":"Boat-F1","type":"route"}},"route_pattern":{"data":{"id":"Boat-F1-0-0","type":"route_pattern"}},"service":{"data":{"id":"Boat-F1-Weekday","type":"service"}},"shape":{"data":{"id":"b0006","type":"shape"}}},"type":"trip"}],"jsonapi":{"version":"1.0"}}
+                   """
+                   Mbta.Decode.routePattern
+            -}
+            , testMany
+                "multiple"
+                "https://api-v3.mbta.com/route-patterns?filter[route]=225&filter[direction_id]=1"
+                """
+                {"data":[{"attributes":{"direction_id":1,"name":"Quincy Center","sort_order":52250167,"time_desc":null,"typicality":2},"id":"225-1-1","links":{"self":"/route-patterns/225-1-1"},"relationships":{"representative_trip":{"data":{"id":"39991847","type":"trip"}},"route":{"data":{"id":"225","type":"route"}}},"type":"route_pattern"},{"attributes":{"direction_id":1,"name":"Quincy Center via Shaw Street","sort_order":52250175,"time_desc":null,"typicality":2},"id":"225-4-1","links":{"self":"/route-patterns/225-4-1"},"relationships":{"representative_trip":{"data":{"id":"39991872","type":"trip"}},"route":{"data":{"id":"225","type":"route"}}},"type":"route_pattern"},{"attributes":{"direction_id":1,"name":"Quincy Center","sort_order":52250181,"time_desc":null,"typicality":2},"id":"225-3-1","links":{"self":"/route-patterns/225-3-1"},"relationships":{"representative_trip":{"data":{"id":"39991942","type":"trip"}},"route":{"data":{"id":"225","type":"route"}}},"type":"route_pattern"},{"attributes":{"direction_id":1,"name":"Quincy Center via Quincy Avenue","sort_order":52250190,"time_desc":null,"typicality":3},"id":"225-_-1","links":{"self":"/route-patterns/225-_-1"},"relationships":{"representative_trip":{"data":{"id":"39991901","type":"trip"}},"route":{"data":{"id":"225","type":"route"}}},"type":"route_pattern"},{"attributes":{"direction_id":1,"name":"Quincy Center via Shaw Street","sort_order":52250190,"time_desc":null,"typicality":3},"id":"225-5-1","links":{"self":"/route-patterns/225-5-1"},"relationships":{"representative_trip":{"data":{"id":"39991849","type":"trip"}},"route":{"data":{"id":"225","type":"route"}}},"type":"route_pattern"},{"attributes":{"direction_id":1,"name":"Quincy Center via Shaw Street","sort_order":52250194,"time_desc":"Weekdays only","typicality":3},"id":"225-2-1","links":{"self":"/route-patterns/225-2-1"},"relationships":{"representative_trip":{"data":{"id":"39991866","type":"trip"}},"route":{"data":{"id":"225","type":"route"}}},"type":"route_pattern"}],"jsonapi":{"version":"1.0"}}
+                """
+                Mbta.Decode.routePattern
+            ]
         , describe "stop"
             [ testOne
                 "bus stop"
