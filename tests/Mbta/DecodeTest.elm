@@ -30,7 +30,23 @@ testMany description url json decoder =
 suite : Test
 suite =
     describe "Mbta.Decode"
-        [ describe "shape"
+        [ describe "service"
+            [ testOne
+                "one"
+                "https://api-v3.mbta.com/services/CR-Weekday-Greenbush-Fall-18"
+                """
+                {"data":{"attributes":{"added_dates":["2019-04-25","2019-04-26","2019-04-29","2019-04-30","2019-05-01"],"added_dates_notes":[null,null,null,null,null],"description":"Weekday schedule","end_date":"2019-05-19","removed_dates":[],"removed_dates_notes":[],"schedule_name":"Weekday","schedule_type":"Weekday","schedule_typicality":1,"start_date":"2019-04-25","valid_days":[1,2,3,4,5]},"id":"CR-Weekday-Greenbush-Fall-18","links":{"self":"/services/CR-Weekday-Greenbush-Fall-18"},"type":"service"},"jsonapi":{"version":"1.0"}}
+                """
+                Mbta.Decode.service
+            , testMany
+                "many"
+                "https://api-v3.mbta.com/services?filter[id]=BUS22019-hbq29hl7-Sunday-02,BUS22019-hbc29hl7-Sunday-02"
+                """
+                {"data":[{"attributes":{"added_dates":["2019-05-27"],"added_dates_notes":["Memorial Day"],"description":"Holiday (Sunday schedule)","end_date":"2019-05-27","removed_dates":[],"removed_dates_notes":[],"schedule_name":"Holiday","schedule_type":"Sunday","schedule_typicality":3,"start_date":"2019-05-27","valid_days":[7]},"id":"BUS22019-hbq29hl7-Sunday-02","links":{"self":"/services/BUS22019-hbq29hl7-Sunday-02"},"type":"service"},{"attributes":{"added_dates":["2019-05-27"],"added_dates_notes":["Memorial Day"],"description":"Holiday (Sunday schedule)","end_date":"2019-05-27","removed_dates":[],"removed_dates_notes":[],"schedule_name":"Holiday","schedule_type":"Sunday","schedule_typicality":3,"start_date":"2019-05-27","valid_days":[7]},"id":"BUS22019-hbc29hl7-Sunday-02","links":{"self":"/services/BUS22019-hbc29hl7-Sunday-02"},"type":"service"}],"jsonapi":{"version":"1.0"}}
+                """
+                Mbta.Decode.service
+            ]
+        , describe "shape"
             [ testOne
                 "one"
                 "https://api-v3.mbta.com/shapes/931_0009"

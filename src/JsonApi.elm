@@ -81,7 +81,7 @@ resourceDecoder =
     Decode.succeed Resource
         |> Pipeline.custom resourceIdDecoder
         |> Pipeline.required "attributes" (Decode.dict Decode.value)
-        |> Pipeline.required "relationships" (Decode.dict relationshipDecoder)
+        |> Pipeline.optional "relationships" (Decode.dict relationshipDecoder) Dict.empty
 
 
 

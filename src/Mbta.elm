@@ -7,6 +7,7 @@ module Mbta exposing
     , AlertLifecycle(..)
     , BikesAllowed(..)
     , BlockId(..)
+    , ChangedDate
     , Color(..)
     , CurrentStatus(..)
     , DirectionId(..)
@@ -235,20 +236,25 @@ type ServiceId
 type alias Service =
     { id : ServiceId
     , description : Maybe String
-    , scheduleType : List ScheduleType
+    , scheduleType : Maybe ScheduleType
     , scheduleName : Maybe String
-    , scheduleTypicality : ServiceTypicality
+    , typicality : ServiceTypicality
     , startDate : ServiceDate
     , endDate : ServiceDate
     , validDays : List Int
 
     -- TODO better format for added/removed
     -- Remove illegal states where lists are different lengths
-    , addedDates : List ServiceDate
-    , addedDatesNotes : List String
-    , removedDates : List ServiceDate
-    , removedDatesNotes : List String
+    , addedDates : List ChangedDate
+    , removedDates : List ChangedDate
     }
+
+
+type ScheduleType
+    = ScheduleType_Weekday
+    | ScheduleType_Saturday
+    | ScheduleType_Sunday
+    | ScheduleType_Other
 
 
 type ServiceTypicality
@@ -260,11 +266,10 @@ type ServiceTypicality
     | ServiceTypicality_5_WeatherDisruption
 
 
-type ScheduleType
-    = ScheduleType_Weekday
-    | ScheduleType_Saturday
-    | ScheduleType_Sunday
-    | ScheduleType_Other
+type alias ChangedDate =
+    { date : ServiceDate
+    , notes : Maybe String
+    }
 
 
 type ShapeId

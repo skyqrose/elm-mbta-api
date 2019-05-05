@@ -1,5 +1,6 @@
 module Mbta.Decode exposing
-    ( shape
+    ( service
+    , shape
     , stop
     , trip
     , vehicle
@@ -21,6 +22,13 @@ import JsonApi
 import Mbta exposing (..)
 
 
+latLng : JsonApi.Resource -> Decoder LatLng
+latLng =
+    JsonApi.decode LatLng
+        |> attribute "latitude" Decode.float
+        |> attribute "longitude" Decode.float
+
+
 currentStatus : Decoder CurrentStatus
 currentStatus =
     DecodeHelpers.enum Decode.string
@@ -38,11 +46,9 @@ directionId =
         ]
 
 
-latLng : JsonApi.Resource -> Decoder LatLng
-latLng =
-    JsonApi.decode LatLng
-        |> attribute "latitude" Decode.float
-        |> attribute "longitude" Decode.float
+serviceDate : Decoder ServiceDate
+serviceDate =
+    Decode.map ServiceDate Decode.string
 
 
 stopSequence : Decoder StopSequence
@@ -72,6 +78,71 @@ routePatternId =
 serviceId : JsonApi.ResourceId -> Decoder ServiceId
 serviceId =
     JsonApi.idDecoder "service" ServiceId
+
+
+service : JsonApi.Resource -> Decoder Service
+service =
+    JsonApi.decode Service
+        |> id serviceId
+        |> attribute "description" (Decode.nullable Decode.string)
+        |> attribute "schedule_type" (Decode.nullable scheduleType)
+        |> attribute "schedule_name" (Decode.nullable Decode.string)
+        |> attribute "schedule_typicality" serviceTypicality
+        |> attribute "start_date" serviceDate
+        |> attribute "end_date" serviceDate
+        |> attribute "valid_days" (Decode.list Decode.int)
+        |> custom (changedDates "added_dates" "added_dates_notes")
+        |> custom (changedDates "removed_dates" "removed_dates_notes")
+
+
+scheduleType : Decoder ScheduleType
+scheduleType =
+    DecodeHelpers.enum Decode.string
+        [ ( "Weekday", ScheduleType_Weekday )
+        , ( "Saturday", ScheduleType_Saturday )
+        , ( "Sunday", ScheduleType_Sunday )
+        , ( "Other", ScheduleType_Other )
+        ]
+
+
+serviceTypicality : Decoder ServiceTypicality
+serviceTypicality =
+    DecodeHelpers.enum Decode.int
+        [ ( 0, ServiceTypicality_0_NotDefined )
+        , ( 1, ServiceTypicality_1_Typical )
+        , ( 2, ServiceTypicality_2_ExtraService )
+        , ( 3, ServiceTypicality_3_ReducedHoliday )
+        , ( 4, ServiceTypicality_4_PlannedDisruption )
+        , ( 5, ServiceTypicality_5_WeatherDisruption )
+        ]
+
+
+changedDates : String -> String -> (JsonApi.Resource -> Decoder (List ChangedDate))
+changedDates datesAttribute notesAttribute =
+    (JsonApi.decode Tuple.pair
+        |> attribute datesAttribute (Decode.list serviceDate)
+        |> attribute notesAttribute (Decode.list (Decode.nullable Decode.string))
+    )
+        >> Decode.andThen
+            (\( datesList, notesList ) ->
+                if List.length datesList == List.length notesList then
+                    Decode.succeed
+                        (List.map2
+                            ChangedDate
+                            datesList
+                            notesList
+                        )
+
+                else
+                    Decode.fail
+                        (String.concat
+                            [ datesAttribute
+                            , " and "
+                            , notesAttribute
+                            , " were different lengths"
+                            ]
+                        )
+            )
 
 
 shapeId : JsonApi.ResourceId -> Decoder ShapeId
