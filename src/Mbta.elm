@@ -1,8 +1,6 @@
 module Mbta exposing
     ( ActivePeriod
     , Alert
-    , AlertCause(..)
-    , AlertEffect(..)
     , AlertId(..)
     , AlertLifecycle(..)
     , BikesAllowed(..)
@@ -424,91 +422,11 @@ type alias Alert =
     , serviceEffect : String
     , lifecycle : AlertLifecycle
     , effectName : String
-    , effect : AlertEffect
-    , cause : AlertCause
+    , effect : String
+    , cause : String
     , facilityId : FacilityId
     , informedEntities : InformedEntity
     }
-
-
-type AlertCause
-    = Cause_Accident
-    | Cause_Amtrak
-    | Cause_AnEarlierMechanicalProblem
-    | Cause_AnEarlierSignalProblem
-    | Cause_AutosImpedingService
-    | Cause_CoastGuardRestriction
-    | Cause_Congestion
-    | Cause_Construction
-    | Cause_CrossingMalfunction
-    | Cause_Demonstration
-    | Cause_DisabledBus
-    | Cause_DisabledTrain
-    | Cause_DrawbridgeBeingRaised
-    | Cause_ElectricalWork
-    | Cause_Fire
-    | Cause_Fog
-    | Cause_FreightTrainInterference
-    | Cause_HazmatCondition
-    | Cause_HeavyRidership
-    | Cause_HighWinds
-    | Cause_Holiday
-    | Cause_Hurricane
-    | Cause_IceInHarbor
-    | Cause_Maintenance
-    | Cause_MechanicalProblem
-    | Cause_MedicalEmergency
-    | Cause_Parade
-    | Cause_PoliceAction
-    | Cause_PowerProblem
-    | Cause_SevereWeather
-    | Cause_SignalProblem
-    | Cause_SlipperyRail
-    | Cause_Snow
-    | Cause_SpecialEvent
-    | Cause_SpeedRestriction
-    | Cause_SwitchProblem
-    | Cause_TieReplacement
-    | Cause_TrackProblem
-    | Cause_TrackWork
-    | Cause_Traffic
-    | Cause_UnrulyPassenger
-    | Cause_Weather
-
-
-type AlertEffect
-    = Effect_AccessIssue
-    | Effect_AdditionalService
-    | Effect_AmberAlert
-    | Effect_BikeIssue
-    | Effect_Cancellation
-    | Effect_Delay
-    | Effect_Detour
-    | Effect_DockClosuR
-    | Effect_DockIssue
-    | Effect_ElevatorClosure
-    | Effect_EscalatorClosure
-    | Effect_ExtraService
-    | Effect_FacilityIssue
-    | Effect_ModifiedService
-    | Effect_NoService
-    | Effect_OtherEffect
-    | Effect_ParkingClosure
-    | Effect_ParkingIssue
-    | Effect_PolicyChange
-    | Effect_ScheduleChange
-    | Effect_ServiceChange
-    | Effect_Shuttle
-    | Effect_SnowRoute
-    | Effect_StationClosure
-    | Effect_StationIssue
-    | Effect_StopClosure
-    | Effect_StopMove
-    | Effect_StopMoved
-    | Effect_Summary
-    | Effect_Suspension
-    | Effect_TrackChange
-    | Effect_UnknownEffect
 
 
 type AlertLifecycle
