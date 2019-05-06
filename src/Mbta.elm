@@ -137,25 +137,25 @@ type alias Prediction =
     , routeId : RouteId
     , tripId : TripId
     , stopId : StopId
-    , stopSequence : Maybe StopSequence
-    , scheduleId : ScheduleId
+    , stopSequence : StopSequence
+    , scheduleId : Maybe ScheduleId
     , vehicleId : Maybe VehicleId
     , alertIds : List AlertId
     , arrivalTime : Maybe Time.Posix
-    , currentStatus : CurrentStatus -- What is this?
     , departureTime : Maybe Time.Posix
+    , status : Maybe String
     , directionId : DirectionId
-    , scheduleRelationship : Maybe PredictionScheduleRelationship
+    , scheduleRelationship : PredictionScheduleRelationship
     }
 
 
 type PredictionScheduleRelationship
-    = ScheduleRelationship_Added
+    = ScheduleRelationship_Scheduled
+    | ScheduleRelationship_Added
     | ScheduleRelationship_Cancelled
     | ScheduleRelationship_NoData
     | ScheduleRelationship_Skipped
     | ScheduleRelationship_Unscheduled
-    | ScheduleRelationship_Scheduled
 
 
 type RouteId

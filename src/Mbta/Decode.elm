@@ -1,5 +1,6 @@
 module Mbta.Decode exposing
-    ( route
+    ( prediction
+    , route
     , routePattern
     , schedule
     , service
@@ -87,6 +88,37 @@ wheelchairAccessible =
 predictionId : JsonApi.IdDecoder PredictionId
 predictionId =
     JsonApi.idDecoder "prediction" PredictionId
+
+
+prediction : JsonApi.Decoder Prediction
+prediction =
+    JsonApi.decode Prediction
+        |> id predictionId
+        |> relationshipOne "route" routeId
+        |> relationshipOne "trip" tripId
+        |> relationshipOne "stop" stopId
+        |> attribute "stop_sequence" stopSequence
+        |> relationshipMaybe "schedule" scheduleId
+        |> relationshipMaybe "vehicle" vehicleId
+        |> relationshipMany "alert" alertId
+        |> attribute "arrival_time" (Decode.nullable Iso8601.decoder)
+        |> attribute "departure_time" (Decode.nullable Iso8601.decoder)
+        |> attribute "status" (Decode.nullable Decode.string)
+        |> attribute "direction_id" directionId
+        |> attribute "schedule_relationship" predictionScheduleRelatonship
+
+
+predictionScheduleRelatonship : Decode.Decoder PredictionScheduleRelationship
+predictionScheduleRelatonship =
+    DecodeHelpers.enum Decode.string
+        [ ( "ADDED", ScheduleRelationship_Added )
+        , ( "CANCELLED", ScheduleRelationship_Cancelled )
+        , ( "NO_DATA", ScheduleRelationship_NoData )
+        , ( "SKIPPED", ScheduleRelationship_Skipped )
+        , ( "UNSCHEDULED", ScheduleRelationship_Unscheduled )
+        ]
+        |> Decode.nullable
+        |> Decode.map (Maybe.withDefault ScheduleRelationship_Scheduled)
 
 
 routeId : JsonApi.IdDecoder RouteId
@@ -366,3 +398,13 @@ vehicle =
         |> attribute "speed" (Decode.nullable Decode.float)
         |> attribute "bearing" Decode.int
         |> attribute "updated_at" Iso8601.decoder
+
+
+
+-- Facilities
+-- Alerts
+
+
+alertId : JsonApi.IdDecoder AlertId
+alertId =
+    JsonApi.idDecoder "alert" AlertId

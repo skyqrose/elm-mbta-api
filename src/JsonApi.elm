@@ -270,9 +270,9 @@ relationshipOne relationshipName relatedIdDecoder =
 
 The result will be `Nothing` if
 
-  - There's a relationship whose data is `null`.
-  - There's a relationship without a `data` field.
   - There's no relationship with the given name.
+  - There's a relationship without a `data` field.
+  - There's a relationship whose data is `null`.
 
 -}
 relationshipMaybe : String -> IdDecoder relatedId -> Decoder (Maybe relatedId -> rest) -> Decoder rest
@@ -302,6 +302,16 @@ relationshipMaybe relationshipName relatedIdDecoder =
 
 
 {-| Use a to-many relationship in a pipeline
+
+Defaults to `[]` if
+
+  - There's no relationship with the given name.
+
+Fails to decode if
+
+  - There's a relationship without a `data` field.
+  - There's a relationship whose data is `null`.
+
 -}
 relationshipMany : String -> IdDecoder relatedId -> Decoder (List relatedId -> rest) -> Decoder rest
 relationshipMany relationshipName relatedIdDecoder =
@@ -326,7 +336,7 @@ relationshipMany relationshipName relatedIdDecoder =
                         |> DecodeHelpers.all
 
                 Nothing ->
-                    fail "it was missing"
+                    Decode.succeed []
 
                 Just RelationshipMissing ->
                     fail "it was missing"
