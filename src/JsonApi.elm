@@ -82,9 +82,8 @@ type alias Relationships =
 
 
 type Relationship
-    = RelationshipOneEmpty
+    = RelationshipMissing
     | RelationshipOne ResourceId
-    | RelationshipManyEmpty
     | RelationshipMany (List ResourceId)
 
 
@@ -101,11 +100,11 @@ relationshipDecoder =
     Decode.oneOf
         [ Decode.field "data" <|
             Decode.oneOf
-                [ Decode.null RelationshipOneEmpty
+                [ Decode.null RelationshipMissing
                 , Decode.map RelationshipOne resourceIdDecoder
                 , Decode.map RelationshipMany (Decode.list resourceIdDecoder)
                 ]
-        , Decode.succeed RelationshipManyEmpty
+        , Decode.succeed RelationshipMissing
         ]
 
 
@@ -269,8 +268,11 @@ relationshipOne relationshipName relatedIdDecoder =
 
 {-| Use a to-one relationship that might not exist in a pipeline
 
-This is for a relationship whose value is `null`.
-A relationship that that does not appear in the `"relationships"` object will fail to decode.
+The result will be `Nothing` if
+
+  - There's a relationship whose data is `null`.
+  - There's a relationship without a `data` field.
+  - There's no relationship with the given name.
 
 -}
 relationshipMaybe : String -> IdDecoder relatedId -> Decoder (Maybe relatedId -> rest) -> Decoder rest
@@ -282,13 +284,13 @@ relationshipMaybe relationshipName relatedIdDecoder =
                     relatedIdDecoder relatedResourceId
                         |> Decode.map Just
 
-                Just RelationshipOneEmpty ->
+                Just RelationshipMissing ->
                     Decode.succeed Nothing
 
                 Nothing ->
                     Decode.succeed Nothing
 
-                Just _ ->
+                Just (RelationshipMany _) ->
                     Decode.fail
                         (String.concat
                             [ "Expected resource to have exactly one relationship "
@@ -326,11 +328,8 @@ relationshipMany relationshipName relatedIdDecoder =
                 Nothing ->
                     fail "it was missing"
 
-                Just RelationshipManyEmpty ->
+                Just RelationshipMissing ->
                     fail "it was missing"
-
-                Just RelationshipOneEmpty ->
-                    fail "only got one"
 
                 Just (RelationshipOne _) ->
                     fail "only got one"
