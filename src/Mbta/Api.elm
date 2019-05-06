@@ -79,26 +79,215 @@ getCustomId toMsg config resourceDecoder path id =
         }
 
 
-getCustomList : (Result Http.Error (List resource) -> msg) -> Config -> JsonApi.Decoder resource -> String -> Cmd msg
-getCustomList toMsg config resourceDecoder path =
+getCustomList : (Result Http.Error (List resource) -> msg) -> Config -> JsonApi.Decoder resource -> String -> Filters -> Cmd msg
+getCustomList toMsg config resourceDecoder path filters =
     Http.get
         { url = url config [ path ]
         , expect = Http.expectJson toMsg (JsonApi.decoderMany resourceDecoder)
         }
 
 
+type alias Filters =
+    List ( String, List String )
+
+
+type alias LatLngFilter =
+    { latLng : LatLng
+    , radius : Maybe Float
+    }
+
+
+filterLatLng : Maybe LatLngFilter -> Filters
+filterLatLng mll =
+    case mll of
+        Nothing ->
+            []
+
+        Just ll ->
+            [ ( "latitude", [ String.fromFloat ll.latLng.latitude ] )
+            , ( "longitude", [ String.fromFloat ll.latLng.longitude ] )
+            ]
+                ++ (case ll.radius of
+                        Nothing ->
+                            []
+
+                        Just radius ->
+                            [ ( "radius", [ String.fromFloat radius ] ) ]
+                   )
+
+
+filterDirectionId : Maybe DirectionId -> Filters
+filterDirectionId maybeDirectionId =
+    let
+        toString directionId =
+            case directionId of
+                D0 ->
+                    "0"
+
+                D1 ->
+                    "1"
+    in
+    filterMaybe "direction_id" toString maybeDirectionId
+
+
+filterRouteType : List RouteType -> Filters
+filterRouteType routeTypes =
+    let
+        toString routeType =
+            case routeType of
+                RouteType_0_LightRail ->
+                    "0"
+
+                RouteType_1_HeavyRail ->
+                    "1"
+
+                RouteType_2_CommuterRail ->
+                    "2"
+
+                RouteType_3_Bus ->
+                    "3"
+
+                RouteType_4_Ferry ->
+                    "4"
+    in
+    filterList "route_type" toString routeTypes
+
+
+filterRoute : List RouteId -> Filters
+filterRoute routes =
+    filterList "route" (\(RouteId routeId) -> routeId) routes
+
+
+filterStop : List StopId -> Filters
+filterStop stops =
+    filterList "stop" (\(StopId stopId) -> stopId) stops
+
+
+filterTrip : List TripId -> Filters
+filterTrip trips =
+    filterList "trip" (\(TripId tripId) -> tripId) trips
+
+
+filterMaybe : String -> (filterValue -> String) -> Maybe filterValue -> Filters
+filterMaybe key toString filterValue =
+    case filterValue of
+        Nothing ->
+            []
+
+        Just value ->
+            [ ( key, [ toString value ] ) ]
+
+
+filterList : String -> (filterValues -> String) -> List filterValues -> Filters
+filterList key toString filterValues =
+    case filterValues of
+        [] ->
+            []
+
+        values ->
+            [ ( key, List.map toString values ) ]
+
+
 
 -- predictions+schedules
 
 
-getPredictions : (Result Http.Error (List Prediction) -> msg) -> Config -> Cmd msg
-getPredictions toMsg config =
-    getCustomList toMsg config Mbta.Decode.prediction "predictions"
+getPredictions : (Result Http.Error (List Prediction) -> msg) -> Config -> PredictionsFilter -> Cmd msg
+getPredictions toMsg config filter =
+    let
+        filters =
+            List.concat
+                [ filterLatLng filter.latLng
+                , filterDirectionId filter.directionId
+                , filterRouteType filter.routeType
+                , filterRoute filter.route
+                , filterStop filter.stop
+                , filterTrip filter.trip
+                ]
+    in
+    getCustomList toMsg config Mbta.Decode.prediction "predictions" filters
 
 
-getSchedules : (Result Http.Error (List Schedule) -> msg) -> Config -> Cmd msg
-getSchedules toMsg config =
-    getCustomList toMsg config Mbta.Decode.schedule "schedules"
+type alias PredictionsFilter =
+    { latLng : Maybe LatLngFilter
+    , directionId : Maybe DirectionId
+    , routeType : List RouteType
+    , route : List RouteId
+    , stop : List StopId
+    , trip : List TripId
+    }
+
+
+predictionsFilter : PredictionsFilter
+predictionsFilter =
+    { latLng = Nothing
+    , directionId = Nothing
+    , routeType = []
+    , route = []
+    , stop = []
+    , trip = []
+    }
+
+
+getSchedules : (Result Http.Error (List Schedule) -> msg) -> Config -> SchedulesFilter -> Cmd msg
+getSchedules toMsg config filter =
+    let
+        stopSequenceToString : StopSequenceFilter -> String
+        stopSequenceToString stopSequenceFilter =
+            case stopSequenceFilter of
+                StopSequence stopSequence ->
+                    String.fromInt stopSequence
+
+                First ->
+                    "first"
+
+                Last ->
+                    "last"
+
+        filters =
+            List.concat
+                [ filterMaybe "date" (\(ServiceDate serviceDate) -> serviceDate) filter.serviceDate
+                , filterDirectionId filter.directionId
+                , filterMaybe "min_time" identity filter.minTime
+                , filterMaybe "max_time" identity filter.maxTime
+                , filterRoute filter.route
+                , filterStop filter.stop
+                , filterTrip filter.trip
+                , filterList "stop_sequence" stopSequenceToString filter.stopSequence
+                ]
+    in
+    getCustomList toMsg config Mbta.Decode.schedule "schedules" filters
+
+
+type alias SchedulesFilter =
+    { serviceDate : Maybe ServiceDate
+    , directionId : Maybe DirectionId
+    , minTime : Maybe String
+    , maxTime : Maybe String
+    , route : List RouteId
+    , stop : List StopId
+    , trip : List TripId
+    , stopSequence : List StopSequenceFilter
+    }
+
+
+schedulesFilter : SchedulesFilter
+schedulesFilter =
+    { serviceDate = Nothing
+    , directionId = Nothing
+    , minTime = Nothing
+    , maxTime = Nothing
+    , route = []
+    , stop = []
+    , trip = []
+    , stopSequence = []
+    }
+
+
+type StopSequenceFilter
+    = StopSequence Int
+    | First
+    | Last
 
 
 
@@ -112,7 +301,7 @@ getRoute toMsg config (RouteId routeId) =
 
 getRoutes : (Result Http.Error (List Route) -> msg) -> Config -> Cmd msg
 getRoutes toMsg config =
-    getCustomList toMsg config Mbta.Decode.route "routes"
+    getCustomList toMsg config Mbta.Decode.route "routes" []
 
 
 getRoutePattern : (Result Http.Error RoutePattern -> msg) -> Config -> RoutePatternId -> Cmd msg
@@ -122,7 +311,7 @@ getRoutePattern toMsg config (RoutePatternId routePatternId) =
 
 getRoutePatterns : (Result Http.Error (List RoutePattern) -> msg) -> Config -> Cmd msg
 getRoutePatterns toMsg config =
-    getCustomList toMsg config Mbta.Decode.routePattern "route-patterns"
+    getCustomList toMsg config Mbta.Decode.routePattern "route-patterns" []
 
 
 
@@ -136,7 +325,7 @@ getService toMsg config (ServiceId serviceId) =
 
 getServices : (Result Http.Error (List Service) -> msg) -> Config -> Cmd msg
 getServices toMsg config =
-    getCustomList toMsg config Mbta.Decode.service "services"
+    getCustomList toMsg config Mbta.Decode.service "services" []
 
 
 
@@ -150,7 +339,7 @@ getShape toMsg config (ShapeId shapeId) =
 
 getShapes : (Result Http.Error (List Shape) -> msg) -> Config -> Cmd msg
 getShapes toMsg config =
-    getCustomList toMsg config Mbta.Decode.shape "shapes"
+    getCustomList toMsg config Mbta.Decode.shape "shapes" []
 
 
 
@@ -164,7 +353,7 @@ getStop toMsg config (StopId stopId) =
 
 getStops : (Result Http.Error (List Stop) -> msg) -> Config -> Cmd msg
 getStops toMsg config =
-    getCustomList toMsg config Mbta.Decode.stop "stops"
+    getCustomList toMsg config Mbta.Decode.stop "stops" []
 
 
 
@@ -178,7 +367,7 @@ getTrip toMsg config (TripId tripId) =
 
 getTrips : (Result Http.Error (List Trip) -> msg) -> Config -> Cmd msg
 getTrips toMsg config =
-    getCustomList toMsg config Mbta.Decode.trip "trips"
+    getCustomList toMsg config Mbta.Decode.trip "trips" []
 
 
 
@@ -192,4 +381,4 @@ getVehicle toMsg config (VehicleId vehicleId) =
 
 getVehicles : (Result Http.Error (List Vehicle) -> msg) -> Config -> Cmd msg
 getVehicles toMsg config =
-    getCustomList toMsg config Mbta.Decode.vehicle "vehicles"
+    getCustomList toMsg config Mbta.Decode.vehicle "vehicles" []
