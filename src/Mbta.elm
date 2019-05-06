@@ -219,11 +219,13 @@ type ScheduleId
 type alias Schedule =
     { id : ScheduleId
     , routeId : RouteId
-    , directionId : DirectionId
+
+    -- TODO disabled due to api bug https://app.asana.com/0/695227265423458/1121247532991447
+    --, directionId : DirectionId
     , tripId : TripId
     , stopId : StopId
     , stopSequence : StopSequence
-    , predictionId : PredictionId
+    , predictionId : Maybe PredictionId
     , timepoint : Bool
     , departureTime : Time.Posix
     , arrivalTime : Time.Posix

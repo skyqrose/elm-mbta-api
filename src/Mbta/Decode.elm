@@ -1,6 +1,7 @@
 module Mbta.Decode exposing
     ( route
     , routePattern
+    , schedule
     , service
     , shape
     , stop
@@ -83,6 +84,11 @@ wheelchairAccessible =
         ]
 
 
+predictionId : JsonApi.IdDecoder PredictionId
+predictionId =
+    JsonApi.idDecoder "prediction" PredictionId
+
+
 routeId : JsonApi.IdDecoder RouteId
 routeId =
     JsonApi.idDecoder "route" RouteId
@@ -154,6 +160,38 @@ routePatternTypicality =
         , ( 2, RoutePatternTypicality_2_Deviation )
         , ( 3, RoutePatternTypicality_3_Atypical )
         , ( 4, RoutePatternTypicality_4_Diversion )
+        ]
+
+
+scheduleId : JsonApi.IdDecoder ScheduleId
+scheduleId =
+    JsonApi.idDecoder "schedule" ScheduleId
+
+
+schedule : JsonApi.Decoder Schedule
+schedule =
+    JsonApi.decode Schedule
+        |> id scheduleId
+        |> relationshipOne "route" routeId
+        --|> attribute "direction_id" directionId
+        |> relationshipOne "trip" tripId
+        |> relationshipOne "stop" stopId
+        |> attribute "stop_sequence" stopSequence
+        |> relationshipMaybe "prediction" predictionId
+        |> attribute "timepoint" Decode.bool
+        |> attribute "departure_time" Iso8601.decoder
+        |> attribute "arrival_time" Iso8601.decoder
+        |> attribute "pickup_type" pickupDropOffType
+        |> attribute "drop_off_type" pickupDropOffType
+
+
+pickupDropOffType : Decode.Decoder PickupDropOffType
+pickupDropOffType =
+    DecodeHelpers.enum Decode.int
+        [ ( 0, PUDO_0_Regular )
+        , ( 1, PUDO_1_NotAllowed )
+        , ( 2, PUDO_2_PhoneAgency )
+        , ( 3, PUDO_3_CoordinateWithDriver )
         ]
 
 
