@@ -1,6 +1,6 @@
 module Mbta.Decode exposing
     ( prediction, vehicle
-    , route, routePattern, schedule, trip, service, shape
+    , route, routePattern, line, schedule, trip, service, shape
     , stop
     )
 
@@ -14,7 +14,7 @@ module Mbta.Decode exposing
 
 # Schedule Data
 
-@docs route, routePattern, schedule, trip, service, shape
+@docs route, routePattern, line, schedule, trip, service, shape
 
 
 # Stops
@@ -230,6 +230,22 @@ routePatternTypicality =
         , ( 3, RoutePatternTypicality_3_Atypical )
         , ( 4, RoutePatternTypicality_4_Diversion )
         ]
+
+
+lineId : JsonApi.IdDecoder LineId
+lineId =
+    JsonApi.idDecoder "line" LineId
+
+
+line : JsonApi.Decoder Line
+line =
+    JsonApi.decode Line
+        |> id lineId
+        |> attribute "short_name" Decode.string
+        |> attribute "long_name" Decode.string
+        |> attribute "sort_order" Decode.int
+        |> attribute "color" color
+        |> attribute "text_color" color
 
 
 scheduleId : JsonApi.IdDecoder ScheduleId

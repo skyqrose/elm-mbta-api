@@ -157,6 +157,29 @@ suite =
                 """
                 Mbta.Decode.routePattern
             ]
+        , describe "lines"
+            [ testOne
+                "one"
+                "https://api-v3.mbta.com/lines/line-SLWaterfront"
+                """
+                {"data":{"attributes":{"color":"7C878E","long_name":"Silver Line SL1/SL2/SL3","short_name":"","sort_order":10051,"text_color":"FFFFFF"},"id":"line-SLWaterfront","links":{"self":"/lines/line-SLWaterfront"},"relationships":{"routes":{}},"type":"line"},"jsonapi":{"version":"1.0"}}
+                """
+                Mbta.Decode.line
+            , testOne
+                "with includes"
+                "https://api-v3.mbta.com/lines/line-SLWaterfront?include=routes"
+                """
+                {"data":{"attributes":{"color":"7C878E","long_name":"Silver Line SL1/SL2/SL3","short_name":"","sort_order":10051,"text_color":"FFFFFF"},"id":"line-SLWaterfront","links":{"self":"/lines/line-SLWaterfront"},"relationships":{"routes":{"data":[{"id":"741","type":"route"},{"id":"742","type":"route"},{"id":"743","type":"route"},{"id":"746","type":"route"}]}},"type":"line"},"included":[{"attributes":{"color":"7C878E","description":"Key Bus","direction_destinations":["Logan Airport","South Station"],"direction_names":["Outbound","Inbound"],"fare_class":"Rapid Transit","long_name":"Logan Airport - South Station","short_name":"SL1","sort_order":10051,"text_color":"FFFFFF","type":3},"id":"741","links":{"self":"/routes/741"},"relationships":{"line":{"data":{"id":"line-SLWaterfront","type":"line"}},"route_patterns":{}},"type":"route"},{"attributes":{"color":"7C878E","description":"Key Bus","direction_destinations":["Design Center","South Station"],"direction_names":["Outbound","Inbound"],"fare_class":"Rapid Transit","long_name":"Design Center - South Station","short_name":"SL2","sort_order":10052,"text_color":"FFFFFF","type":3},"id":"742","links":{"self":"/routes/742"},"relationships":{"line":{"data":{"id":"line-SLWaterfront","type":"line"}},"route_patterns":{}},"type":"route"},{"attributes":{"color":"7C878E","description":"Key Bus","direction_destinations":["Chelsea","South Station"],"direction_names":["Outbound","Inbound"],"fare_class":"Rapid Transit","long_name":"Chelsea - South Station","short_name":"SL3","sort_order":10053,"text_color":"FFFFFF","type":3},"id":"743","links":{"self":"/routes/743"},"relationships":{"line":{"data":{"id":"line-SLWaterfront","type":"line"}},"route_patterns":{}},"type":"route"},{"attributes":{"color":"7C878E","description":"Key Bus","direction_destinations":["Silver Line Way","South Station"],"direction_names":["Outbound","Inbound"],"fare_class":"Rapid Transit","long_name":"Silver Line Way - South Station","short_name":"","sort_order":10057,"text_color":"FFFFFF","type":3},"id":"746","links":{"self":"/routes/746"},"relationships":{"line":{"data":{"id":"line-SLWaterfront","type":"line"}},"route_patterns":{}},"type":"route"}],"jsonapi":{"version":"1.0"}}
+                """
+                Mbta.Decode.line
+            , testMany
+                "multiple"
+                "https://api-v3.mbta.com/lines?filter[id]=line-SLWaterfront,line-Green"
+                """
+                {"data":[{"attributes":{"color":"00843D","long_name":"Green Line","short_name":"","sort_order":10032,"text_color":"FFFFFF"},"id":"line-Green","links":{"self":"/lines/line-Green"},"relationships":{"routes":{}},"type":"line"},{"attributes":{"color":"7C878E","long_name":"Silver Line SL1/SL2/SL3","short_name":"","sort_order":10051,"text_color":"FFFFFF"},"id":"line-SLWaterfront","links":{"self":"/lines/line-SLWaterfront"},"relationships":{"routes":{}},"type":"line"}],"jsonapi":{"version":"1.0"}}
+                """
+                Mbta.Decode.line
+            ]
         , describe "schedule"
             [ testMany
                 "plain"
