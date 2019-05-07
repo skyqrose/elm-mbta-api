@@ -237,7 +237,7 @@ service =
     JsonApi.decode Service
         |> id serviceId
         |> attribute "description" (Decode.nullable Decode.string)
-        |> attribute "schedule_type" (Decode.nullable scheduleType)
+        |> attribute "schedule_type" (Decode.nullable serviceType)
         |> attribute "schedule_name" (Decode.nullable Decode.string)
         |> attribute "schedule_typicality" serviceTypicality
         |> attribute "start_date" serviceDate
@@ -247,13 +247,13 @@ service =
         |> custom (changedDates "removed_dates" "removed_dates_notes")
 
 
-scheduleType : Decode.Decoder ScheduleType
-scheduleType =
+serviceType : Decode.Decoder ServiceType
+serviceType =
     DecodeHelpers.enum Decode.string
-        [ ( "Weekday", ScheduleType_Weekday )
-        , ( "Saturday", ScheduleType_Saturday )
-        , ( "Sunday", ScheduleType_Sunday )
-        , ( "Other", ScheduleType_Other )
+        [ ( "Weekday", ServiceType_Weekday )
+        , ( "Saturday", ServiceType_Saturday )
+        , ( "Sunday", ServiceType_Sunday )
+        , ( "Other", ServiceType_Other )
         ]
 
 

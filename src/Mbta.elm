@@ -1,7 +1,7 @@
 module Mbta exposing
     ( Color(..), LatLng, DirectionId(..), WheelchairAccessible(..)
     , PredictionId(..), Prediction, PredictionScheduleRelationship(..), VehicleId(..), Vehicle, CurrentStatus(..)
-    , RouteType(..), RouteId(..), Route, RouteDirections, RouteDirection, RoutePatternId(..), RoutePattern, RoutePatternTypicality(..), LineId(..), Line, ScheduleId(..), Schedule, StopSequence(..), PickupDropOffType(..), TripId(..), Trip, BikesAllowed(..), BlockId(..), ServiceId(..), Service, ServiceDate(..), ScheduleType(..), ServiceTypicality(..), ChangedDate, ShapeId(..), Shape
+    , RouteType(..), RouteId(..), Route, RouteDirections, RouteDirection, RoutePatternId(..), RoutePattern, RoutePatternTypicality(..), LineId(..), Line, ScheduleId(..), Schedule, StopSequence(..), PickupDropOffType(..), TripId(..), Trip, BikesAllowed(..), BlockId(..), ServiceId(..), Service, ServiceDate(..), ServiceType(..), ServiceTypicality(..), ChangedDate, ShapeId(..), Shape
     , StopId(..), Stop, LocationType(..), FacilityId(..), Facility, LiveFacility, FacilityProperties, FacilityProperty, FacilityPropertyName(..), FacilityPropertyValue(..)
     , AlertId(..), Alert, AlertLifecycle(..), ActivePeriod, InformedEntity, InformedEntityActivity(..)
     )
@@ -34,7 +34,7 @@ though they were changed in some places to make them clearer.
 
 # Scheduled Data
 
-@docs RouteType, RouteId, Route, RouteDirections, RouteDirection, RoutePatternId, RoutePattern, RoutePatternTypicality, LineId, Line, ScheduleId, Schedule, StopSequence, PickupDropOffType, TripId, Trip, BikesAllowed, BlockId, ServiceId, Service, ServiceDate, ScheduleType, ServiceTypicality, ChangedDate, ShapeId, Shape
+@docs RouteType, RouteId, Route, RouteDirections, RouteDirection, RoutePatternId, RoutePattern, RoutePatternTypicality, LineId, Line, ScheduleId, Schedule, StopSequence, PickupDropOffType, TripId, Trip, BikesAllowed, BlockId, ServiceId, Service, ServiceDate, ServiceType, ServiceTypicality, ChangedDate, ShapeId, Shape
 
 
 # Stops
@@ -324,8 +324,8 @@ type ServiceId
 type alias Service =
     { id : ServiceId
     , description : Maybe String
-    , scheduleType : Maybe ScheduleType
-    , scheduleName : Maybe String
+    , serviceType : Maybe ServiceType
+    , name : Maybe String
     , typicality : ServiceTypicality
     , startDate : ServiceDate
     , endDate : ServiceDate
@@ -349,12 +349,12 @@ type
 {-| This is called `schedule_type` in the MBTA API. It was changed here to avoid ambiguity with [`Schedule`](#Schedule), which is unrelated to [`Service`](#Service)
 -}
 type
-    ScheduleType
-    -- TODO change to ServiceType. Also change field names in Service.scheduleType and Service.scheduleName
-    = ScheduleType_Weekday
-    | ScheduleType_Saturday
-    | ScheduleType_Sunday
-    | ScheduleType_Other
+    ServiceType
+    -- TODO change to ServiceType. Also change field names in Service.ServiceType and Service.scheduleName
+    = ServiceType_Weekday
+    | ServiceType_Saturday
+    | ServiceType_Sunday
+    | ServiceType_Other
 
 
 {-| This is called `schedule_typicality` in the MBTA API. It was changed here to avoid ambiguity with [`Schedule`](#Schedule), which is unrelated to [`Service`](#Service)
