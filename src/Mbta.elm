@@ -2,7 +2,7 @@ module Mbta exposing
     ( Color(..), LatLng, DirectionId(..), WheelchairAccessible(..)
     , PredictionId(..), Prediction, PredictionScheduleRelationship(..), VehicleId(..), Vehicle, CurrentStatus(..)
     , RouteType(..), RouteId(..), Route, RouteDirections, RouteDirection, RoutePatternId(..), RoutePattern, RoutePatternTypicality(..), LineId(..), Line, ScheduleId(..), Schedule, StopSequence(..), PickupDropOffType(..), TripId(..), Trip, BikesAllowed(..), BlockId(..), ServiceId(..), Service, ServiceDate(..), ServiceType(..), ServiceTypicality(..), ChangedDate, ShapeId(..), Shape
-    , StopId(..), Stop, LocationType(..), FacilityId(..), Facility, LiveFacility, FacilityProperties, FacilityProperty, FacilityPropertyName(..), FacilityPropertyValue(..)
+    , StopId(..), Stop, LocationType(..), FacilityId(..), Facility, LiveFacility, FacilityType(..), FacilityProperties, FacilityPropertyValue(..)
     , AlertId(..), Alert, AlertLifecycle(..), ActivePeriod, InformedEntity, InformedEntityActivity(..)
     )
 
@@ -39,7 +39,7 @@ though they were changed in some places to make them clearer.
 
 # Stops
 
-@docs StopId, Stop, LocationType, FacilityId, Facility, LiveFacility, FacilityProperties, FacilityProperty, FacilityPropertyName, FacilityPropertyValue
+@docs StopId, Stop, LocationType, FacilityId, Facility, LiveFacility, FacilityType, FacilityProperties, FacilityProperty, FacilityPropertyName, FacilityPropertyValue
 
 
 # Alerts
@@ -48,6 +48,7 @@ though they were changed in some places to make them clearer.
 
 -}
 
+import Dict
 import Time
 
 
@@ -431,7 +432,8 @@ type alias Facility =
     { id : FacilityId
     , stopId : StopId
     , name : String
-    , latLng : LatLng
+    , facilityType : FacilityType
+    , latLng : Maybe LatLng
     , properties : FacilityProperties
     }
 
@@ -444,25 +446,25 @@ type alias LiveFacility =
     }
 
 
-{-| -}
+{-| The API and GTFS docs list a long but finite list of potential string values
+-}
+type FacilityType
+    = FacilityType String
+
+
+{-| Properties come in `name` `value` pairs.
+A `name` may appear multiple times, so the values are grouped.
+Order is not important.
+-}
 type alias FacilityProperties =
-    List FacilityProperty
-
-
-{-| -}
-type alias FacilityProperty =
-    ( FacilityPropertyName, FacilityPropertyValue )
-
-
-{-| -}
-type FacilityPropertyName
-    = FacilityProperyName String
+    Dict.Dict String (List FacilityPropertyValue)
 
 
 {-| -}
 type FacilityPropertyValue
-    = StringProperty String
-    | IntProperty Int
+    = FacilityProperty_String String
+    | FacilityProperty_Int Int
+    | FacilityProperty_Null
 
 
 

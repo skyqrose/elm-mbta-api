@@ -1,7 +1,7 @@
 module Mbta.Decode exposing
     ( prediction, vehicle
     , route, routePattern, line, schedule, trip, service, shape
-    , stop
+    , stop, facility, liveFacility
     )
 
 {-|
@@ -19,7 +19,7 @@ module Mbta.Decode exposing
 
 # Stops
 
-@docs stop
+@docs stop, facility, liveFacility
 
 -}
 
@@ -53,6 +53,34 @@ latLng =
     JsonApi.decode LatLng
         |> attribute "latitude" Decode.float
         |> attribute "longitude" Decode.float
+
+
+maybeLatLng : JsonApi.Decoder (Maybe LatLng)
+maybeLatLng =
+    (JsonApi.decode Tuple.pair
+        |> attribute "latitude" (Decode.nullable Decode.float)
+        |> attribute "longitude" (Decode.nullable Decode.float)
+    )
+        >> Decode.andThen
+            (\( maybeLat, maybeLng ) ->
+                case ( maybeLat, maybeLng ) of
+                    ( Just lat, Just lng ) ->
+                        Decode.succeed
+                            (Just
+                                { latitude = lat
+                                , longitude = lng
+                                }
+                            )
+
+                    ( Nothing, Nothing ) ->
+                        Decode.succeed Nothing
+
+                    ( Just lat, Nothing ) ->
+                        Decode.fail "longitude is missing but latitude exists"
+
+                    ( Nothing, Just lng ) ->
+                        Decode.fail "latitude is missing but longitude exists"
+            )
 
 
 directionId : Decode.Decoder DirectionId
@@ -443,6 +471,72 @@ locationType =
         , ( 1, LocationType_1_Station )
         , ( 2, LocationType_2_Entrance )
         ]
+
+
+facilityId : JsonApi.IdDecoder FacilityId
+facilityId =
+    JsonApi.idDecoder "facility" FacilityId
+
+
+facility : JsonApi.Decoder Facility
+facility =
+    JsonApi.decode Facility
+        |> id facilityId
+        |> relationshipOne "stop" stopId
+        |> attribute "name" Decode.string
+        |> attribute "type" (Decode.map FacilityType Decode.string)
+        |> custom maybeLatLng
+        |> attribute "properties" facilityProperties
+
+
+liveFacilityId : JsonApi.IdDecoder FacilityId
+liveFacilityId =
+    JsonApi.idDecoder "live-facility" FacilityId
+
+
+liveFacility : JsonApi.Decoder LiveFacility
+liveFacility =
+    JsonApi.decode LiveFacility
+        |> id liveFacilityId
+        |> attribute "updated_at" Iso8601.decoder
+        |> attribute "properties" facilityProperties
+
+
+facilityProperties : Decode.Decoder FacilityProperties
+facilityProperties =
+    Decode.map2 Tuple.pair
+        (Decode.field "name" Decode.string)
+        (Decode.field "value" facilityPropertyValue)
+        |> Decode.list
+        |> Decode.map group
+
+
+facilityPropertyValue : Decode.Decoder FacilityPropertyValue
+facilityPropertyValue =
+    Decode.oneOf
+        [ Decode.map FacilityProperty_String Decode.string
+        , Decode.map FacilityProperty_Int Decode.int
+        , Decode.null FacilityProperty_Null
+        ]
+
+
+group : List ( comparable, a ) -> Dict.Dict comparable (List a)
+group nameValuePairs =
+    List.foldr
+        (\( name, value ) dict ->
+            Dict.update name
+                (\maybeExistingValues ->
+                    case maybeExistingValues of
+                        Nothing ->
+                            Just [ value ]
+
+                        Just existingValues ->
+                            Just (value :: existingValues)
+                )
+                dict
+        )
+        Dict.empty
+        nameValuePairs
 
 
 
