@@ -1,14 +1,27 @@
 module Mbta.Decode exposing
-    ( prediction
-    , route
-    , routePattern
-    , schedule
-    , service
-    , shape
+    ( prediction, vehicle
+    , route, routePattern, schedule, trip, service, shape
     , stop
-    , trip
-    , vehicle
     )
+
+{-|
+
+
+# Realtime Data
+
+@docs prediction, vehicle
+
+
+# Schedule Data
+
+@docs route, routePattern, schedule, trip, service, shape
+
+
+# Stops
+
+@docs stop
+
+-}
 
 import DecodeHelpers
 import Dict
@@ -26,6 +39,10 @@ import JsonApi
 import Mbta exposing (..)
 
 
+
+-- Util
+
+
 color : Decode.Decoder Color
 color =
     Decode.map Color Decode.string
@@ -38,42 +55,12 @@ latLng =
         |> attribute "longitude" Decode.float
 
 
-currentStatus : Decode.Decoder CurrentStatus
-currentStatus =
-    DecodeHelpers.enum Decode.string
-        [ ( "INCOMING_AT", IncomingAt )
-        , ( "STOPPED_AT", StoppedAt )
-        , ( "IN_TRANSIT_TO", InTransitTo )
-        ]
-
-
 directionId : Decode.Decoder DirectionId
 directionId =
     DecodeHelpers.enum Decode.int
         [ ( 0, D0 )
         , ( 1, D1 )
         ]
-
-
-routeType : Decode.Decoder RouteType
-routeType =
-    DecodeHelpers.enum Decode.int
-        [ ( 0, RouteType_0_LightRail )
-        , ( 1, RouteType_1_HeavyRail )
-        , ( 2, RouteType_2_CommuterRail )
-        , ( 3, RouteType_3_Bus )
-        , ( 4, RouteType_4_Ferry )
-        ]
-
-
-serviceDate : Decode.Decoder ServiceDate
-serviceDate =
-    Decode.map ServiceDate Decode.string
-
-
-stopSequence : Decode.Decoder StopSequence
-stopSequence =
-    Decode.map StopSequence Decode.int
 
 
 wheelchairAccessible : Decode.Decoder WheelchairAccessible
@@ -83,6 +70,10 @@ wheelchairAccessible =
         , ( 1, Accessible_1_Accessible )
         , ( 2, Accessible_2_Inaccessible )
         ]
+
+
+
+-- Realtime Data
 
 
 predictionId : JsonApi.IdDecoder PredictionId
@@ -119,6 +110,52 @@ predictionScheduleRelatonship =
         ]
         |> Decode.nullable
         |> Decode.map (Maybe.withDefault ScheduleRelationship_Scheduled)
+
+
+vehicleId : JsonApi.IdDecoder VehicleId
+vehicleId =
+    JsonApi.idDecoder "vehicle" VehicleId
+
+
+vehicle : JsonApi.Decoder Vehicle
+vehicle =
+    JsonApi.decode Vehicle
+        |> id vehicleId
+        |> attribute "label" Decode.string
+        |> relationshipOne "route" routeId
+        |> attribute "direction_id" directionId
+        |> relationshipOne "trip" tripId
+        |> relationshipOne "stop" stopId
+        |> attribute "current_stop_sequence" stopSequence
+        |> attribute "current_status" currentStatus
+        |> custom latLng
+        |> attribute "speed" (Decode.nullable Decode.float)
+        |> attribute "bearing" Decode.int
+        |> attribute "updated_at" Iso8601.decoder
+
+
+currentStatus : Decode.Decoder CurrentStatus
+currentStatus =
+    DecodeHelpers.enum Decode.string
+        [ ( "INCOMING_AT", IncomingAt )
+        , ( "STOPPED_AT", StoppedAt )
+        , ( "IN_TRANSIT_TO", InTransitTo )
+        ]
+
+
+
+-- Schedule Data
+
+
+routeType : Decode.Decoder RouteType
+routeType =
+    DecodeHelpers.enum Decode.int
+        [ ( 0, RouteType_0_LightRail )
+        , ( 1, RouteType_1_HeavyRail )
+        , ( 2, RouteType_2_CommuterRail )
+        , ( 3, RouteType_3_Bus )
+        , ( 4, RouteType_4_Ferry )
+        ]
 
 
 routeId : JsonApi.IdDecoder RouteId
@@ -217,6 +254,11 @@ schedule =
         |> attribute "drop_off_type" pickupDropOffType
 
 
+stopSequence : Decode.Decoder StopSequence
+stopSequence =
+    Decode.map StopSequence Decode.int
+
+
 pickupDropOffType : Decode.Decoder PickupDropOffType
 pickupDropOffType =
     DecodeHelpers.enum Decode.int
@@ -225,6 +267,41 @@ pickupDropOffType =
         , ( 2, PUDO_2_PhoneAgency )
         , ( 3, PUDO_3_CoordinateWithDriver )
         ]
+
+
+tripId : JsonApi.IdDecoder TripId
+tripId =
+    JsonApi.idDecoder "trip" TripId
+
+
+trip : JsonApi.Decoder Trip
+trip =
+    JsonApi.decode Trip
+        |> id tripId
+        |> relationshipOne "service" serviceId
+        |> relationshipOne "route" routeId
+        |> attribute "direction_id" directionId
+        |> relationshipOne "route_pattern" routePatternId
+        |> attribute "name" Decode.string
+        |> attribute "headsign" Decode.string
+        |> relationshipOne "shape" shapeId
+        |> attribute "wheelchair_accessible" wheelchairAccessible
+        |> attribute "bikes_allowed" bikesAllowed
+        |> attribute "block_id" blockId
+
+
+bikesAllowed : Decode.Decoder BikesAllowed
+bikesAllowed =
+    DecodeHelpers.enum Decode.int
+        [ ( 0, Bikes_0_NoInformation )
+        , ( 1, Bikes_1_Allowed )
+        , ( 2, Bikes_2_NotAllowed )
+        ]
+
+
+blockId : Decode.Decoder BlockId
+blockId =
+    Decode.map BlockId Decode.string
 
 
 serviceId : JsonApi.IdDecoder ServiceId
@@ -245,6 +322,11 @@ service =
         |> attribute "valid_days" (Decode.list Decode.int)
         |> custom (changedDates "added_dates" "added_dates_notes")
         |> custom (changedDates "removed_dates" "removed_dates_notes")
+
+
+serviceDate : Decode.Decoder ServiceDate
+serviceDate =
+    Decode.map ServiceDate Decode.string
 
 
 serviceType : Decode.Decoder ServiceType
@@ -314,6 +396,10 @@ shape =
         |> attribute "polyline" Decode.string
 
 
+
+-- Stops
+
+
 stopId : JsonApi.IdDecoder StopId
 stopId =
     JsonApi.idDecoder "stop" StopId
@@ -343,65 +429,7 @@ locationType =
         ]
 
 
-tripId : JsonApi.IdDecoder TripId
-tripId =
-    JsonApi.idDecoder "trip" TripId
 
-
-trip : JsonApi.Decoder Trip
-trip =
-    JsonApi.decode Trip
-        |> id tripId
-        |> relationshipOne "service" serviceId
-        |> relationshipOne "route" routeId
-        |> attribute "direction_id" directionId
-        |> relationshipOne "route_pattern" routePatternId
-        |> attribute "name" Decode.string
-        |> attribute "headsign" Decode.string
-        |> relationshipOne "shape" shapeId
-        |> attribute "wheelchair_accessible" wheelchairAccessible
-        |> attribute "bikes_allowed" bikesAllowed
-        |> attribute "block_id" blockId
-
-
-blockId : Decode.Decoder BlockId
-blockId =
-    Decode.map BlockId Decode.string
-
-
-bikesAllowed : Decode.Decoder BikesAllowed
-bikesAllowed =
-    DecodeHelpers.enum Decode.int
-        [ ( 0, Bikes_0_NoInformation )
-        , ( 1, Bikes_1_Allowed )
-        , ( 2, Bikes_2_NotAllowed )
-        ]
-
-
-vehicleId : JsonApi.IdDecoder VehicleId
-vehicleId =
-    JsonApi.idDecoder "vehicle" VehicleId
-
-
-vehicle : JsonApi.Decoder Vehicle
-vehicle =
-    JsonApi.decode Vehicle
-        |> id vehicleId
-        |> attribute "label" Decode.string
-        |> relationshipOne "route" routeId
-        |> attribute "direction_id" directionId
-        |> relationshipOne "trip" tripId
-        |> relationshipOne "stop" stopId
-        |> attribute "current_stop_sequence" stopSequence
-        |> attribute "current_status" currentStatus
-        |> custom latLng
-        |> attribute "speed" (Decode.nullable Decode.float)
-        |> attribute "bearing" Decode.int
-        |> attribute "updated_at" Iso8601.decoder
-
-
-
--- Facilities
 -- Alerts
 
 

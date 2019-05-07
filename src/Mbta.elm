@@ -32,7 +32,7 @@ though they were changed in some places to make them clearer.
 @docs PredictionId, Prediction, PredictionScheduleRelationship, VehicleId, Vehicle, CurrentStatus
 
 
-# Scheduled Data
+# Schedule Data
 
 @docs RouteType, RouteId, Route, RouteDirections, RouteDirection, RoutePatternId, RoutePattern, RoutePatternTypicality, LineId, Line, ScheduleId, Schedule, StopSequence, PickupDropOffType, TripId, Trip, BikesAllowed, BlockId, ServiceId, Service, ServiceDate, ServiceType, ServiceTypicality, ChangedDate, ShapeId, Shape
 
@@ -154,7 +154,7 @@ type CurrentStatus
 
 
 
--- Schedules
+-- Schedule Data
 
 
 {-| -}
