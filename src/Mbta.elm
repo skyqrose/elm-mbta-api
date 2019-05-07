@@ -348,9 +348,7 @@ type
 
 {-| This is called `schedule_type` in the MBTA API. It was changed here to avoid ambiguity with [`Schedule`](#Schedule), which is unrelated to [`Service`](#Service)
 -}
-type
-    ServiceType
-    -- TODO change to ServiceType. Also change field names in Service.ServiceType and Service.scheduleName
+type ServiceType
     = ServiceType_Weekday
     | ServiceType_Saturday
     | ServiceType_Sunday
