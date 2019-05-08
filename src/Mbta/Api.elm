@@ -546,20 +546,53 @@ getStop toMsg config (StopId stopId) =
 getStops : (Result Http.Error (List Stop) -> msg) -> Config -> StopsFilter -> Cmd msg
 getStops toMsg config filter =
     let
+        locationTypeToString : LocationType -> String
+        locationTypeToString locationType =
+            case locationType of
+                LocationType_0_Stop ->
+                    "0"
+
+                LocationType_1_Station ->
+                    "1"
+
+                LocationType_2_Entrance ->
+                    "2"
+
+                LocationType_3_Node ->
+                    "3"
+
         filters =
             List.concat
-                []
+                [ filterList "id" (\(StopId stopId) -> stopId) filter.id
+                , filterRouteType filter.routeType
+                , filterRoute filter.route
+                , filterDirectionId filter.directionId
+                , filterList "location_type" locationTypeToString filter.locationType
+                , filterLatLng filter.latLng
+                ]
     in
     getCustomList toMsg config Mbta.Decode.stop "stops" filters
 
 
 type alias StopsFilter =
-    {}
+    { id : List StopId
+    , routeType : List RouteType
+    , route : List RouteId
+    , directionId : Maybe DirectionId
+    , locationType : List LocationType
+    , latLng : Maybe LatLngFilter
+    }
 
 
 stopsFilter : StopsFilter
 stopsFilter =
-    {}
+    { id = []
+    , routeType = []
+    , route = []
+    , directionId = Nothing
+    , locationType = []
+    , latLng = Nothing
+    }
 
 
 getFacility : (Result Http.Error Facility -> msg) -> Config -> FacilityId -> Cmd msg
@@ -572,18 +605,24 @@ getFacilities toMsg config filter =
     let
         filters =
             List.concat
-                []
+                [ filterStop filter.stop
+                , filterList "type" (\(FacilityType facilityType) -> facilityType) filter.facilityType
+                ]
     in
     getCustomList toMsg config Mbta.Decode.facility "facilities" filters
 
 
 type alias FacilitiesFilter =
-    {}
+    { stop : List StopId
+    , facilityType : List FacilityType
+    }
 
 
 facilitiesFilter : FacilitiesFilter
 facilitiesFilter =
-    {}
+    { stop = []
+    , facilityType = []
+    }
 
 
 getLiveFacility : (Result Http.Error LiveFacility -> msg) -> Config -> FacilityId -> Cmd msg
@@ -596,18 +635,21 @@ getLiveFacilities toMsg config filter =
     let
         filters =
             List.concat
-                []
+                [ filterList "id" (\(FacilityId facilityId) -> facilityId) filter.id
+                ]
     in
     getCustomList toMsg config Mbta.Decode.liveFacility "live-facilities" filters
 
 
 type alias LiveFacilitiesFilter =
-    {}
+    { id : List FacilityId
+    }
 
 
 liveFacilitiesFilter : LiveFacilitiesFilter
 liveFacilitiesFilter =
-    {}
+    { id = []
+    }
 
 
 
