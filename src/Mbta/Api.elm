@@ -447,18 +447,34 @@ getTrips toMsg config filter =
     let
         filters =
             List.concat
-                []
+                [ filterList "id" (\(TripId tripId) -> tripId) filter.id
+                , filterRoute filter.route
+                , filterDirectionId filter.directionId
+                , filterList "route_pattern" (\(RoutePatternId routePatternId) -> routePatternId) filter.routePattern
+                , filterList "name" identity filter.name
+                ]
     in
     getCustomList toMsg config Mbta.Decode.trip "trips" filters
 
 
 type alias TripsFilter =
-    {}
+    -- TODO date filter, which didn't work.
+    { id : List TripId
+    , route : List RouteId
+    , directionId : Maybe DirectionId
+    , routePattern : List RoutePatternId
+    , name : List String
+    }
 
 
 tripsFilter : TripsFilter
 tripsFilter =
-    {}
+    { id = []
+    , route = []
+    , directionId = Nothing
+    , routePattern = []
+    , name = []
+    }
 
 
 getService : (Result Http.Error Service -> msg) -> Config -> ServiceId -> Cmd msg
@@ -471,18 +487,21 @@ getServices toMsg config filter =
     let
         filters =
             List.concat
-                []
+                [ filterList "id" (\(ServiceId serviceId) -> serviceId) filter.id
+                ]
     in
     getCustomList toMsg config Mbta.Decode.service "services" filters
 
 
 type alias ServicesFilter =
-    {}
+    { id : List ServiceId
+    }
 
 
 servicesFilter : ServicesFilter
 servicesFilter =
-    {}
+    { id = []
+    }
 
 
 getShape : (Result Http.Error Shape -> msg) -> Config -> ShapeId -> Cmd msg
@@ -495,18 +514,24 @@ getShapes toMsg config filter =
     let
         filters =
             List.concat
-                []
+                [ filterRoute filter.route
+                , filterDirectionId filter.directionId
+                ]
     in
     getCustomList toMsg config Mbta.Decode.shape "shapes" filters
 
 
 type alias ShapesFilter =
-    {}
+    { route : List RouteId
+    , directionId : Maybe DirectionId
+    }
 
 
 shapesFilter : ShapesFilter
 shapesFilter =
-    {}
+    { route = []
+    , directionId = Nothing
+    }
 
 
 
