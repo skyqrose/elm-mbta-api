@@ -482,25 +482,31 @@ type AlertId
 
 {-| There are long but finite lists of possible values for `effect` and `cause` in the MBTA API docs.
 -}
+
+
+
+-- TODO facilities is only included if includes is specified
+
+
 type alias Alert =
     { id : AlertId
-    , url : String
+    , url : Maybe String
     , shortHeader : String
     , header : String
-    , banner : String
-    , description : String
+    , banner : Maybe String
+    , description : Maybe String
     , createdAt : Time.Posix
     , updatedAt : Time.Posix
-    , timeframe : String
+    , timeframe : Maybe String
     , activePeriod : List ActivePeriod
     , severity : Int
     , serviceEffect : String
     , lifecycle : AlertLifecycle
-    , effectName : String
     , effect : String
     , cause : String
-    , facilityId : FacilityId
-    , informedEntities : InformedEntity
+
+    --, facilities : Maybe (List FacilityId)
+    , informedEntities : List InformedEntity
     }
 
 
@@ -515,20 +521,20 @@ type AlertLifecycle
 {-| -}
 type alias ActivePeriod =
     { start : Time.Posix
-    , end : Time.Posix
+    , end : Maybe Time.Posix
     }
 
 
 {-| -}
 type alias InformedEntity =
     -- TODO most are probably optional
-    { routeType : RouteType
-    , routeId : RouteId
-    , directionId : DirectionId
-    , tripId : TripId
-    , stopId : StopId
-    , facilityId : FacilityId
-    , activities : InformedEntityActivity
+    { activities : List InformedEntityActivity
+    , routeType : Maybe RouteType
+    , routeId : Maybe RouteId
+    , directionId : Maybe DirectionId
+    , tripId : Maybe TripId
+    , stopId : Maybe StopId
+    , facilityId : Maybe FacilityId
     }
 
 

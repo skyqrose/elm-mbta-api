@@ -2,6 +2,7 @@ module Mbta.Decode exposing
     ( prediction, vehicle
     , route, routePattern, line, schedule, trip, service, shape
     , stop, facility, liveFacility
+    , alert
     )
 
 {-|
@@ -27,6 +28,7 @@ import DecodeHelpers
 import Dict
 import Iso8601
 import Json.Decode as Decode
+import Json.Decode.Pipeline as Pipeline
 import JsonApi
     exposing
         ( attribute
@@ -547,3 +549,74 @@ group nameValuePairs =
 alertId : JsonApi.IdDecoder AlertId
 alertId =
     JsonApi.idDecoder "alert" AlertId
+
+
+alert : JsonApi.Decoder Alert
+alert =
+    JsonApi.decode Alert
+        |> id alertId
+        |> attribute "url" (Decode.nullable Decode.string)
+        |> attribute "short_header" Decode.string
+        |> attribute "header" Decode.string
+        |> attribute "banner" (Decode.nullable Decode.string)
+        |> attribute "description" (Decode.nullable Decode.string)
+        |> attribute "created_at" Iso8601.decoder
+        |> attribute "updated_at" Iso8601.decoder
+        |> attribute "timeframe" (Decode.nullable Decode.string)
+        |> attribute "active_period" (Decode.list activePeriod)
+        |> attribute "severity" Decode.int
+        |> attribute "service_effect" Decode.string
+        |> attribute "lifecycle" alertLifecycle
+        |> attribute "effect" Decode.string
+        |> attribute "cause" Decode.string
+        --|> relationshipMaybe "facility" facilityId
+        |> attribute "informed_entity" (Decode.list informedEntity)
+
+
+alertLifecycle : Decode.Decoder AlertLifecycle
+alertLifecycle =
+    DecodeHelpers.enum Decode.string
+        [ ( "NEW", Alert_New )
+        , ( "ONGOING", Alert_Ongoing )
+        , ( "ONGOING_UPCOMING", Alert_OngoingUpcoming )
+        , ( "UPCOMING", Alert_Upcoming )
+        ]
+
+
+activePeriod : Decode.Decoder ActivePeriod
+activePeriod =
+    Decode.map2
+        (\start end -> { start = start, end = end })
+        (Decode.field "start" Iso8601.decoder)
+        (Decode.field "end" (Decode.nullable Iso8601.decoder))
+
+
+informedEntity : Decode.Decoder InformedEntity
+informedEntity =
+    Decode.succeed InformedEntity
+        |> Pipeline.required "activities" (Decode.list informedEntityActivity)
+        |> pipelineMaybe "route_type" routeType
+        |> pipelineMaybe "route" (Decode.map RouteId Decode.string)
+        |> pipelineMaybe "direction_id" directionId
+        |> pipelineMaybe "trip" (Decode.map TripId Decode.string)
+        |> pipelineMaybe "stop" (Decode.map StopId Decode.string)
+        |> pipelineMaybe "facility" (Decode.map FacilityId Decode.string)
+
+
+informedEntityActivity : Decode.Decoder InformedEntityActivity
+informedEntityActivity =
+    DecodeHelpers.enum Decode.string
+        [ ( "BOARD", Activity_Board )
+        , ( "BRINGING_BIKE", Activity_BringingBike )
+        , ( "EXIT", Activity_Exit )
+        , ( "PARK_CAR", Activity_ParkCar )
+        , ( "RIDE", Activity_Ride )
+        , ( "STORE_BIKE", Activity_StoreBike )
+        , ( "USING_ESCALATOR", Activity_UsingEscalator )
+        , ( "USING_WHEELCHAIR", Activity_UsingWheelchair )
+        ]
+
+
+pipelineMaybe : String -> Decode.Decoder a -> Decode.Decoder (Maybe a -> b) -> Decode.Decoder b
+pipelineMaybe field decoder =
+    Pipeline.optional field (Decode.map Just decoder) Nothing
