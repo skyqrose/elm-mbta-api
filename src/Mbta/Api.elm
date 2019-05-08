@@ -134,27 +134,28 @@ filterDirectionId maybeDirectionId =
     filterMaybe "direction_id" toString maybeDirectionId
 
 
+routeTypeToString : RouteType -> String
+routeTypeToString routeType =
+    case routeType of
+        RouteType_0_LightRail ->
+            "0"
+
+        RouteType_1_HeavyRail ->
+            "1"
+
+        RouteType_2_CommuterRail ->
+            "2"
+
+        RouteType_3_Bus ->
+            "3"
+
+        RouteType_4_Ferry ->
+            "4"
+
+
 filterRouteType : List RouteType -> Filters
 filterRouteType routeTypes =
-    let
-        toString routeType =
-            case routeType of
-                RouteType_0_LightRail ->
-                    "0"
-
-                RouteType_1_HeavyRail ->
-                    "1"
-
-                RouteType_2_CommuterRail ->
-                    "2"
-
-                RouteType_3_Bus ->
-                    "3"
-
-                RouteType_4_Ferry ->
-                    "4"
-    in
-    filterList "route_type" toString routeTypes
+    filterList "route_type" routeTypeToString routeTypes
 
 
 filterRoute : List RouteId -> Filters
@@ -284,9 +285,35 @@ getRoute toMsg config (RouteId routeId) =
     getCustomId toMsg config Mbta.Decode.route "routes" routeId
 
 
-getRoutes : (Result Http.Error (List Route) -> msg) -> Config -> Cmd msg
-getRoutes toMsg config =
-    getCustomList toMsg config Mbta.Decode.route "routes" []
+getRoutes : (Result Http.Error (List Route) -> msg) -> Config -> RoutesFilter -> Cmd msg
+getRoutes toMsg config filter =
+    let
+        filters =
+            List.concat
+                [ filterList "id" (\(RouteId routeId) -> routeId) filter.id
+                , filterList "type" routeTypeToString filter.routeType
+                , filterDirectionId filter.directionId
+                , filterStop filter.stop
+                ]
+    in
+    getCustomList toMsg config Mbta.Decode.route "routes" filters
+
+
+type alias RoutesFilter =
+    { id : List RouteId
+    , routeType : List RouteType
+    , directionId : Maybe DirectionId
+    , stop : List StopId
+    }
+
+
+routesFilter : RoutesFilter
+routesFilter =
+    { id = []
+    , routeType = []
+    , directionId = Nothing
+    , stop = []
+    }
 
 
 getRoutePattern : (Result Http.Error RoutePattern -> msg) -> Config -> RoutePatternId -> Cmd msg
@@ -294,9 +321,32 @@ getRoutePattern toMsg config (RoutePatternId routePatternId) =
     getCustomId toMsg config Mbta.Decode.routePattern "route-patterns" routePatternId
 
 
-getRoutePatterns : (Result Http.Error (List RoutePattern) -> msg) -> Config -> Cmd msg
-getRoutePatterns toMsg config =
-    getCustomList toMsg config Mbta.Decode.routePattern "route-patterns" []
+getRoutePatterns : (Result Http.Error (List RoutePattern) -> msg) -> Config -> RoutePatternsFilter -> Cmd msg
+getRoutePatterns toMsg config filter =
+    let
+        filters =
+            List.concat
+                [ filterList "id" (\(RoutePatternId routePatternId) -> routePatternId) filter.id
+                , filterRoute filter.route
+                , filterDirectionId filter.directionId
+                ]
+    in
+    getCustomList toMsg config Mbta.Decode.routePattern "route-patterns" filters
+
+
+type alias RoutePatternsFilter =
+    { id : List RoutePatternId
+    , route : List RouteId
+    , directionId : Maybe DirectionId
+    }
+
+
+routePatternsFilter : RoutePatternsFilter
+routePatternsFilter =
+    { id = []
+    , route = []
+    , directionId = Nothing
+    }
 
 
 getLine : (Result Http.Error Line -> msg) -> Config -> LineId -> Cmd msg
@@ -304,9 +354,26 @@ getLine toMsg config (LineId lineId) =
     getCustomId toMsg config Mbta.Decode.line "lines" lineId
 
 
-getLines : (Result Http.Error (List Line) -> msg) -> Config -> Cmd msg
-getLines toMsg config =
-    getCustomList toMsg config Mbta.Decode.line "lines" []
+getLines : (Result Http.Error (List Line) -> msg) -> Config -> LinesFilter -> Cmd msg
+getLines toMsg config filter =
+    let
+        filters =
+            List.concat
+                [ filterList "id" (\(LineId lineId) -> lineId) filter.id
+                ]
+    in
+    getCustomList toMsg config Mbta.Decode.line "lines" filters
+
+
+type alias LinesFilter =
+    { id : List LineId
+    }
+
+
+linesFilter : LinesFilter
+linesFilter =
+    { id = []
+    }
 
 
 getSchedules : (Result Http.Error (List Schedule) -> msg) -> Config -> SchedulesFilter -> Cmd msg
