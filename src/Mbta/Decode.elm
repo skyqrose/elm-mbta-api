@@ -59,11 +59,10 @@ latLng =
 
 maybeLatLng : JsonApi.Decoder (Maybe LatLng)
 maybeLatLng =
-    (JsonApi.decode Tuple.pair
+    JsonApi.decode Tuple.pair
         |> attribute "latitude" (Decode.nullable Decode.float)
         |> attribute "longitude" (Decode.nullable Decode.float)
-    )
-        >> Decode.andThen
+        |> JsonApi.andThen
             (\( maybeLat, maybeLng ) ->
                 case ( maybeLat, maybeLng ) of
                     ( Just lat, Just lng ) ->
@@ -210,11 +209,10 @@ route =
 
 routeDirections : JsonApi.Decoder (Maybe RouteDirections)
 routeDirections =
-    (JsonApi.decode Tuple.pair
+    JsonApi.decode Tuple.pair
         |> attribute "direction_names" (Decode.nullable (Decode.list Decode.string))
         |> attribute "direction_destinations" (Decode.nullable (Decode.list Decode.string))
-    )
-        >> Decode.andThen
+        |> JsonApi.andThen
             (\( names, destinations ) ->
                 case ( names, destinations ) of
                     ( Just [ d0_name, d1_name ], Just [ d0_destination, d1_destination ] ) ->
@@ -399,11 +397,10 @@ serviceTypicality =
 
 changedDates : String -> String -> JsonApi.Decoder (List ChangedDate)
 changedDates datesAttribute notesAttribute =
-    (JsonApi.decode Tuple.pair
+    JsonApi.decode Tuple.pair
         |> attribute datesAttribute (Decode.list serviceDate)
         |> attribute notesAttribute (Decode.list (Decode.nullable Decode.string))
-    )
-        >> Decode.andThen
+        |> JsonApi.andThen
             (\( datesList, notesList ) ->
                 if List.length datesList == List.length notesList then
                     Decode.succeed

@@ -1,6 +1,7 @@
 module JsonApi exposing
     ( Decoder, IdDecoder, idDecoder
     , decode, id, attribute, relationshipOne, relationshipMaybe, relationshipMany, custom
+    , andThen
     , decoderOne, decoderMany
     )
 
@@ -41,6 +42,11 @@ You can make `Decoder`s using a pipeline, modeled off of [`NoRedInk/elm-json-dec
 [Pipeline][https://package.elm-lang.org/packages/NoRedInk/elm-json-decode-pipeline/latest/Json-Decode-Pipeline]
 
 @docs decode, id, attribute, relationshipOne, relationshipMaybe, relationshipMany, custom
+
+
+# Fancy Decoding
+
+@docs andThen
 
 
 # Running a Decoder
@@ -361,7 +367,20 @@ custom decoder constructorDecoder =
 
 
 
--- Run it
+-- Fancy Decoding
+
+
+{-| Run another decoder that depends on a previous result.
+-}
+andThen : (a -> Decode.Decoder b) -> Decoder a -> Decoder b
+andThen second first =
+    \resource ->
+        first resource
+            |> Decode.andThen second
+
+
+
+-- Run It
 
 
 {-| Create a `Json.Decode.Decoder` that can decode a JSON:API document representing a single resource
