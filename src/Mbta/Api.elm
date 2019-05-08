@@ -442,9 +442,23 @@ getTrip toMsg config (TripId tripId) =
     getCustomId toMsg config Mbta.Decode.trip "trips" tripId
 
 
-getTrips : (Result Http.Error (List Trip) -> msg) -> Config -> Cmd msg
-getTrips toMsg config =
-    getCustomList toMsg config Mbta.Decode.trip "trips" []
+getTrips : (Result Http.Error (List Trip) -> msg) -> Config -> TripsFilter -> Cmd msg
+getTrips toMsg config filter =
+    let
+        filters =
+            List.concat
+                []
+    in
+    getCustomList toMsg config Mbta.Decode.trip "trips" filters
+
+
+type alias TripsFilter =
+    {}
+
+
+tripsFilter : TripsFilter
+tripsFilter =
+    {}
 
 
 getService : (Result Http.Error Service -> msg) -> Config -> ServiceId -> Cmd msg
@@ -452,9 +466,23 @@ getService toMsg config (ServiceId serviceId) =
     getCustomId toMsg config Mbta.Decode.service "services" serviceId
 
 
-getServices : (Result Http.Error (List Service) -> msg) -> Config -> Cmd msg
-getServices toMsg config =
-    getCustomList toMsg config Mbta.Decode.service "services" []
+getServices : (Result Http.Error (List Service) -> msg) -> Config -> ServicesFilter -> Cmd msg
+getServices toMsg config filter =
+    let
+        filters =
+            List.concat
+                []
+    in
+    getCustomList toMsg config Mbta.Decode.service "services" filters
+
+
+type alias ServicesFilter =
+    {}
+
+
+servicesFilter : ServicesFilter
+servicesFilter =
+    {}
 
 
 getShape : (Result Http.Error Shape -> msg) -> Config -> ShapeId -> Cmd msg
@@ -462,9 +490,23 @@ getShape toMsg config (ShapeId shapeId) =
     getCustomId toMsg config Mbta.Decode.shape "shapes" shapeId
 
 
-getShapes : (Result Http.Error (List Shape) -> msg) -> Config -> Cmd msg
-getShapes toMsg config =
-    getCustomList toMsg config Mbta.Decode.shape "shapes" []
+getShapes : (Result Http.Error (List Shape) -> msg) -> Config -> ShapesFilter -> Cmd msg
+getShapes toMsg config filter =
+    let
+        filters =
+            List.concat
+                []
+    in
+    getCustomList toMsg config Mbta.Decode.shape "shapes" filters
+
+
+type alias ShapesFilter =
+    {}
+
+
+shapesFilter : ShapesFilter
+shapesFilter =
+    {}
 
 
 
@@ -476,9 +518,23 @@ getStop toMsg config (StopId stopId) =
     getCustomId toMsg config Mbta.Decode.stop "stops" stopId
 
 
-getStops : (Result Http.Error (List Stop) -> msg) -> Config -> Cmd msg
-getStops toMsg config =
-    getCustomList toMsg config Mbta.Decode.stop "stops" []
+getStops : (Result Http.Error (List Stop) -> msg) -> Config -> StopsFilter -> Cmd msg
+getStops toMsg config filter =
+    let
+        filters =
+            List.concat
+                []
+    in
+    getCustomList toMsg config Mbta.Decode.stop "stops" filters
+
+
+type alias StopsFilter =
+    {}
+
+
+stopsFilter : StopsFilter
+stopsFilter =
+    {}
 
 
 getFacility : (Result Http.Error Facility -> msg) -> Config -> FacilityId -> Cmd msg
@@ -486,9 +542,23 @@ getFacility toMsg config (FacilityId facilityId) =
     getCustomId toMsg config Mbta.Decode.facility "facilities" facilityId
 
 
-getFacilities : (Result Http.Error (List Facility) -> msg) -> Config -> Cmd msg
-getFacilities toMsg config =
-    getCustomList toMsg config Mbta.Decode.facility "facilities" []
+getFacilities : (Result Http.Error (List Facility) -> msg) -> Config -> FacilitiesFilter -> Cmd msg
+getFacilities toMsg config filter =
+    let
+        filters =
+            List.concat
+                []
+    in
+    getCustomList toMsg config Mbta.Decode.facility "facilities" filters
+
+
+type alias FacilitiesFilter =
+    {}
+
+
+facilitiesFilter : FacilitiesFilter
+facilitiesFilter =
+    {}
 
 
 getLiveFacility : (Result Http.Error LiveFacility -> msg) -> Config -> FacilityId -> Cmd msg
@@ -496,9 +566,23 @@ getLiveFacility toMsg config (FacilityId facilityId) =
     getCustomId toMsg config Mbta.Decode.liveFacility "live-facilities" facilityId
 
 
-getLiveFacilities : (Result Http.Error (List LiveFacility) -> msg) -> Config -> Cmd msg
-getLiveFacilities toMsg config =
-    getCustomList toMsg config Mbta.Decode.liveFacility "live-facilities" []
+getLiveFacilities : (Result Http.Error (List LiveFacility) -> msg) -> Config -> LiveFacilitiesFilter -> Cmd msg
+getLiveFacilities toMsg config filter =
+    let
+        filters =
+            List.concat
+                []
+    in
+    getCustomList toMsg config Mbta.Decode.liveFacility "live-facilities" filters
+
+
+type alias LiveFacilitiesFilter =
+    {}
+
+
+liveFacilitiesFilter : LiveFacilitiesFilter
+liveFacilitiesFilter =
+    {}
 
 
 
@@ -510,6 +594,20 @@ getAlert toMsg config (AlertId alertId) =
     getCustomId toMsg config Mbta.Decode.alert "alerts" alertId
 
 
-getAlerts : (Result Http.Error (List Alert) -> msg) -> Config -> Cmd msg
-getAlerts toMsg config =
-    getCustomList toMsg config Mbta.Decode.alert "alerts" []
+getAlerts : (Result Http.Error (List Alert) -> msg) -> Config -> AlertsFilter -> Cmd msg
+getAlerts toMsg config filter =
+    let
+        filters =
+            List.concat
+                []
+    in
+    getCustomList toMsg config Mbta.Decode.alert "alerts" filters
+
+
+type alias AlertsFilter =
+    {}
+
+
+alertsFilter : AlertsFilter
+alertsFilter =
+    {}
