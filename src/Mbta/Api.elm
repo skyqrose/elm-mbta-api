@@ -47,17 +47,9 @@ type alias Config =
     }
 
 
-url : Config -> List String -> String
-url config path =
+url : Config -> List String -> Filters -> String
+url config path filters =
     let
-        apiKeyQueryParams =
-            case config.apiKey of
-                NoApiKey ->
-                    []
-
-                ApiKey key ->
-                    [ Url.Builder.string "api_key" key ]
-
         urlExceptParams : List Url.Builder.QueryParameter -> String
         urlExceptParams =
             case config.host of
@@ -69,14 +61,29 @@ url config path =
 
                 CustomHost customHost ->
                     Url.Builder.crossOrigin "https://api-v3.mbta.com" path
+
+        apiKeyQueryParams : List Url.Builder.QueryParameter
+        apiKeyQueryParams =
+            case config.apiKey of
+                NoApiKey ->
+                    []
+
+                ApiKey key ->
+                    [ Url.Builder.string "api_key" key ]
+
+        filterQueryParams : List Url.Builder.QueryParameter
+        filterQueryParams =
+            List.map
+                (\( key, values ) -> Url.Builder.string key (String.join "," values))
+                filters
     in
-    urlExceptParams apiKeyQueryParams
+    urlExceptParams (apiKeyQueryParams ++ filterQueryParams)
 
 
 getCustomId : (Result Http.Error resource -> msg) -> Config -> JsonApi.Decoder resource -> String -> String -> Cmd msg
 getCustomId toMsg config resourceDecoder path id =
     Http.get
-        { url = url config [ path, id ]
+        { url = url config [ path, id ] []
         , expect = Http.expectJson toMsg (JsonApi.decoderOne resourceDecoder)
         }
 
@@ -84,7 +91,7 @@ getCustomId toMsg config resourceDecoder path id =
 getCustomList : (Result Http.Error (List resource) -> msg) -> Config -> JsonApi.Decoder resource -> String -> Filters -> Cmd msg
 getCustomList toMsg config resourceDecoder path filters =
     Http.get
-        { url = url config [ path ]
+        { url = url config [ path ] filters
         , expect = Http.expectJson toMsg (JsonApi.decoderMany resourceDecoder)
         }
 
