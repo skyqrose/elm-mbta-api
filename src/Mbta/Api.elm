@@ -87,6 +87,10 @@ getCustomList toMsg config resourceDecoder path filters =
         }
 
 
+
+-- Filtering
+
+
 type alias Filters =
     List ( String, List String )
 
@@ -189,7 +193,7 @@ filterList key toString filterValues =
 
 
 
--- predictions+schedules
+-- Realtime Data
 
 
 getPredictions : (Result Http.Error (List Prediction) -> msg) -> Config -> PredictionsFilter -> Cmd msg
@@ -227,6 +231,52 @@ predictionsFilter =
     , stop = []
     , trip = []
     }
+
+
+getVehicle : (Result Http.Error Vehicle -> msg) -> Config -> VehicleId -> Cmd msg
+getVehicle toMsg config (VehicleId vehicleId) =
+    getCustomId toMsg config Mbta.Decode.vehicle "vehicles" vehicleId
+
+
+getVehicles : (Result Http.Error (List Vehicle) -> msg) -> Config -> VehiclesFilter -> Cmd msg
+getVehicles toMsg config filter =
+    let
+        filters =
+            List.concat
+                [ filterList "id" (\(VehicleId vehicleId) -> vehicleId) filter.id
+                , filterTrip filter.trip
+                , filterList "label" identity filter.label
+                , filterRoute filter.route
+                , filterDirectionId filter.directionId
+                , filterRouteType filter.routeType
+                ]
+    in
+    getCustomList toMsg config Mbta.Decode.vehicle "vehicles" filters
+
+
+type alias VehiclesFilter =
+    { id : List VehicleId
+    , trip : List TripId
+    , label : List String
+    , route : List RouteId
+    , directionId : Maybe DirectionId
+    , routeType : List RouteType
+    }
+
+
+vehiclesFilter : VehiclesFilter
+vehiclesFilter =
+    { id = []
+    , trip = []
+    , label = []
+    , route = []
+    , directionId = Nothing
+    , routeType = []
+    }
+
+
+
+-- Schedule Data
 
 
 getSchedules : (Result Http.Error (List Schedule) -> msg) -> Config -> SchedulesFilter -> Cmd msg
@@ -372,13 +422,3 @@ getTrips toMsg config =
 
 
 -- vehicles
-
-
-getVehicle : (Result Http.Error Vehicle -> msg) -> Config -> VehicleId -> Cmd msg
-getVehicle toMsg config (VehicleId vehicleId) =
-    getCustomId toMsg config Mbta.Decode.vehicle "vehicles" vehicleId
-
-
-getVehicles : (Result Http.Error (List Vehicle) -> msg) -> Config -> Cmd msg
-getVehicles toMsg config =
-    getCustomList toMsg config Mbta.Decode.vehicle "vehicles" []
