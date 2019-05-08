@@ -400,8 +400,10 @@ type StopId
     = StopId String
 
 
-{-| -}
+{-| Nodes will not have a latLng. Other location types will.
+-}
 type alias Stop =
+    -- TODO format that enforces constraints. E.g. stations can't have a parent_station.
     { id : StopId
     , name : String
     , description : Maybe String
@@ -409,7 +411,7 @@ type alias Stop =
     , platformCode : Maybe String
     , platformName : Maybe String
     , locationType : LocationType
-    , latLng : LatLng
+    , latLng : Maybe LatLng
     , address : Maybe String
     , wheelchairBoarding : WheelchairAccessible
     }
@@ -420,6 +422,7 @@ type LocationType
     = LocationType_0_Stop
     | LocationType_1_Station
     | LocationType_2_Entrance
+    | LocationType_3_Node
 
 
 {-| -}

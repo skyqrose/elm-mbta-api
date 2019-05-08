@@ -459,7 +459,7 @@ stop =
         |> attribute "platform_code" (Decode.nullable Decode.string)
         |> attribute "platform_name" (Decode.nullable Decode.string)
         |> attribute "location_type" locationType
-        |> custom latLng
+        |> custom maybeLatLng
         |> attribute "address" (Decode.nullable Decode.string)
         |> attribute "wheelchair_boarding" wheelchairAccessible
 
@@ -470,6 +470,7 @@ locationType =
         [ ( 0, LocationType_0_Stop )
         , ( 1, LocationType_1_Station )
         , ( 2, LocationType_2_Entrance )
+        , ( 3, LocationType_3_Node )
         ]
 
 

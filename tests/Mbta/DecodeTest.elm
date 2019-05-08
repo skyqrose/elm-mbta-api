@@ -290,6 +290,13 @@ suite =
                 """
                 Mbta.Decode.stop
             , testOne
+                "pathways node"
+                "https://api-v3.mbta.com/stops/node-336-middle"
+                """
+                {"data":{"attributes":{"address":null,"description":"Davis - Bottom of Escalator 336","latitude":null,"location_type":3,"longitude":null,"name":"Davis","platform_code":null,"platform_name":null,"wheelchair_boarding":1},"id":"node-336-middle","links":{"self":"/stops/node-336-middle"},"relationships":{"child_stops":{},"facilities":{"links":{"related":"/facilities/?filter[stop]=node-336-middle"}},"parent_station":{"data":{"id":"place-davis","type":"stop"}},"recommended_transfers":{},"zone":{"data":null}},"type":"stop"},"jsonapi":{"version":"1.0"}}
+                """
+                Mbta.Decode.stop
+            , testOne
                 "parent with children included"
                 "/stops/place-cntsq?include=child_stops"
                 """
