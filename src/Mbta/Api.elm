@@ -279,6 +279,36 @@ vehiclesFilter =
 -- Schedule Data
 
 
+getRoute : (Result Http.Error Route -> msg) -> Config -> RouteId -> Cmd msg
+getRoute toMsg config (RouteId routeId) =
+    getCustomId toMsg config Mbta.Decode.route "routes" routeId
+
+
+getRoutes : (Result Http.Error (List Route) -> msg) -> Config -> Cmd msg
+getRoutes toMsg config =
+    getCustomList toMsg config Mbta.Decode.route "routes" []
+
+
+getRoutePattern : (Result Http.Error RoutePattern -> msg) -> Config -> RoutePatternId -> Cmd msg
+getRoutePattern toMsg config (RoutePatternId routePatternId) =
+    getCustomId toMsg config Mbta.Decode.routePattern "route-patterns" routePatternId
+
+
+getRoutePatterns : (Result Http.Error (List RoutePattern) -> msg) -> Config -> Cmd msg
+getRoutePatterns toMsg config =
+    getCustomList toMsg config Mbta.Decode.routePattern "route-patterns" []
+
+
+getLine : (Result Http.Error Line -> msg) -> Config -> LineId -> Cmd msg
+getLine toMsg config (LineId lineId) =
+    getCustomId toMsg config Mbta.Decode.line "lines" lineId
+
+
+getLines : (Result Http.Error (List Line) -> msg) -> Config -> Cmd msg
+getLines toMsg config =
+    getCustomList toMsg config Mbta.Decode.line "lines" []
+
+
 getSchedules : (Result Http.Error (List Schedule) -> msg) -> Config -> SchedulesFilter -> Cmd msg
 getSchedules toMsg config filter =
     let
@@ -340,32 +370,14 @@ type StopSequenceFilter
     | Last
 
 
-
--- routes
-
-
-getRoute : (Result Http.Error Route -> msg) -> Config -> RouteId -> Cmd msg
-getRoute toMsg config (RouteId routeId) =
-    getCustomId toMsg config Mbta.Decode.route "routes" routeId
+getTrip : (Result Http.Error Trip -> msg) -> Config -> TripId -> Cmd msg
+getTrip toMsg config (TripId tripId) =
+    getCustomId toMsg config Mbta.Decode.trip "trips" tripId
 
 
-getRoutes : (Result Http.Error (List Route) -> msg) -> Config -> Cmd msg
-getRoutes toMsg config =
-    getCustomList toMsg config Mbta.Decode.route "routes" []
-
-
-getRoutePattern : (Result Http.Error RoutePattern -> msg) -> Config -> RoutePatternId -> Cmd msg
-getRoutePattern toMsg config (RoutePatternId routePatternId) =
-    getCustomId toMsg config Mbta.Decode.routePattern "route-patterns" routePatternId
-
-
-getRoutePatterns : (Result Http.Error (List RoutePattern) -> msg) -> Config -> Cmd msg
-getRoutePatterns toMsg config =
-    getCustomList toMsg config Mbta.Decode.routePattern "route-patterns" []
-
-
-
--- services
+getTrips : (Result Http.Error (List Trip) -> msg) -> Config -> Cmd msg
+getTrips toMsg config =
+    getCustomList toMsg config Mbta.Decode.trip "trips" []
 
 
 getService : (Result Http.Error Service -> msg) -> Config -> ServiceId -> Cmd msg
@@ -376,10 +388,6 @@ getService toMsg config (ServiceId serviceId) =
 getServices : (Result Http.Error (List Service) -> msg) -> Config -> Cmd msg
 getServices toMsg config =
     getCustomList toMsg config Mbta.Decode.service "services" []
-
-
-
--- shapes
 
 
 getShape : (Result Http.Error Shape -> msg) -> Config -> ShapeId -> Cmd msg
@@ -393,7 +401,7 @@ getShapes toMsg config =
 
 
 
--- stops
+-- Stops
 
 
 getStop : (Result Http.Error Stop -> msg) -> Config -> StopId -> Cmd msg
@@ -406,19 +414,35 @@ getStops toMsg config =
     getCustomList toMsg config Mbta.Decode.stop "stops" []
 
 
-
--- trips
-
-
-getTrip : (Result Http.Error Trip -> msg) -> Config -> TripId -> Cmd msg
-getTrip toMsg config (TripId tripId) =
-    getCustomId toMsg config Mbta.Decode.trip "trips" tripId
+getFacility : (Result Http.Error Facility -> msg) -> Config -> FacilityId -> Cmd msg
+getFacility toMsg config (FacilityId facilityId) =
+    getCustomId toMsg config Mbta.Decode.facility "facilities" facilityId
 
 
-getTrips : (Result Http.Error (List Trip) -> msg) -> Config -> Cmd msg
-getTrips toMsg config =
-    getCustomList toMsg config Mbta.Decode.trip "trips" []
+getFacilities : (Result Http.Error (List Facility) -> msg) -> Config -> Cmd msg
+getFacilities toMsg config =
+    getCustomList toMsg config Mbta.Decode.facility "facilities" []
+
+
+getLiveFacility : (Result Http.Error LiveFacility -> msg) -> Config -> FacilityId -> Cmd msg
+getLiveFacility toMsg config (FacilityId facilityId) =
+    getCustomId toMsg config Mbta.Decode.liveFacility "live-facilities" facilityId
+
+
+getLiveFacilities : (Result Http.Error (List LiveFacility) -> msg) -> Config -> Cmd msg
+getLiveFacilities toMsg config =
+    getCustomList toMsg config Mbta.Decode.liveFacility "live-facilities" []
 
 
 
--- vehicles
+-- Alerts
+
+
+getAlert : (Result Http.Error Alert -> msg) -> Config -> AlertId -> Cmd msg
+getAlert toMsg config (AlertId alertId) =
+    getCustomId toMsg config Mbta.Decode.alert "alerts" alertId
+
+
+getAlerts : (Result Http.Error (List Alert) -> msg) -> Config -> Cmd msg
+getAlerts toMsg config =
+    getCustomList toMsg config Mbta.Decode.alert "alerts" []
