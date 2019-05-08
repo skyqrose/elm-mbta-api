@@ -404,6 +404,7 @@ type StopId
 -}
 type alias Stop =
     -- TODO format that enforces constraints. E.g. stations can't have a parent_station.
+    -- TODO childStops : Maybe (List StopId)?
     { id : StopId
     , name : String
     , description : Maybe String
