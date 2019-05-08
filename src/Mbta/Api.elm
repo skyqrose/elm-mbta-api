@@ -22,9 +22,11 @@ module Mbta.Api exposing
 
 import DecodeHelpers
 import Http
+import Iso8601
 import JsonApi
 import Mbta exposing (..)
 import Mbta.Decode
+import Time
 import Url.Builder
 
 
@@ -664,17 +666,117 @@ getAlert toMsg config (AlertId alertId) =
 getAlerts : (Result Http.Error (List Alert) -> msg) -> Config -> AlertsFilter -> Cmd msg
 getAlerts toMsg config filter =
     let
+        activityToString : InformedEntityActivity -> String
+        activityToString activity =
+            case activity of
+                Activity_Board ->
+                    "BOARD"
+
+                Activity_BringingBike ->
+                    "BRINGING_BIKE"
+
+                Activity_Exit ->
+                    "EXIT"
+
+                Activity_ParkCar ->
+                    "PARK_CAR"
+
+                Activity_Ride ->
+                    "RIDE"
+
+                Activity_StoreBike ->
+                    "STORE_BIKE"
+
+                Activity_UsingEscalator ->
+                    "USING_ESCALATOR"
+
+                Activity_UsingWheelchair ->
+                    "USING_WHEELCHAIR"
+
+        boolToString : Bool -> String
+        boolToString bool =
+            if bool then
+                "true"
+
+            else
+                "false"
+
+        datetimeFilterToString : AlertDatetimeFilter -> String
+        datetimeFilterToString datetimeFilter =
+            case datetimeFilter of
+                Datetime posix ->
+                    Iso8601.fromTime posix
+
+                Now ->
+                    "NOW"
+
+        lifecycleToString : AlertLifecycle -> String
+        lifecycleToString lifecycle =
+            case lifecycle of
+                Alert_New ->
+                    "NEW"
+
+                Alert_Ongoing ->
+                    "ONGOING"
+
+                Alert_OngoingUpcoming ->
+                    "ONGOING_UPCOMING"
+
+                Alert_Upcoming ->
+                    "UPCOMING"
+
         filters =
             List.concat
-                []
+                [ filterList "id" (\(AlertId alertId) -> alertId) filter.id
+                , filterRouteType filter.routeType
+                , filterDirectionId filter.directionId
+                , filterRoute filter.route
+                , filterStop filter.stop
+                , filterTrip filter.trip
+                , filterList "facility" (\(FacilityId facilityId) -> facilityId) filter.facility
+                , filterList "activity" activityToString filter.activity
+                , filterMaybe "banner" boolToString filter.banner
+                , filterMaybe "datetime" datetimeFilterToString filter.datetime
+                , filterList "lifecycle" lifecycleToString filter.lifecycle
+                , filterList "severity" String.fromInt filter.severity
+                ]
     in
     getCustomList toMsg config Mbta.Decode.alert "alerts" filters
 
 
 type alias AlertsFilter =
-    {}
+    { id : List AlertId
+    , routeType : List RouteType
+    , directionId : Maybe DirectionId
+    , route : List RouteId
+    , stop : List StopId
+    , trip : List TripId
+    , facility : List FacilityId
+    , activity : List InformedEntityActivity
+    , banner : Maybe Bool
+    , datetime : Maybe AlertDatetimeFilter
+    , lifecycle : List AlertLifecycle
+    , severity : List Int
+    }
+
+
+type AlertDatetimeFilter
+    = Datetime Time.Posix
+    | Now
 
 
 alertsFilter : AlertsFilter
 alertsFilter =
-    {}
+    { id = []
+    , routeType = []
+    , directionId = Nothing
+    , route = []
+    , stop = []
+    , trip = []
+    , facility = []
+    , activity = []
+    , banner = Nothing
+    , datetime = Nothing
+    , lifecycle = []
+    , severity = []
+    }
