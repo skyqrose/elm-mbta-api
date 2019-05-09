@@ -1,9 +1,18 @@
 module Mbta exposing
     ( Color(..), LatLng, DirectionId(..), WheelchairAccessible(..)
-    , PredictionId(..), Prediction, PredictionScheduleRelationship(..), VehicleId(..), Vehicle, CurrentStatus(..)
-    , RouteType(..), RouteId(..), Route, RouteDirections, RouteDirection, RoutePatternId(..), RoutePattern, RoutePatternTypicality(..), LineId(..), Line, ScheduleId(..), Schedule, StopSequence(..), PickupDropOffType(..), TripId(..), Trip, BikesAllowed(..), BlockId(..), ServiceId(..), Service, ServiceDate(..), ServiceType(..), ServiceTypicality(..), ChangedDate, ShapeId(..), Shape
-    , StopId(..), Stop, LocationType(..), FacilityId(..), Facility, LiveFacility, FacilityType(..), FacilityProperties, FacilityPropertyValue(..)
+    , PredictionId(..), Prediction, PredictionScheduleRelationship(..)
+    , VehicleId(..), Vehicle, CurrentStatus(..)
+    , Route, RouteDirections, RouteDirection
+    , RoutePatternId(..), RoutePattern, RoutePatternTypicality(..)
+    , LineId(..), Line, ScheduleId(..)
+    , Schedule, StopSequence(..), PickupDropOffType(..)
+    , TripId(..), Trip, BikesAllowed(..), BlockId(..)
+    , ServiceId(..), Service, ServiceDate(..), ServiceType(..), ServiceTypicality(..), ChangedDate
+    , ShapeId(..), Shape
+    , StopId(..), Stop, LocationType(..)
+    , FacilityId(..), Facility, LiveFacility, FacilityType(..), FacilityProperties, FacilityPropertyValue(..)
     , AlertId(..), Alert, AlertLifecycle(..), ActivePeriod, InformedEntity, InformedEntityActivity(..)
+    , RouteId(..), RouteType(..)
     )
 
 {-| The types for all data coming from the MBTA API
@@ -29,17 +38,25 @@ though they were changed in some places to make them clearer.
 
 # Realtime Data
 
-@docs PredictionId, Prediction, PredictionScheduleRelationship, VehicleId, Vehicle, CurrentStatus
+@docs PredictionId, Prediction, PredictionScheduleRelationship
+@docs VehicleId, Vehicle, CurrentStatus
 
 
 # Schedule Data
 
-@docs RouteType, RouteId, Route, RouteDirections, RouteDirection, RoutePatternId, RoutePattern, RoutePatternTypicality, LineId, Line, ScheduleId, Schedule, StopSequence, PickupDropOffType, TripId, Trip, BikesAllowed, BlockId, ServiceId, Service, ServiceDate, ServiceType, ServiceTypicality, ChangedDate, ShapeId, Shape
+@docs RouteType RouteId, Route, RouteDirections, RouteDirection
+@docs RoutePatternId, RoutePattern, RoutePatternTypicality
+@docs LineId, Line, ScheduleId
+@docs Schedule, StopSequence, PickupDropOffType
+@docs TripId, Trip, BikesAllowed, BlockId
+@docs ServiceId, Service, ServiceDate, ServiceType, ServiceTypicality, ChangedDate
+@docs ShapeId, Shape
 
 
 # Stops
 
-@docs StopId, Stop, LocationType, FacilityId, Facility, LiveFacility, FacilityType, FacilityProperties, FacilityProperty, FacilityPropertyName, FacilityPropertyValue
+@docs StopId, Stop, LocationType
+@docs FacilityId, Facility, LiveFacility, FacilityType, FacilityProperties, FacilityProperty, FacilityPropertyName, FacilityPropertyValue
 
 
 # Alerts

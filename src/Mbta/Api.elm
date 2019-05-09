@@ -1,24 +1,75 @@
 module Mbta.Api exposing
-    ( ApiKey(..)
-    , Config
-    , Host(..)
-    , getPredictions
-    , getRoute
-    , getRoutePattern
-    , getRoutePatterns
-    , getRoutes
-    , getSchedules
-    , getService
-    , getServices
-    , getShape
-    , getShapes
-    , getStop
-    , getStops
-    , getTrip
-    , getTrips
-    , getVehicle
-    , getVehicles
+    ( Host(..), ApiKey(..), Config
+    , LatLngFilter
+    , getPredictions, PredictionsFilter, predictionsFilter
+    , getVehicle, getVehicles, VehiclesFilter, vehiclesFilter
+    , getRoute, getRoutes, RoutesFilter, routesFilter
+    , getRoutePattern, getRoutePatterns, RoutePatternsFilter, routePatternsFilter
+    , getLine, getLines, LinesFilter, linesFilter
+    , getSchedules, SchedulesFilter, StopSequenceFilter(..), schedulesFilter
+    , getTrip, getTrips, TripsFilter, tripsFilter
+    , getService, getServices, ServicesFilter, servicesFilter
+    , getShape, getShapes, ShapesFilter, shapesFilter
+    , getStop, getStops, StopsFilter, stopsFilter
+    , getFacility, getFacilities, FacilitiesFilter, facilitiesFilter
+    , getLiveFacility, getLiveFacilities, LiveFacilitiesFilter, liveFacilitiesFilter
+    , getAlert, getAlerts, AlertsFilter, AlertDatetimeFilter(..), alertsFilter
     )
+
+{-| Make HTTP requests to get data
+
+All of the calls that return a list of data take a list of filters, and a function to provide an empty list of filters. Use it to build your filters like this:
+
+    getPredictions ReceivePredictions
+        config
+        { predictionsFilter
+            | routeType = RouteType_2_CommuterRail
+            , stop = [ StopId "place-sstat" ]
+        }
+
+If you want all results, pass in the empty filter without setting any fields,
+though note that some calls require at least one filter to be specified.
+
+
+# Configuration
+
+@docs Host, ApiKey, Config
+
+
+# Util
+
+@docs LatLngFilter
+
+
+# Realtime Data
+
+@docs getPredictions, PredictionsFilter, predictionsFilter
+@docs getVehicle, getVehicles, VehiclesFilter, vehiclesFilter
+
+
+# Schedule Data
+
+@docs getRoute, getRoutes, RoutesFilter, routesFilter
+@docs getRoutePattern, getRoutePatterns, RoutePatternsFilter, routePatternsFilter
+@docs getLine, getLines, LinesFilter, linesFilter
+@docs getSchedules, SchedulesFilter, StopSequenceFilter, schedulesFilter
+@docs getTrip, getTrips, TripsFilter, tripsFilter
+@docs getService, getServices, ServicesFilter, servicesFilter
+@docs getShape, getShapes, ShapesFilter, shapesFilter
+
+
+# Stops
+
+@docs getStop, getStops, StopsFilter, stopsFilter
+@docs getFacility, getFacilities, FacilitiesFilter, facilitiesFilter
+@docs getLiveFacility, getLiveFacilities, LiveFacilitiesFilter, liveFacilitiesFilter
+
+
+# Alerts
+
+@docs getAlert, getAlerts, AlertsFilter, AlertDatetimeFilter, alertsFilter
+
+-}
 
 import DecodeHelpers
 import Http
@@ -30,17 +81,40 @@ import Time
 import Url.Builder
 
 
+
+-- Configuration
+
+
+{-| Where to send the HTTP requests?
+
+  - `Default`
+    <https://api-v3.mbta.com>, MBTA's official API server.
+  - `SameOrigin pathPrefix`
+    You might want to have all api calls go to your server,
+    and then your server can make the api call to the api server and forward the JSON back to the client.
+    If you want to have what would normally be `https://api-v3.mbta.com/vehicles` be called to `/api/mbta-forward/vehicles`,
+    use a `pathPrefix` of `["api", "mbta-forward"]`
+  - `CustomHost urlPrefix`
+    Specify another api server, e.g. `Default` is equivalent to `CustomHost "https://api-v3.mbta.com"`
+
+If you use anything except `SameOrigin`, you may need to configure CORS.
+-- TODO more specific instructions
+
+-}
 type Host
     = Default
     | SameOrigin (List String)
     | CustomHost String
 
 
+{-| Not required, but recommended. [Sign up for a key.](https://api-v3.mbta.com/register)
+-}
 type ApiKey
     = NoApiKey
     | ApiKey String
 
 
+{-| -}
 type alias Config =
     { host : Host
     , apiKey : ApiKey
@@ -206,6 +280,8 @@ filterList key toString filterValues =
 -- Realtime Data
 
 
+{-| At least one filter (not counting `direcitonId`) is required
+-}
 getPredictions : (Result Http.Error (List Prediction) -> msg) -> Config -> PredictionsFilter -> Cmd msg
 getPredictions toMsg config filter =
     let
@@ -222,6 +298,7 @@ getPredictions toMsg config filter =
     getCustomList toMsg config Mbta.Decode.prediction "predictions" filters
 
 
+{-| -}
 type alias PredictionsFilter =
     { latLng : Maybe LatLngFilter
     , directionId : Maybe DirectionId
@@ -232,6 +309,7 @@ type alias PredictionsFilter =
     }
 
 
+{-| -}
 predictionsFilter : PredictionsFilter
 predictionsFilter =
     { latLng = Nothing
@@ -243,11 +321,13 @@ predictionsFilter =
     }
 
 
+{-| -}
 getVehicle : (Result Http.Error Vehicle -> msg) -> Config -> VehicleId -> Cmd msg
 getVehicle toMsg config (VehicleId vehicleId) =
     getCustomId toMsg config Mbta.Decode.vehicle "vehicles" vehicleId
 
 
+{-| -}
 getVehicles : (Result Http.Error (List Vehicle) -> msg) -> Config -> VehiclesFilter -> Cmd msg
 getVehicles toMsg config filter =
     let
@@ -264,6 +344,7 @@ getVehicles toMsg config filter =
     getCustomList toMsg config Mbta.Decode.vehicle "vehicles" filters
 
 
+{-| -}
 type alias VehiclesFilter =
     { id : List VehicleId
     , trip : List TripId
@@ -274,6 +355,7 @@ type alias VehiclesFilter =
     }
 
 
+{-| -}
 vehiclesFilter : VehiclesFilter
 vehiclesFilter =
     { id = []
@@ -289,11 +371,13 @@ vehiclesFilter =
 -- Schedule Data
 
 
+{-| -}
 getRoute : (Result Http.Error Route -> msg) -> Config -> RouteId -> Cmd msg
 getRoute toMsg config (RouteId routeId) =
     getCustomId toMsg config Mbta.Decode.route "routes" routeId
 
 
+{-| -}
 getRoutes : (Result Http.Error (List Route) -> msg) -> Config -> RoutesFilter -> Cmd msg
 getRoutes toMsg config filter =
     let
@@ -308,6 +392,7 @@ getRoutes toMsg config filter =
     getCustomList toMsg config Mbta.Decode.route "routes" filters
 
 
+{-| -}
 type alias RoutesFilter =
     { id : List RouteId
     , routeType : List RouteType
@@ -316,6 +401,7 @@ type alias RoutesFilter =
     }
 
 
+{-| -}
 routesFilter : RoutesFilter
 routesFilter =
     { id = []
@@ -325,11 +411,13 @@ routesFilter =
     }
 
 
+{-| -}
 getRoutePattern : (Result Http.Error RoutePattern -> msg) -> Config -> RoutePatternId -> Cmd msg
 getRoutePattern toMsg config (RoutePatternId routePatternId) =
     getCustomId toMsg config Mbta.Decode.routePattern "route-patterns" routePatternId
 
 
+{-| -}
 getRoutePatterns : (Result Http.Error (List RoutePattern) -> msg) -> Config -> RoutePatternsFilter -> Cmd msg
 getRoutePatterns toMsg config filter =
     let
@@ -343,6 +431,7 @@ getRoutePatterns toMsg config filter =
     getCustomList toMsg config Mbta.Decode.routePattern "route-patterns" filters
 
 
+{-| -}
 type alias RoutePatternsFilter =
     { id : List RoutePatternId
     , route : List RouteId
@@ -350,6 +439,7 @@ type alias RoutePatternsFilter =
     }
 
 
+{-| -}
 routePatternsFilter : RoutePatternsFilter
 routePatternsFilter =
     { id = []
@@ -358,11 +448,13 @@ routePatternsFilter =
     }
 
 
+{-| -}
 getLine : (Result Http.Error Line -> msg) -> Config -> LineId -> Cmd msg
 getLine toMsg config (LineId lineId) =
     getCustomId toMsg config Mbta.Decode.line "lines" lineId
 
 
+{-| -}
 getLines : (Result Http.Error (List Line) -> msg) -> Config -> LinesFilter -> Cmd msg
 getLines toMsg config filter =
     let
@@ -374,17 +466,21 @@ getLines toMsg config filter =
     getCustomList toMsg config Mbta.Decode.line "lines" filters
 
 
+{-| -}
 type alias LinesFilter =
     { id : List LineId
     }
 
 
+{-| -}
 linesFilter : LinesFilter
 linesFilter =
     { id = []
     }
 
 
+{-| Requires filtering by at least one of route, stop, or trip.
+-}
 getSchedules : (Result Http.Error (List Schedule) -> msg) -> Config -> SchedulesFilter -> Cmd msg
 getSchedules toMsg config filter =
     let
@@ -415,6 +511,7 @@ getSchedules toMsg config filter =
     getCustomList toMsg config Mbta.Decode.schedule "schedules" filters
 
 
+{-| -}
 type alias SchedulesFilter =
     { serviceDate : Maybe ServiceDate
     , directionId : Maybe DirectionId
@@ -427,6 +524,14 @@ type alias SchedulesFilter =
     }
 
 
+{-| -}
+type StopSequenceFilter
+    = StopSequence Int
+    | First
+    | Last
+
+
+{-| -}
 schedulesFilter : SchedulesFilter
 schedulesFilter =
     { serviceDate = Nothing
@@ -440,17 +545,13 @@ schedulesFilter =
     }
 
 
-type StopSequenceFilter
-    = StopSequence Int
-    | First
-    | Last
-
-
+{-| -}
 getTrip : (Result Http.Error Trip -> msg) -> Config -> TripId -> Cmd msg
 getTrip toMsg config (TripId tripId) =
     getCustomId toMsg config Mbta.Decode.trip "trips" tripId
 
 
+{-| -}
 getTrips : (Result Http.Error (List Trip) -> msg) -> Config -> TripsFilter -> Cmd msg
 getTrips toMsg config filter =
     let
@@ -466,6 +567,7 @@ getTrips toMsg config filter =
     getCustomList toMsg config Mbta.Decode.trip "trips" filters
 
 
+{-| -}
 type alias TripsFilter =
     -- TODO date filter, which didn't work.
     { id : List TripId
@@ -476,6 +578,7 @@ type alias TripsFilter =
     }
 
 
+{-| -}
 tripsFilter : TripsFilter
 tripsFilter =
     { id = []
@@ -486,11 +589,13 @@ tripsFilter =
     }
 
 
+{-| -}
 getService : (Result Http.Error Service -> msg) -> Config -> ServiceId -> Cmd msg
 getService toMsg config (ServiceId serviceId) =
     getCustomId toMsg config Mbta.Decode.service "services" serviceId
 
 
+{-| -}
 getServices : (Result Http.Error (List Service) -> msg) -> Config -> ServicesFilter -> Cmd msg
 getServices toMsg config filter =
     let
@@ -502,22 +607,27 @@ getServices toMsg config filter =
     getCustomList toMsg config Mbta.Decode.service "services" filters
 
 
+{-| -}
 type alias ServicesFilter =
     { id : List ServiceId
     }
 
 
+{-| -}
 servicesFilter : ServicesFilter
 servicesFilter =
     { id = []
     }
 
 
+{-| -}
 getShape : (Result Http.Error Shape -> msg) -> Config -> ShapeId -> Cmd msg
 getShape toMsg config (ShapeId shapeId) =
     getCustomId toMsg config Mbta.Decode.shape "shapes" shapeId
 
 
+{-| Must filter by route
+-}
 getShapes : (Result Http.Error (List Shape) -> msg) -> Config -> ShapesFilter -> Cmd msg
 getShapes toMsg config filter =
     let
@@ -530,15 +640,18 @@ getShapes toMsg config filter =
     getCustomList toMsg config Mbta.Decode.shape "shapes" filters
 
 
+{-| -}
 type alias ShapesFilter =
     { route : List RouteId
     , directionId : Maybe DirectionId
     }
 
 
-shapesFilter : ShapesFilter
-shapesFilter =
-    { route = []
+{-| Must filter by route
+-}
+shapesFilter : List RouteId -> ShapesFilter
+shapesFilter routes =
+    { route = routes
     , directionId = Nothing
     }
 
@@ -547,11 +660,13 @@ shapesFilter =
 -- Stops
 
 
+{-| -}
 getStop : (Result Http.Error Stop -> msg) -> Config -> StopId -> Cmd msg
 getStop toMsg config (StopId stopId) =
     getCustomId toMsg config Mbta.Decode.stop "stops" stopId
 
 
+{-| -}
 getStops : (Result Http.Error (List Stop) -> msg) -> Config -> StopsFilter -> Cmd msg
 getStops toMsg config filter =
     let
@@ -583,6 +698,7 @@ getStops toMsg config filter =
     getCustomList toMsg config Mbta.Decode.stop "stops" filters
 
 
+{-| -}
 type alias StopsFilter =
     { id : List StopId
     , routeType : List RouteType
@@ -593,6 +709,7 @@ type alias StopsFilter =
     }
 
 
+{-| -}
 stopsFilter : StopsFilter
 stopsFilter =
     { id = []
@@ -604,11 +721,13 @@ stopsFilter =
     }
 
 
+{-| -}
 getFacility : (Result Http.Error Facility -> msg) -> Config -> FacilityId -> Cmd msg
 getFacility toMsg config (FacilityId facilityId) =
     getCustomId toMsg config Mbta.Decode.facility "facilities" facilityId
 
 
+{-| -}
 getFacilities : (Result Http.Error (List Facility) -> msg) -> Config -> FacilitiesFilter -> Cmd msg
 getFacilities toMsg config filter =
     let
@@ -621,12 +740,14 @@ getFacilities toMsg config filter =
     getCustomList toMsg config Mbta.Decode.facility "facilities" filters
 
 
+{-| -}
 type alias FacilitiesFilter =
     { stop : List StopId
     , facilityType : List FacilityType
     }
 
 
+{-| -}
 facilitiesFilter : FacilitiesFilter
 facilitiesFilter =
     { stop = []
@@ -634,11 +755,13 @@ facilitiesFilter =
     }
 
 
+{-| -}
 getLiveFacility : (Result Http.Error LiveFacility -> msg) -> Config -> FacilityId -> Cmd msg
 getLiveFacility toMsg config (FacilityId facilityId) =
     getCustomId toMsg config Mbta.Decode.liveFacility "live-facilities" facilityId
 
 
+{-| -}
 getLiveFacilities : (Result Http.Error (List LiveFacility) -> msg) -> Config -> LiveFacilitiesFilter -> Cmd msg
 getLiveFacilities toMsg config filter =
     let
@@ -650,11 +773,13 @@ getLiveFacilities toMsg config filter =
     getCustomList toMsg config Mbta.Decode.liveFacility "live-facilities" filters
 
 
+{-| -}
 type alias LiveFacilitiesFilter =
     { id : List FacilityId
     }
 
 
+{-| -}
 liveFacilitiesFilter : LiveFacilitiesFilter
 liveFacilitiesFilter =
     { id = []
@@ -665,11 +790,13 @@ liveFacilitiesFilter =
 -- Alerts
 
 
+{-| -}
 getAlert : (Result Http.Error Alert -> msg) -> Config -> AlertId -> Cmd msg
 getAlert toMsg config (AlertId alertId) =
     getCustomId toMsg config Mbta.Decode.alert "alerts" alertId
 
 
+{-| -}
 getAlerts : (Result Http.Error (List Alert) -> msg) -> Config -> AlertsFilter -> Cmd msg
 getAlerts toMsg config filter =
     let
@@ -751,6 +878,7 @@ getAlerts toMsg config filter =
     getCustomList toMsg config Mbta.Decode.alert "alerts" filters
 
 
+{-| -}
 type alias AlertsFilter =
     { id : List AlertId
     , routeType : List RouteType
@@ -767,11 +895,13 @@ type alias AlertsFilter =
     }
 
 
+{-| -}
 type AlertDatetimeFilter
     = Datetime Time.Posix
     | Now
 
 
+{-| -}
 alertsFilter : AlertsFilter
 alertsFilter =
     { id = []
