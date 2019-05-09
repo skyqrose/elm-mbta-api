@@ -498,6 +498,9 @@ type AlertId
 
 
 {-| There are long but finite lists of possible values for `effect` and `cause` in the MBTA API docs.
+
+The `banner` field is published by the API, but always `null`, so it's not included here.
+
 -}
 
 
@@ -510,7 +513,6 @@ type alias Alert =
     , url : Maybe String
     , shortHeader : String
     , header : String
-    , banner : Maybe String
     , description : Maybe String
     , createdAt : Time.Posix
     , updatedAt : Time.Posix

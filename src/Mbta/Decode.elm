@@ -555,7 +555,6 @@ alert =
         |> attribute "url" (Decode.nullable Decode.string)
         |> attribute "short_header" Decode.string
         |> attribute "header" Decode.string
-        |> attribute "banner" (Decode.nullable Decode.string)
         |> attribute "description" (Decode.nullable Decode.string)
         |> attribute "created_at" Iso8601.decoder
         |> attribute "updated_at" Iso8601.decoder

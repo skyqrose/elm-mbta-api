@@ -827,14 +827,6 @@ getAlerts toMsg config filter =
                 Activity_UsingWheelchair ->
                     "USING_WHEELCHAIR"
 
-        boolToString : Bool -> String
-        boolToString bool =
-            if bool then
-                "true"
-
-            else
-                "false"
-
         datetimeFilterToString : AlertDatetimeFilter -> String
         datetimeFilterToString datetimeFilter =
             case datetimeFilter of
@@ -869,7 +861,6 @@ getAlerts toMsg config filter =
                 , filterTrip filter.trip
                 , filterList "facility" (\(FacilityId facilityId) -> facilityId) filter.facility
                 , filterList "activity" activityToString filter.activity
-                , filterMaybe "banner" boolToString filter.banner
                 , filterMaybe "datetime" datetimeFilterToString filter.datetime
                 , filterList "lifecycle" lifecycleToString filter.lifecycle
                 , filterList "severity" String.fromInt filter.severity
@@ -888,7 +879,6 @@ type alias AlertsFilter =
     , trip : List TripId
     , facility : List FacilityId
     , activity : List InformedEntityActivity
-    , banner : Maybe Bool
     , datetime : Maybe AlertDatetimeFilter
     , lifecycle : List AlertLifecycle
     , severity : List Int
@@ -912,7 +902,6 @@ alertsFilter =
     , trip = []
     , facility = []
     , activity = []
-    , banner = Nothing
     , datetime = Nothing
     , lifecycle = []
     , severity = []
