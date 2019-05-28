@@ -77,6 +77,7 @@ import Iso8601
 import JsonApi
 import Mbta exposing (..)
 import Mbta.Decode
+import Mbta.Include exposing (Include)
 import Time
 import Url.Builder
 
@@ -121,8 +122,8 @@ type alias Config =
     }
 
 
-url : Config -> List String -> Filters -> String
-url config path filters =
+url : Config -> List String -> Filters -> List (Include resource) -> String
+url config path filters includes =
     let
         urlExceptParams : List Url.Builder.QueryParameter -> String
         urlExceptParams =
@@ -151,21 +152,21 @@ url config path filters =
                 (\( key, values ) -> Url.Builder.string key (String.join "," values))
                 filters
     in
-    urlExceptParams (apiKeyQueryParams ++ filterQueryParams)
+    urlExceptParams (apiKeyQueryParams ++ filterQueryParams ++ Mbta.Include.queryParameter includes)
 
 
-getCustomId : (Result Http.Error resource -> msg) -> Config -> JsonApi.Decoder resource -> String -> String -> Cmd msg
-getCustomId toMsg config resourceDecoder path id =
+getCustomId : (Result Http.Error resource -> msg) -> Config -> JsonApi.Decoder resource -> String -> List (Include resource) -> String -> Cmd msg
+getCustomId toMsg config resourceDecoder path includes id =
     Http.get
-        { url = url config [ path, id ] []
+        { url = url config [ path, id ] [] includes
         , expect = Http.expectJson toMsg (JsonApi.decoderOne resourceDecoder)
         }
 
 
-getCustomList : (Result Http.Error (List resource) -> msg) -> Config -> JsonApi.Decoder resource -> String -> Filters -> Cmd msg
-getCustomList toMsg config resourceDecoder path filters =
+getCustomList : (Result Http.Error (List resource) -> msg) -> Config -> JsonApi.Decoder resource -> String -> List (Include resource) -> Filters -> Cmd msg
+getCustomList toMsg config resourceDecoder path includes filters =
     Http.get
-        { url = url config [ path ] filters
+        { url = url config [ path ] filters includes
         , expect = Http.expectJson toMsg (JsonApi.decoderMany resourceDecoder)
         }
 
@@ -282,8 +283,8 @@ filterList key toString filterValues =
 
 {-| At least one filter (not counting `direcitonId`) is required
 -}
-getPredictions : (Result Http.Error (List Prediction) -> msg) -> Config -> PredictionsFilter -> Cmd msg
-getPredictions toMsg config filter =
+getPredictions : (Result Http.Error (List Prediction) -> msg) -> Config -> List (Include Prediction) -> PredictionsFilter -> Cmd msg
+getPredictions toMsg config includes filter =
     let
         filters =
             List.concat
@@ -295,7 +296,7 @@ getPredictions toMsg config filter =
                 , filterTrip filter.trip
                 ]
     in
-    getCustomList toMsg config Mbta.Decode.prediction "predictions" filters
+    getCustomList toMsg config Mbta.Decode.prediction "predictions" includes filters
 
 
 {-| -}
@@ -322,14 +323,14 @@ predictionsFilter =
 
 
 {-| -}
-getVehicle : (Result Http.Error Vehicle -> msg) -> Config -> VehicleId -> Cmd msg
-getVehicle toMsg config (VehicleId vehicleId) =
-    getCustomId toMsg config Mbta.Decode.vehicle "vehicles" vehicleId
+getVehicle : (Result Http.Error Vehicle -> msg) -> Config -> List (Include Vehicle) -> VehicleId -> Cmd msg
+getVehicle toMsg config includes (VehicleId vehicleId) =
+    getCustomId toMsg config Mbta.Decode.vehicle "vehicles" includes vehicleId
 
 
 {-| -}
-getVehicles : (Result Http.Error (List Vehicle) -> msg) -> Config -> VehiclesFilter -> Cmd msg
-getVehicles toMsg config filter =
+getVehicles : (Result Http.Error (List Vehicle) -> msg) -> Config -> List (Include Vehicle) -> VehiclesFilter -> Cmd msg
+getVehicles toMsg config includes filter =
     let
         filters =
             List.concat
@@ -341,7 +342,7 @@ getVehicles toMsg config filter =
                 , filterRouteType filter.routeType
                 ]
     in
-    getCustomList toMsg config Mbta.Decode.vehicle "vehicles" filters
+    getCustomList toMsg config Mbta.Decode.vehicle "vehicles" includes filters
 
 
 {-| -}
@@ -372,14 +373,14 @@ vehiclesFilter =
 
 
 {-| -}
-getRoute : (Result Http.Error Route -> msg) -> Config -> RouteId -> Cmd msg
-getRoute toMsg config (RouteId routeId) =
-    getCustomId toMsg config Mbta.Decode.route "routes" routeId
+getRoute : (Result Http.Error Route -> msg) -> Config -> List (Include Route) -> RouteId -> Cmd msg
+getRoute toMsg config includes (RouteId routeId) =
+    getCustomId toMsg config Mbta.Decode.route "routes" includes routeId
 
 
 {-| -}
-getRoutes : (Result Http.Error (List Route) -> msg) -> Config -> RoutesFilter -> Cmd msg
-getRoutes toMsg config filter =
+getRoutes : (Result Http.Error (List Route) -> msg) -> Config -> List (Include Route) -> RoutesFilter -> Cmd msg
+getRoutes toMsg config includes filter =
     let
         filters =
             List.concat
@@ -389,7 +390,7 @@ getRoutes toMsg config filter =
                 , filterStop filter.stop
                 ]
     in
-    getCustomList toMsg config Mbta.Decode.route "routes" filters
+    getCustomList toMsg config Mbta.Decode.route "routes" includes filters
 
 
 {-| -}
@@ -412,14 +413,14 @@ routesFilter =
 
 
 {-| -}
-getRoutePattern : (Result Http.Error RoutePattern -> msg) -> Config -> RoutePatternId -> Cmd msg
-getRoutePattern toMsg config (RoutePatternId routePatternId) =
-    getCustomId toMsg config Mbta.Decode.routePattern "route-patterns" routePatternId
+getRoutePattern : (Result Http.Error RoutePattern -> msg) -> Config -> List (Include RoutePattern) -> RoutePatternId -> Cmd msg
+getRoutePattern toMsg config includes (RoutePatternId routePatternId) =
+    getCustomId toMsg config Mbta.Decode.routePattern "route-patterns" includes routePatternId
 
 
 {-| -}
-getRoutePatterns : (Result Http.Error (List RoutePattern) -> msg) -> Config -> RoutePatternsFilter -> Cmd msg
-getRoutePatterns toMsg config filter =
+getRoutePatterns : (Result Http.Error (List RoutePattern) -> msg) -> Config -> List (Include RoutePattern) -> RoutePatternsFilter -> Cmd msg
+getRoutePatterns toMsg config includes filter =
     let
         filters =
             List.concat
@@ -428,7 +429,7 @@ getRoutePatterns toMsg config filter =
                 , filterDirectionId filter.directionId
                 ]
     in
-    getCustomList toMsg config Mbta.Decode.routePattern "route-patterns" filters
+    getCustomList toMsg config Mbta.Decode.routePattern "route-patterns" includes filters
 
 
 {-| -}
@@ -449,21 +450,21 @@ routePatternsFilter =
 
 
 {-| -}
-getLine : (Result Http.Error Line -> msg) -> Config -> LineId -> Cmd msg
-getLine toMsg config (LineId lineId) =
-    getCustomId toMsg config Mbta.Decode.line "lines" lineId
+getLine : (Result Http.Error Line -> msg) -> Config -> List (Include Line) -> LineId -> Cmd msg
+getLine toMsg config includes (LineId lineId) =
+    getCustomId toMsg config Mbta.Decode.line "lines" includes lineId
 
 
 {-| -}
-getLines : (Result Http.Error (List Line) -> msg) -> Config -> LinesFilter -> Cmd msg
-getLines toMsg config filter =
+getLines : (Result Http.Error (List Line) -> msg) -> Config -> List (Include Line) -> LinesFilter -> Cmd msg
+getLines toMsg config includes filter =
     let
         filters =
             List.concat
                 [ filterList "id" (\(LineId lineId) -> lineId) filter.id
                 ]
     in
-    getCustomList toMsg config Mbta.Decode.line "lines" filters
+    getCustomList toMsg config Mbta.Decode.line "lines" includes filters
 
 
 {-| -}
@@ -481,8 +482,8 @@ linesFilter =
 
 {-| Requires filtering by at least one of route, stop, or trip.
 -}
-getSchedules : (Result Http.Error (List Schedule) -> msg) -> Config -> SchedulesFilter -> Cmd msg
-getSchedules toMsg config filter =
+getSchedules : (Result Http.Error (List Schedule) -> msg) -> Config -> List (Include Schedule) -> SchedulesFilter -> Cmd msg
+getSchedules toMsg config includes filter =
     let
         stopSequenceToString : StopSequenceFilter -> String
         stopSequenceToString stopSequenceFilter =
@@ -508,7 +509,7 @@ getSchedules toMsg config filter =
                 , filterList "stop_sequence" stopSequenceToString filter.stopSequence
                 ]
     in
-    getCustomList toMsg config Mbta.Decode.schedule "schedules" filters
+    getCustomList toMsg config Mbta.Decode.schedule "schedules" includes filters
 
 
 {-| -}
@@ -546,14 +547,14 @@ schedulesFilter =
 
 
 {-| -}
-getTrip : (Result Http.Error Trip -> msg) -> Config -> TripId -> Cmd msg
-getTrip toMsg config (TripId tripId) =
-    getCustomId toMsg config Mbta.Decode.trip "trips" tripId
+getTrip : (Result Http.Error Trip -> msg) -> Config -> List (Include Trip) -> TripId -> Cmd msg
+getTrip toMsg config includes (TripId tripId) =
+    getCustomId toMsg config Mbta.Decode.trip "trips" includes tripId
 
 
 {-| -}
-getTrips : (Result Http.Error (List Trip) -> msg) -> Config -> TripsFilter -> Cmd msg
-getTrips toMsg config filter =
+getTrips : (Result Http.Error (List Trip) -> msg) -> Config -> List (Include Trip) -> TripsFilter -> Cmd msg
+getTrips toMsg config includes filter =
     let
         filters =
             List.concat
@@ -564,7 +565,7 @@ getTrips toMsg config filter =
                 , filterList "name" identity filter.name
                 ]
     in
-    getCustomList toMsg config Mbta.Decode.trip "trips" filters
+    getCustomList toMsg config Mbta.Decode.trip "trips" includes filters
 
 
 {-| -}
@@ -590,21 +591,21 @@ tripsFilter =
 
 
 {-| -}
-getService : (Result Http.Error Service -> msg) -> Config -> ServiceId -> Cmd msg
-getService toMsg config (ServiceId serviceId) =
-    getCustomId toMsg config Mbta.Decode.service "services" serviceId
+getService : (Result Http.Error Service -> msg) -> Config -> List (Include Service) -> ServiceId -> Cmd msg
+getService toMsg config includes (ServiceId serviceId) =
+    getCustomId toMsg config Mbta.Decode.service "services" includes serviceId
 
 
 {-| -}
-getServices : (Result Http.Error (List Service) -> msg) -> Config -> ServicesFilter -> Cmd msg
-getServices toMsg config filter =
+getServices : (Result Http.Error (List Service) -> msg) -> Config -> List (Include Service) -> ServicesFilter -> Cmd msg
+getServices toMsg config includes filter =
     let
         filters =
             List.concat
                 [ filterList "id" (\(ServiceId serviceId) -> serviceId) filter.id
                 ]
     in
-    getCustomList toMsg config Mbta.Decode.service "services" filters
+    getCustomList toMsg config Mbta.Decode.service "services" includes filters
 
 
 {-| -}
@@ -621,15 +622,15 @@ servicesFilter =
 
 
 {-| -}
-getShape : (Result Http.Error Shape -> msg) -> Config -> ShapeId -> Cmd msg
-getShape toMsg config (ShapeId shapeId) =
-    getCustomId toMsg config Mbta.Decode.shape "shapes" shapeId
+getShape : (Result Http.Error Shape -> msg) -> Config -> List (Include Shape) -> ShapeId -> Cmd msg
+getShape toMsg config includes (ShapeId shapeId) =
+    getCustomId toMsg config Mbta.Decode.shape "shapes" includes shapeId
 
 
 {-| Must filter by route
 -}
-getShapes : (Result Http.Error (List Shape) -> msg) -> Config -> ShapesFilter -> Cmd msg
-getShapes toMsg config filter =
+getShapes : (Result Http.Error (List Shape) -> msg) -> Config -> List (Include Shape) -> ShapesFilter -> Cmd msg
+getShapes toMsg config includes filter =
     let
         filters =
             List.concat
@@ -637,7 +638,7 @@ getShapes toMsg config filter =
                 , filterDirectionId filter.directionId
                 ]
     in
-    getCustomList toMsg config Mbta.Decode.shape "shapes" filters
+    getCustomList toMsg config Mbta.Decode.shape "shapes" includes filters
 
 
 {-| -}
@@ -661,14 +662,14 @@ shapesFilter routes =
 
 
 {-| -}
-getStop : (Result Http.Error Stop -> msg) -> Config -> StopId -> Cmd msg
-getStop toMsg config (StopId stopId) =
-    getCustomId toMsg config Mbta.Decode.stop "stops" stopId
+getStop : (Result Http.Error Stop -> msg) -> Config -> List (Include Stop) -> StopId -> Cmd msg
+getStop toMsg config includes (StopId stopId) =
+    getCustomId toMsg config Mbta.Decode.stop "stops" includes stopId
 
 
 {-| -}
-getStops : (Result Http.Error (List Stop) -> msg) -> Config -> StopsFilter -> Cmd msg
-getStops toMsg config filter =
+getStops : (Result Http.Error (List Stop) -> msg) -> Config -> List (Include Stop) -> StopsFilter -> Cmd msg
+getStops toMsg config includes filter =
     let
         locationTypeToString : LocationType -> String
         locationTypeToString locationType =
@@ -695,7 +696,7 @@ getStops toMsg config filter =
                 , filterLatLng filter.latLng
                 ]
     in
-    getCustomList toMsg config Mbta.Decode.stop "stops" filters
+    getCustomList toMsg config Mbta.Decode.stop "stops" includes filters
 
 
 {-| -}
@@ -722,14 +723,14 @@ stopsFilter =
 
 
 {-| -}
-getFacility : (Result Http.Error Facility -> msg) -> Config -> FacilityId -> Cmd msg
-getFacility toMsg config (FacilityId facilityId) =
-    getCustomId toMsg config Mbta.Decode.facility "facilities" facilityId
+getFacility : (Result Http.Error Facility -> msg) -> Config -> List (Include Facility) -> FacilityId -> Cmd msg
+getFacility toMsg config includes (FacilityId facilityId) =
+    getCustomId toMsg config Mbta.Decode.facility "facilities" includes facilityId
 
 
 {-| -}
-getFacilities : (Result Http.Error (List Facility) -> msg) -> Config -> FacilitiesFilter -> Cmd msg
-getFacilities toMsg config filter =
+getFacilities : (Result Http.Error (List Facility) -> msg) -> Config -> List (Include Facility) -> FacilitiesFilter -> Cmd msg
+getFacilities toMsg config includes filter =
     let
         filters =
             List.concat
@@ -737,7 +738,7 @@ getFacilities toMsg config filter =
                 , filterList "type" (\(FacilityType facilityType) -> facilityType) filter.facilityType
                 ]
     in
-    getCustomList toMsg config Mbta.Decode.facility "facilities" filters
+    getCustomList toMsg config Mbta.Decode.facility "facilities" includes filters
 
 
 {-| -}
@@ -756,21 +757,21 @@ facilitiesFilter =
 
 
 {-| -}
-getLiveFacility : (Result Http.Error LiveFacility -> msg) -> Config -> FacilityId -> Cmd msg
-getLiveFacility toMsg config (FacilityId facilityId) =
-    getCustomId toMsg config Mbta.Decode.liveFacility "live-facilities" facilityId
+getLiveFacility : (Result Http.Error LiveFacility -> msg) -> Config -> List (Include LiveFacility) -> FacilityId -> Cmd msg
+getLiveFacility toMsg config includes (FacilityId facilityId) =
+    getCustomId toMsg config Mbta.Decode.liveFacility "live-facilities" includes facilityId
 
 
 {-| -}
-getLiveFacilities : (Result Http.Error (List LiveFacility) -> msg) -> Config -> LiveFacilitiesFilter -> Cmd msg
-getLiveFacilities toMsg config filter =
+getLiveFacilities : (Result Http.Error (List LiveFacility) -> msg) -> Config -> List (Include LiveFacility) -> LiveFacilitiesFilter -> Cmd msg
+getLiveFacilities toMsg config includes filter =
     let
         filters =
             List.concat
                 [ filterList "id" (\(FacilityId facilityId) -> facilityId) filter.id
                 ]
     in
-    getCustomList toMsg config Mbta.Decode.liveFacility "live-facilities" filters
+    getCustomList toMsg config Mbta.Decode.liveFacility "live-facilities" includes filters
 
 
 {-| -}
@@ -791,14 +792,14 @@ liveFacilitiesFilter =
 
 
 {-| -}
-getAlert : (Result Http.Error Alert -> msg) -> Config -> AlertId -> Cmd msg
-getAlert toMsg config (AlertId alertId) =
-    getCustomId toMsg config Mbta.Decode.alert "alerts" alertId
+getAlert : (Result Http.Error Alert -> msg) -> Config -> List (Include Alert) -> AlertId -> Cmd msg
+getAlert toMsg config includes (AlertId alertId) =
+    getCustomId toMsg config Mbta.Decode.alert "alerts" includes alertId
 
 
 {-| -}
-getAlerts : (Result Http.Error (List Alert) -> msg) -> Config -> AlertsFilter -> Cmd msg
-getAlerts toMsg config filter =
+getAlerts : (Result Http.Error (List Alert) -> msg) -> Config -> List (Include Alert) -> AlertsFilter -> Cmd msg
+getAlerts toMsg config includes filter =
     let
         activityToString : InformedEntityActivity -> String
         activityToString activity =
@@ -866,7 +867,7 @@ getAlerts toMsg config filter =
                 , filterList "severity" String.fromInt filter.severity
                 ]
     in
-    getCustomList toMsg config Mbta.Decode.alert "alerts" filters
+    getCustomList toMsg config Mbta.Decode.alert "alerts" includes filters
 
 
 {-| -}

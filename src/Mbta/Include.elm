@@ -13,6 +13,7 @@ module Mbta.Include exposing
     , facilityStop
     , liveFacilityFacility
     , alertRoutes, alertTrips, alertStops, alertFacilities
+    , queryParameter
     )
 
 {-| For specifying which additional resources to sideload during an api call
@@ -80,7 +81,7 @@ Any sideloaded resources are put in the [`Included`](#Included) object returned 
 
 ### [Service](#Mbta.Service)
 
-`Service` does not have any relationships to include.
+`Service` does not currently have any relationships to include.
 
 
 ### [Shape](#Mbta.Shape)
@@ -117,6 +118,7 @@ Any sideloaded resources are put in the [`Included`](#Included) object returned 
 
 import AssocList exposing (Dict)
 import Mbta exposing (..)
+import Url.Builder
 
 
 {-| The sideloaded data returned by an api call
@@ -152,6 +154,25 @@ type Relationship from to
 include : Relationship from to -> Include from
 include (Relationship s) =
     Include s
+
+
+{-| Undocumented
+
+For internal use. You won't need this.
+
+-}
+queryParameter : List (Include a) -> List Url.Builder.QueryParameter
+queryParameter includes =
+    case includes of
+        [] ->
+            []
+
+        _ ->
+            includes
+                |> List.map (\(Include s) -> s)
+                |> String.join ","
+                |> Url.Builder.string "include"
+                |> List.singleton
 
 
 {-| For chaining includes
