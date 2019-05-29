@@ -1,19 +1,18 @@
 module Mbta.Api exposing
     ( Host(..)
-    , LatLngFilter
-    , getPredictions, PredictionsFilter, predictionsFilter
-    , getVehicle, getVehicles, VehiclesFilter, vehiclesFilter
-    , getRoute, getRoutes, RoutesFilter, routesFilter
-    , getRoutePattern, getRoutePatterns, RoutePatternsFilter, routePatternsFilter
-    , getLine, getLines, LinesFilter, linesFilter
-    , getSchedules, SchedulesFilter, StopSequenceFilter(..), schedulesFilter
-    , getTrip, getTrips, TripsFilter, tripsFilter
-    , getService, getServices, ServicesFilter, servicesFilter
-    , getShape, getShapes, ShapesFilter, shapesFilter
-    , getStop, getStops, StopsFilter, stopsFilter
-    , getFacility, getFacilities, FacilitiesFilter, facilitiesFilter
-    , getLiveFacility, getLiveFacilities, LiveFacilitiesFilter, liveFacilitiesFilter
-    , getAlert, getAlerts, AlertsFilter, AlertDatetimeFilter(..), alertsFilter
+    , getPredictions
+    , getVehicle, getVehicles
+    , getRoute, getRoutes
+    , getRoutePattern, getRoutePatterns
+    , getLine, getLines
+    , getSchedules
+    , getTrip, getTrips
+    , getService, getServices
+    , getShape, getShapes
+    , getStop, getStops
+    , getFacility, getFacilities
+    , getLiveFacility, getLiveFacilities
+    , getAlert, getAlerts
     )
 
 {-| Make HTTP requests to get data
@@ -36,49 +35,42 @@ though note that some calls require at least one filter to be specified.
 @docs Host
 
 
-# Util
-
-@docs LatLngFilter
-
-
 # Realtime Data
 
-@docs getPredictions, PredictionsFilter, predictionsFilter
-@docs getVehicle, getVehicles, VehiclesFilter, vehiclesFilter
+@docs getPredictions
+@docs getVehicle, getVehicles
 
 
 # Schedule Data
 
-@docs getRoute, getRoutes, RoutesFilter, routesFilter
-@docs getRoutePattern, getRoutePatterns, RoutePatternsFilter, routePatternsFilter
-@docs getLine, getLines, LinesFilter, linesFilter
-@docs getSchedules, SchedulesFilter, StopSequenceFilter, schedulesFilter
-@docs getTrip, getTrips, TripsFilter, tripsFilter
-@docs getService, getServices, ServicesFilter, servicesFilter
-@docs getShape, getShapes, ShapesFilter, shapesFilter
+@docs getRoute, getRoutes
+@docs getRoutePattern, getRoutePatterns
+@docs getLine, getLines
+@docs getSchedules
+@docs getTrip, getTrips
+@docs getService, getServices
+@docs getShape, getShapes
 
 
 # Stops
 
-@docs getStop, getStops, StopsFilter, stopsFilter
-@docs getFacility, getFacilities, FacilitiesFilter, facilitiesFilter
-@docs getLiveFacility, getLiveFacilities, LiveFacilitiesFilter, liveFacilitiesFilter
+@docs getStop, getStops
+@docs getFacility, getFacilities
+@docs getLiveFacility, getLiveFacilities
 
 
 # Alerts
 
-@docs getAlert, getAlerts, AlertsFilter, AlertDatetimeFilter, alertsFilter
+@docs getAlert, getAlerts
 
 -}
 
-import DecodeHelpers
 import Http
-import Iso8601
 import JsonApi
 import Mbta exposing (..)
 import Mbta.Decode
+import Mbta.Filter exposing (Filter)
 import Mbta.Include exposing (Include)
-import Time
 import Url.Builder
 
 
@@ -119,15 +111,8 @@ type Host
         }
 
 
-url : Host -> List String -> Filters -> List (Include resource) -> String
+url : Host -> List String -> List (Filter resource) -> List (Include resource) -> String
 url host path filters includes =
-    let
-        filterQueryParams : List Url.Builder.QueryParameter
-        filterQueryParams =
-            List.map
-                (\( key, values ) -> Url.Builder.string key (String.join "," values))
-                filters
-    in
     case host of
         Default config ->
             let
@@ -143,18 +128,33 @@ url host path filters includes =
             Url.Builder.crossOrigin
                 "https://api-v3.mbta.com"
                 path
-                (apiKeyQueryParam ++ Mbta.Include.queryParameter includes ++ filterQueryParams)
+                (List.concat
+                    [ apiKeyQueryParam
+                    , Mbta.Include.queryParameter includes
+                    , Mbta.Filter.queryParameters filters
+                    ]
+                )
 
         SameOrigin config ->
             Url.Builder.absolute
                 (config.basePath ++ path)
-                (config.queryParameters ++ Mbta.Include.queryParameter includes ++ filterQueryParams)
+                (List.concat
+                    [ config.queryParameters
+                    , Mbta.Include.queryParameter includes
+                    , Mbta.Filter.queryParameters filters
+                    ]
+                )
 
         CustomHost config ->
             Url.Builder.crossOrigin
                 config.host
                 (config.basePath ++ path)
-                (config.queryParameters ++ Mbta.Include.queryParameter includes ++ filterQueryParams)
+                (List.concat
+                    [ config.queryParameters
+                    , Mbta.Include.queryParameter includes
+                    , Mbta.Filter.queryParameters filters
+                    ]
+                )
 
 
 getCustomId : (Result Http.Error resource -> msg) -> Host -> JsonApi.Decoder resource -> String -> List (Include resource) -> String -> Cmd msg
@@ -165,7 +165,7 @@ getCustomId toMsg host resourceDecoder path includes id =
         }
 
 
-getCustomList : (Result Http.Error (List resource) -> msg) -> Host -> JsonApi.Decoder resource -> String -> List (Include resource) -> Filters -> Cmd msg
+getCustomList : (Result Http.Error (List resource) -> msg) -> Host -> JsonApi.Decoder resource -> String -> List (Include resource) -> List (Filter resource) -> Cmd msg
 getCustomList toMsg host resourceDecoder path includes filters =
     Http.get
         { url = url host [ path ] filters includes
@@ -174,154 +174,14 @@ getCustomList toMsg host resourceDecoder path includes filters =
 
 
 
--- Filtering
-
-
-type alias Filters =
-    List ( String, List String )
-
-
-type alias LatLngFilter =
-    { latLng : LatLng
-    , radius : Maybe Float
-    }
-
-
-filterLatLng : Maybe LatLngFilter -> Filters
-filterLatLng mll =
-    case mll of
-        Nothing ->
-            []
-
-        Just ll ->
-            [ ( "latitude", [ String.fromFloat ll.latLng.latitude ] )
-            , ( "longitude", [ String.fromFloat ll.latLng.longitude ] )
-            ]
-                ++ (case ll.radius of
-                        Nothing ->
-                            []
-
-                        Just radius ->
-                            [ ( "radius", [ String.fromFloat radius ] ) ]
-                   )
-
-
-filterDirectionId : Maybe DirectionId -> Filters
-filterDirectionId maybeDirectionId =
-    let
-        toString directionId =
-            case directionId of
-                D0 ->
-                    "0"
-
-                D1 ->
-                    "1"
-    in
-    filterMaybe "direction_id" toString maybeDirectionId
-
-
-routeTypeToString : RouteType -> String
-routeTypeToString routeType =
-    case routeType of
-        RouteType_0_LightRail ->
-            "0"
-
-        RouteType_1_HeavyRail ->
-            "1"
-
-        RouteType_2_CommuterRail ->
-            "2"
-
-        RouteType_3_Bus ->
-            "3"
-
-        RouteType_4_Ferry ->
-            "4"
-
-
-filterRouteType : List RouteType -> Filters
-filterRouteType routeTypes =
-    filterList "route_type" routeTypeToString routeTypes
-
-
-filterRoute : List RouteId -> Filters
-filterRoute routes =
-    filterList "route" (\(RouteId routeId) -> routeId) routes
-
-
-filterStop : List StopId -> Filters
-filterStop stops =
-    filterList "stop" (\(StopId stopId) -> stopId) stops
-
-
-filterTrip : List TripId -> Filters
-filterTrip trips =
-    filterList "trip" (\(TripId tripId) -> tripId) trips
-
-
-filterMaybe : String -> (filterValue -> String) -> Maybe filterValue -> Filters
-filterMaybe key toString filterValue =
-    case filterValue of
-        Nothing ->
-            []
-
-        Just value ->
-            [ ( key, [ toString value ] ) ]
-
-
-filterList : String -> (filterValues -> String) -> List filterValues -> Filters
-filterList key toString filterValues =
-    case filterValues of
-        [] ->
-            []
-
-        values ->
-            [ ( key, List.map toString values ) ]
-
-
-
 -- Realtime Data
 
 
-{-| At least one filter (not counting `direcitonId`) is required
+{-| At least one filter (not counting `directionId`) is required
 -}
-getPredictions : (Result Http.Error (List Prediction) -> msg) -> Host -> List (Include Prediction) -> PredictionsFilter -> Cmd msg
-getPredictions toMsg host includes filter =
-    let
-        filters =
-            List.concat
-                [ filterLatLng filter.latLng
-                , filterDirectionId filter.directionId
-                , filterRouteType filter.routeType
-                , filterRoute filter.route
-                , filterStop filter.stop
-                , filterTrip filter.trip
-                ]
-    in
+getPredictions : (Result Http.Error (List Prediction) -> msg) -> Host -> List (Include Prediction) -> List (Filter Prediction) -> Cmd msg
+getPredictions toMsg host includes filters =
     getCustomList toMsg host Mbta.Decode.prediction "predictions" includes filters
-
-
-{-| -}
-type alias PredictionsFilter =
-    { latLng : Maybe LatLngFilter
-    , directionId : Maybe DirectionId
-    , routeType : List RouteType
-    , route : List RouteId
-    , stop : List StopId
-    , trip : List TripId
-    }
-
-
-{-| -}
-predictionsFilter : PredictionsFilter
-predictionsFilter =
-    { latLng = Nothing
-    , directionId = Nothing
-    , routeType = []
-    , route = []
-    , stop = []
-    , trip = []
-    }
 
 
 {-| -}
@@ -331,43 +191,9 @@ getVehicle toMsg host includes (VehicleId vehicleId) =
 
 
 {-| -}
-getVehicles : (Result Http.Error (List Vehicle) -> msg) -> Host -> List (Include Vehicle) -> VehiclesFilter -> Cmd msg
-getVehicles toMsg host includes filter =
-    let
-        filters =
-            List.concat
-                [ filterList "id" (\(VehicleId vehicleId) -> vehicleId) filter.id
-                , filterTrip filter.trip
-                , filterList "label" identity filter.label
-                , filterRoute filter.route
-                , filterDirectionId filter.directionId
-                , filterRouteType filter.routeType
-                ]
-    in
+getVehicles : (Result Http.Error (List Vehicle) -> msg) -> Host -> List (Include Vehicle) -> List (Filter Vehicle) -> Cmd msg
+getVehicles toMsg host includes filters =
     getCustomList toMsg host Mbta.Decode.vehicle "vehicles" includes filters
-
-
-{-| -}
-type alias VehiclesFilter =
-    { id : List VehicleId
-    , trip : List TripId
-    , label : List String
-    , route : List RouteId
-    , directionId : Maybe DirectionId
-    , routeType : List RouteType
-    }
-
-
-{-| -}
-vehiclesFilter : VehiclesFilter
-vehiclesFilter =
-    { id = []
-    , trip = []
-    , label = []
-    , route = []
-    , directionId = Nothing
-    , routeType = []
-    }
 
 
 
@@ -381,37 +207,9 @@ getRoute toMsg host includes (RouteId routeId) =
 
 
 {-| -}
-getRoutes : (Result Http.Error (List Route) -> msg) -> Host -> List (Include Route) -> RoutesFilter -> Cmd msg
-getRoutes toMsg host includes filter =
-    let
-        filters =
-            List.concat
-                [ filterList "id" (\(RouteId routeId) -> routeId) filter.id
-                , filterList "type" routeTypeToString filter.routeType
-                , filterDirectionId filter.directionId
-                , filterStop filter.stop
-                ]
-    in
+getRoutes : (Result Http.Error (List Route) -> msg) -> Host -> List (Include Route) -> List (Filter Route) -> Cmd msg
+getRoutes toMsg host includes filters =
     getCustomList toMsg host Mbta.Decode.route "routes" includes filters
-
-
-{-| -}
-type alias RoutesFilter =
-    { id : List RouteId
-    , routeType : List RouteType
-    , directionId : Maybe DirectionId
-    , stop : List StopId
-    }
-
-
-{-| -}
-routesFilter : RoutesFilter
-routesFilter =
-    { id = []
-    , routeType = []
-    , directionId = Nothing
-    , stop = []
-    }
 
 
 {-| -}
@@ -421,34 +219,9 @@ getRoutePattern toMsg host includes (RoutePatternId routePatternId) =
 
 
 {-| -}
-getRoutePatterns : (Result Http.Error (List RoutePattern) -> msg) -> Host -> List (Include RoutePattern) -> RoutePatternsFilter -> Cmd msg
-getRoutePatterns toMsg host includes filter =
-    let
-        filters =
-            List.concat
-                [ filterList "id" (\(RoutePatternId routePatternId) -> routePatternId) filter.id
-                , filterRoute filter.route
-                , filterDirectionId filter.directionId
-                ]
-    in
+getRoutePatterns : (Result Http.Error (List RoutePattern) -> msg) -> Host -> List (Include RoutePattern) -> List (Filter RoutePattern) -> Cmd msg
+getRoutePatterns toMsg host includes filters =
     getCustomList toMsg host Mbta.Decode.routePattern "route-patterns" includes filters
-
-
-{-| -}
-type alias RoutePatternsFilter =
-    { id : List RoutePatternId
-    , route : List RouteId
-    , directionId : Maybe DirectionId
-    }
-
-
-{-| -}
-routePatternsFilter : RoutePatternsFilter
-routePatternsFilter =
-    { id = []
-    , route = []
-    , directionId = Nothing
-    }
 
 
 {-| -}
@@ -458,94 +231,16 @@ getLine toMsg host includes (LineId lineId) =
 
 
 {-| -}
-getLines : (Result Http.Error (List Line) -> msg) -> Host -> List (Include Line) -> LinesFilter -> Cmd msg
-getLines toMsg host includes filter =
-    let
-        filters =
-            List.concat
-                [ filterList "id" (\(LineId lineId) -> lineId) filter.id
-                ]
-    in
+getLines : (Result Http.Error (List Line) -> msg) -> Host -> List (Include Line) -> List (Filter Line) -> Cmd msg
+getLines toMsg host includes filters =
     getCustomList toMsg host Mbta.Decode.line "lines" includes filters
-
-
-{-| -}
-type alias LinesFilter =
-    { id : List LineId
-    }
-
-
-{-| -}
-linesFilter : LinesFilter
-linesFilter =
-    { id = []
-    }
 
 
 {-| Requires filtering by at least one of route, stop, or trip.
 -}
-getSchedules : (Result Http.Error (List Schedule) -> msg) -> Host -> List (Include Schedule) -> SchedulesFilter -> Cmd msg
-getSchedules toMsg host includes filter =
-    let
-        stopSequenceToString : StopSequenceFilter -> String
-        stopSequenceToString stopSequenceFilter =
-            case stopSequenceFilter of
-                StopSequence stopSequence ->
-                    String.fromInt stopSequence
-
-                First ->
-                    "first"
-
-                Last ->
-                    "last"
-
-        filters =
-            List.concat
-                [ filterMaybe "date" (\(ServiceDate serviceDate) -> serviceDate) filter.serviceDate
-                , filterDirectionId filter.directionId
-                , filterMaybe "min_time" identity filter.minTime
-                , filterMaybe "max_time" identity filter.maxTime
-                , filterRoute filter.route
-                , filterStop filter.stop
-                , filterTrip filter.trip
-                , filterList "stop_sequence" stopSequenceToString filter.stopSequence
-                ]
-    in
+getSchedules : (Result Http.Error (List Schedule) -> msg) -> Host -> List (Include Schedule) -> List (Filter Schedule) -> Cmd msg
+getSchedules toMsg host includes filters =
     getCustomList toMsg host Mbta.Decode.schedule "schedules" includes filters
-
-
-{-| -}
-type alias SchedulesFilter =
-    { serviceDate : Maybe ServiceDate
-    , directionId : Maybe DirectionId
-    , minTime : Maybe String
-    , maxTime : Maybe String
-    , route : List RouteId
-    , stop : List StopId
-    , trip : List TripId
-    , stopSequence : List StopSequenceFilter
-    }
-
-
-{-| -}
-type StopSequenceFilter
-    = StopSequence Int
-    | First
-    | Last
-
-
-{-| -}
-schedulesFilter : SchedulesFilter
-schedulesFilter =
-    { serviceDate = Nothing
-    , directionId = Nothing
-    , minTime = Nothing
-    , maxTime = Nothing
-    , route = []
-    , stop = []
-    , trip = []
-    , stopSequence = []
-    }
 
 
 {-| -}
@@ -555,41 +250,9 @@ getTrip toMsg host includes (TripId tripId) =
 
 
 {-| -}
-getTrips : (Result Http.Error (List Trip) -> msg) -> Host -> List (Include Trip) -> TripsFilter -> Cmd msg
-getTrips toMsg host includes filter =
-    let
-        filters =
-            List.concat
-                [ filterList "id" (\(TripId tripId) -> tripId) filter.id
-                , filterRoute filter.route
-                , filterDirectionId filter.directionId
-                , filterList "route_pattern" (\(RoutePatternId routePatternId) -> routePatternId) filter.routePattern
-                , filterList "name" identity filter.name
-                ]
-    in
+getTrips : (Result Http.Error (List Trip) -> msg) -> Host -> List (Include Trip) -> List (Filter Trip) -> Cmd msg
+getTrips toMsg host includes filters =
     getCustomList toMsg host Mbta.Decode.trip "trips" includes filters
-
-
-{-| -}
-type alias TripsFilter =
-    -- TODO date filter, which didn't work.
-    { id : List TripId
-    , route : List RouteId
-    , directionId : Maybe DirectionId
-    , routePattern : List RoutePatternId
-    , name : List String
-    }
-
-
-{-| -}
-tripsFilter : TripsFilter
-tripsFilter =
-    { id = []
-    , route = []
-    , directionId = Nothing
-    , routePattern = []
-    , name = []
-    }
 
 
 {-| -}
@@ -599,28 +262,9 @@ getService toMsg host includes (ServiceId serviceId) =
 
 
 {-| -}
-getServices : (Result Http.Error (List Service) -> msg) -> Host -> List (Include Service) -> ServicesFilter -> Cmd msg
-getServices toMsg host includes filter =
-    let
-        filters =
-            List.concat
-                [ filterList "id" (\(ServiceId serviceId) -> serviceId) filter.id
-                ]
-    in
+getServices : (Result Http.Error (List Service) -> msg) -> Host -> List (Include Service) -> List (Filter Service) -> Cmd msg
+getServices toMsg host includes filters =
     getCustomList toMsg host Mbta.Decode.service "services" includes filters
-
-
-{-| -}
-type alias ServicesFilter =
-    { id : List ServiceId
-    }
-
-
-{-| -}
-servicesFilter : ServicesFilter
-servicesFilter =
-    { id = []
-    }
 
 
 {-| -}
@@ -631,32 +275,9 @@ getShape toMsg host includes (ShapeId shapeId) =
 
 {-| Must filter by route
 -}
-getShapes : (Result Http.Error (List Shape) -> msg) -> Host -> List (Include Shape) -> ShapesFilter -> Cmd msg
-getShapes toMsg host includes filter =
-    let
-        filters =
-            List.concat
-                [ filterRoute filter.route
-                , filterDirectionId filter.directionId
-                ]
-    in
+getShapes : (Result Http.Error (List Shape) -> msg) -> Host -> List (Include Shape) -> List (Filter Shape) -> Cmd msg
+getShapes toMsg host includes filters =
     getCustomList toMsg host Mbta.Decode.shape "shapes" includes filters
-
-
-{-| -}
-type alias ShapesFilter =
-    { route : List RouteId
-    , directionId : Maybe DirectionId
-    }
-
-
-{-| Must filter by route
--}
-shapesFilter : List RouteId -> ShapesFilter
-shapesFilter routes =
-    { route = routes
-    , directionId = Nothing
-    }
 
 
 
@@ -670,58 +291,9 @@ getStop toMsg host includes (StopId stopId) =
 
 
 {-| -}
-getStops : (Result Http.Error (List Stop) -> msg) -> Host -> List (Include Stop) -> StopsFilter -> Cmd msg
-getStops toMsg host includes filter =
-    let
-        locationTypeToString : LocationType -> String
-        locationTypeToString locationType =
-            case locationType of
-                LocationType_0_Stop ->
-                    "0"
-
-                LocationType_1_Station ->
-                    "1"
-
-                LocationType_2_Entrance ->
-                    "2"
-
-                LocationType_3_Node ->
-                    "3"
-
-        filters =
-            List.concat
-                [ filterList "id" (\(StopId stopId) -> stopId) filter.id
-                , filterRouteType filter.routeType
-                , filterRoute filter.route
-                , filterDirectionId filter.directionId
-                , filterList "location_type" locationTypeToString filter.locationType
-                , filterLatLng filter.latLng
-                ]
-    in
+getStops : (Result Http.Error (List Stop) -> msg) -> Host -> List (Include Stop) -> List (Filter Stop) -> Cmd msg
+getStops toMsg host includes filters =
     getCustomList toMsg host Mbta.Decode.stop "stops" includes filters
-
-
-{-| -}
-type alias StopsFilter =
-    { id : List StopId
-    , routeType : List RouteType
-    , route : List RouteId
-    , directionId : Maybe DirectionId
-    , locationType : List LocationType
-    , latLng : Maybe LatLngFilter
-    }
-
-
-{-| -}
-stopsFilter : StopsFilter
-stopsFilter =
-    { id = []
-    , routeType = []
-    , route = []
-    , directionId = Nothing
-    , locationType = []
-    , latLng = Nothing
-    }
 
 
 {-| -}
@@ -731,31 +303,9 @@ getFacility toMsg host includes (FacilityId facilityId) =
 
 
 {-| -}
-getFacilities : (Result Http.Error (List Facility) -> msg) -> Host -> List (Include Facility) -> FacilitiesFilter -> Cmd msg
-getFacilities toMsg host includes filter =
-    let
-        filters =
-            List.concat
-                [ filterStop filter.stop
-                , filterList "type" (\(FacilityType facilityType) -> facilityType) filter.facilityType
-                ]
-    in
+getFacilities : (Result Http.Error (List Facility) -> msg) -> Host -> List (Include Facility) -> List (Filter Facility) -> Cmd msg
+getFacilities toMsg host includes filters =
     getCustomList toMsg host Mbta.Decode.facility "facilities" includes filters
-
-
-{-| -}
-type alias FacilitiesFilter =
-    { stop : List StopId
-    , facilityType : List FacilityType
-    }
-
-
-{-| -}
-facilitiesFilter : FacilitiesFilter
-facilitiesFilter =
-    { stop = []
-    , facilityType = []
-    }
 
 
 {-| -}
@@ -765,28 +315,9 @@ getLiveFacility toMsg host includes (FacilityId facilityId) =
 
 
 {-| -}
-getLiveFacilities : (Result Http.Error (List LiveFacility) -> msg) -> Host -> List (Include LiveFacility) -> LiveFacilitiesFilter -> Cmd msg
-getLiveFacilities toMsg host includes filter =
-    let
-        filters =
-            List.concat
-                [ filterList "id" (\(FacilityId facilityId) -> facilityId) filter.id
-                ]
-    in
+getLiveFacilities : (Result Http.Error (List LiveFacility) -> msg) -> Host -> List (Include LiveFacility) -> List (Filter LiveFacility) -> Cmd msg
+getLiveFacilities toMsg host includes filters =
     getCustomList toMsg host Mbta.Decode.liveFacility "live-facilities" includes filters
-
-
-{-| -}
-type alias LiveFacilitiesFilter =
-    { id : List FacilityId
-    }
-
-
-{-| -}
-liveFacilitiesFilter : LiveFacilitiesFilter
-liveFacilitiesFilter =
-    { id = []
-    }
 
 
 
@@ -800,112 +331,6 @@ getAlert toMsg host includes (AlertId alertId) =
 
 
 {-| -}
-getAlerts : (Result Http.Error (List Alert) -> msg) -> Host -> List (Include Alert) -> AlertsFilter -> Cmd msg
-getAlerts toMsg host includes filter =
-    let
-        activityToString : InformedEntityActivity -> String
-        activityToString activity =
-            case activity of
-                Activity_Board ->
-                    "BOARD"
-
-                Activity_BringingBike ->
-                    "BRINGING_BIKE"
-
-                Activity_Exit ->
-                    "EXIT"
-
-                Activity_ParkCar ->
-                    "PARK_CAR"
-
-                Activity_Ride ->
-                    "RIDE"
-
-                Activity_StoreBike ->
-                    "STORE_BIKE"
-
-                Activity_UsingEscalator ->
-                    "USING_ESCALATOR"
-
-                Activity_UsingWheelchair ->
-                    "USING_WHEELCHAIR"
-
-        datetimeFilterToString : AlertDatetimeFilter -> String
-        datetimeFilterToString datetimeFilter =
-            case datetimeFilter of
-                Datetime posix ->
-                    Iso8601.fromTime posix
-
-                Now ->
-                    "NOW"
-
-        lifecycleToString : AlertLifecycle -> String
-        lifecycleToString lifecycle =
-            case lifecycle of
-                Alert_New ->
-                    "NEW"
-
-                Alert_Ongoing ->
-                    "ONGOING"
-
-                Alert_OngoingUpcoming ->
-                    "ONGOING_UPCOMING"
-
-                Alert_Upcoming ->
-                    "UPCOMING"
-
-        filters =
-            List.concat
-                [ filterList "id" (\(AlertId alertId) -> alertId) filter.id
-                , filterRouteType filter.routeType
-                , filterDirectionId filter.directionId
-                , filterRoute filter.route
-                , filterStop filter.stop
-                , filterTrip filter.trip
-                , filterList "facility" (\(FacilityId facilityId) -> facilityId) filter.facility
-                , filterList "activity" activityToString filter.activity
-                , filterMaybe "datetime" datetimeFilterToString filter.datetime
-                , filterList "lifecycle" lifecycleToString filter.lifecycle
-                , filterList "severity" String.fromInt filter.severity
-                ]
-    in
+getAlerts : (Result Http.Error (List Alert) -> msg) -> Host -> List (Include Alert) -> List (Filter Alert) -> Cmd msg
+getAlerts toMsg host includes filters =
     getCustomList toMsg host Mbta.Decode.alert "alerts" includes filters
-
-
-{-| -}
-type alias AlertsFilter =
-    { id : List AlertId
-    , routeType : List RouteType
-    , directionId : Maybe DirectionId
-    , route : List RouteId
-    , stop : List StopId
-    , trip : List TripId
-    , facility : List FacilityId
-    , activity : List InformedEntityActivity
-    , datetime : Maybe AlertDatetimeFilter
-    , lifecycle : List AlertLifecycle
-    , severity : List Int
-    }
-
-
-{-| -}
-type AlertDatetimeFilter
-    = Datetime Time.Posix
-    | Now
-
-
-{-| -}
-alertsFilter : AlertsFilter
-alertsFilter =
-    { id = []
-    , routeType = []
-    , directionId = Nothing
-    , route = []
-    , stop = []
-    , trip = []
-    , facility = []
-    , activity = []
-    , datetime = Nothing
-    , lifecycle = []
-    , severity = []
-    }
