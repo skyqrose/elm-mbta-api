@@ -156,10 +156,7 @@ include (Relationship s) =
     Include s
 
 
-{-| Undocumented
-
-For internal use. You won't need this.
-
+{-| For internal use. You won't need this unless you're constructing your own urls.
 -}
 queryParameter : List (Include a) -> List Url.Builder.QueryParameter
 queryParameter includes =

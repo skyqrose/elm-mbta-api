@@ -148,10 +148,7 @@ type Filter resource
     = Filter (List ( String, List String ))
 
 
-{-| Undocumented
-
-For internal use. You won't need this unless you're constructing your own urls.
-
+{-| For internal use. You won't need this unless you're constructing your own urls.
 -}
 queryParameters : List (Filter a) -> List Url.Builder.QueryParameter
 queryParameters filters =
