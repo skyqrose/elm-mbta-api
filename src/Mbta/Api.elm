@@ -66,6 +66,7 @@ though note that some calls require at least one filter to be specified.
 -}
 
 import Http
+import Json.Decode
 import JsonApi
 import Mbta exposing (..)
 import Mbta.Decode
@@ -111,8 +112,8 @@ type Host
         }
 
 
-url : Host -> List String -> List (Filter resource) -> List (Include resource) -> String
-url host path filters includes =
+makeUrl : Host -> List String -> List (Filter resource) -> List (Include resource) -> String
+makeUrl host path filters includes =
     case host of
         Default config ->
             let
@@ -157,44 +158,63 @@ url host path filters includes =
                 )
 
 
-getCustomId : (Result Http.Error resource -> msg) -> Host -> JsonApi.Decoder resource -> String -> List (Include resource) -> String -> Cmd msg
+getCustomId : (Result Error resource -> msg) -> Host -> JsonApi.Decoder resource -> String -> List (Include resource) -> String -> Cmd msg
 getCustomId toMsg host resourceDecoder path includes id =
-    let
-        documentToMsg : Result Http.Error JsonApi.Document -> msg
-        documentToMsg result =
-            result
-                |> Result.andThen
-                    (\document ->
-                        document
-                            |> JsonApi.decodeOne resourceDecoder
-                            |> Result.mapError (Http.BadBody << JsonApi.documentErrorToString)
-                    )
-                |> toMsg
-    in
-    Http.get
-        { url = url host [ path, id ] [] includes
-        , expect = Http.expectJson documentToMsg JsonApi.documentDecoder
-        }
+    getCustom
+        toMsg
+        (makeUrl host [ path, id ] [] includes)
+        (JsonApi.decodeOne resourceDecoder)
 
 
-getCustomList : (Result Http.Error (List resource) -> msg) -> Host -> JsonApi.Decoder resource -> String -> List (Include resource) -> List (Filter resource) -> Cmd msg
+getCustomList : (Result Error (List resource) -> msg) -> Host -> JsonApi.Decoder resource -> String -> List (Include resource) -> List (Filter resource) -> Cmd msg
 getCustomList toMsg host resourceDecoder path includes filters =
+    getCustom
+        toMsg
+        (makeUrl host [ path ] filters includes)
+        (JsonApi.decodeMany resourceDecoder)
+
+
+getCustom : (Result Error data -> msg) -> String -> (JsonApi.Document -> Result JsonApi.DocumentError data) -> Cmd msg
+getCustom toMsg url decodeDocument =
     let
         documentToMsg : Result Http.Error JsonApi.Document -> msg
-        documentToMsg result =
-            result
+        documentToMsg httpResult =
+            httpResult
+                |> Result.mapError HttpError
                 |> Result.andThen
                     (\document ->
                         document
-                            |> JsonApi.decodeMany resourceDecoder
-                            |> Result.mapError (Http.BadBody << JsonApi.documentErrorToString)
+                            |> decodeDocument
+                            |> Result.mapError DecodeError
                     )
                 |> toMsg
     in
     Http.get
-        { url = url host [ path ] filters includes
+        { url = url
         , expect = Http.expectJson documentToMsg JsonApi.documentDecoder
         }
+
+
+
+-- Result
+
+
+{-| Sometimes things don't go as planned.
+
+If we fail to decode the JSON:API format, that will show up as HttpError Http.BadPayload
+If we fail to decode the MBTA types from the JSON:API format, it will be a DecodeError
+
+Either way is a bug in this library. Please report it.
+TODO more reporting directions
+
+TODO document cases
+TODO create illegalCall
+
+-}
+type Error
+    = HttpError Http.Error
+    | DecodeError JsonApi.DocumentError
+    | IllegalCall String
 
 
 
@@ -203,19 +223,19 @@ getCustomList toMsg host resourceDecoder path includes filters =
 
 {-| At least one filter (not counting `directionId`) is required
 -}
-getPredictions : (Result Http.Error (List Prediction) -> msg) -> Host -> List (Include Prediction) -> List (Filter Prediction) -> Cmd msg
+getPredictions : (Result Error (List Prediction) -> msg) -> Host -> List (Include Prediction) -> List (Filter Prediction) -> Cmd msg
 getPredictions toMsg host includes filters =
     getCustomList toMsg host Mbta.Decode.prediction "predictions" includes filters
 
 
 {-| -}
-getVehicle : (Result Http.Error Vehicle -> msg) -> Host -> List (Include Vehicle) -> VehicleId -> Cmd msg
+getVehicle : (Result Error Vehicle -> msg) -> Host -> List (Include Vehicle) -> VehicleId -> Cmd msg
 getVehicle toMsg host includes (VehicleId vehicleId) =
     getCustomId toMsg host Mbta.Decode.vehicle "vehicles" includes vehicleId
 
 
 {-| -}
-getVehicles : (Result Http.Error (List Vehicle) -> msg) -> Host -> List (Include Vehicle) -> List (Filter Vehicle) -> Cmd msg
+getVehicles : (Result Error (List Vehicle) -> msg) -> Host -> List (Include Vehicle) -> List (Filter Vehicle) -> Cmd msg
 getVehicles toMsg host includes filters =
     getCustomList toMsg host Mbta.Decode.vehicle "vehicles" includes filters
 
@@ -225,81 +245,81 @@ getVehicles toMsg host includes filters =
 
 
 {-| -}
-getRoute : (Result Http.Error Route -> msg) -> Host -> List (Include Route) -> RouteId -> Cmd msg
+getRoute : (Result Error Route -> msg) -> Host -> List (Include Route) -> RouteId -> Cmd msg
 getRoute toMsg host includes (RouteId routeId) =
     getCustomId toMsg host Mbta.Decode.route "routes" includes routeId
 
 
 {-| -}
-getRoutes : (Result Http.Error (List Route) -> msg) -> Host -> List (Include Route) -> List (Filter Route) -> Cmd msg
+getRoutes : (Result Error (List Route) -> msg) -> Host -> List (Include Route) -> List (Filter Route) -> Cmd msg
 getRoutes toMsg host includes filters =
     getCustomList toMsg host Mbta.Decode.route "routes" includes filters
 
 
 {-| -}
-getRoutePattern : (Result Http.Error RoutePattern -> msg) -> Host -> List (Include RoutePattern) -> RoutePatternId -> Cmd msg
+getRoutePattern : (Result Error RoutePattern -> msg) -> Host -> List (Include RoutePattern) -> RoutePatternId -> Cmd msg
 getRoutePattern toMsg host includes (RoutePatternId routePatternId) =
     getCustomId toMsg host Mbta.Decode.routePattern "route-patterns" includes routePatternId
 
 
 {-| -}
-getRoutePatterns : (Result Http.Error (List RoutePattern) -> msg) -> Host -> List (Include RoutePattern) -> List (Filter RoutePattern) -> Cmd msg
+getRoutePatterns : (Result Error (List RoutePattern) -> msg) -> Host -> List (Include RoutePattern) -> List (Filter RoutePattern) -> Cmd msg
 getRoutePatterns toMsg host includes filters =
     getCustomList toMsg host Mbta.Decode.routePattern "route-patterns" includes filters
 
 
 {-| -}
-getLine : (Result Http.Error Line -> msg) -> Host -> List (Include Line) -> LineId -> Cmd msg
+getLine : (Result Error Line -> msg) -> Host -> List (Include Line) -> LineId -> Cmd msg
 getLine toMsg host includes (LineId lineId) =
     getCustomId toMsg host Mbta.Decode.line "lines" includes lineId
 
 
 {-| -}
-getLines : (Result Http.Error (List Line) -> msg) -> Host -> List (Include Line) -> List (Filter Line) -> Cmd msg
+getLines : (Result Error (List Line) -> msg) -> Host -> List (Include Line) -> List (Filter Line) -> Cmd msg
 getLines toMsg host includes filters =
     getCustomList toMsg host Mbta.Decode.line "lines" includes filters
 
 
 {-| Requires filtering by at least one of route, stop, or trip.
 -}
-getSchedules : (Result Http.Error (List Schedule) -> msg) -> Host -> List (Include Schedule) -> List (Filter Schedule) -> Cmd msg
+getSchedules : (Result Error (List Schedule) -> msg) -> Host -> List (Include Schedule) -> List (Filter Schedule) -> Cmd msg
 getSchedules toMsg host includes filters =
     getCustomList toMsg host Mbta.Decode.schedule "schedules" includes filters
 
 
 {-| -}
-getTrip : (Result Http.Error Trip -> msg) -> Host -> List (Include Trip) -> TripId -> Cmd msg
+getTrip : (Result Error Trip -> msg) -> Host -> List (Include Trip) -> TripId -> Cmd msg
 getTrip toMsg host includes (TripId tripId) =
     getCustomId toMsg host Mbta.Decode.trip "trips" includes tripId
 
 
 {-| -}
-getTrips : (Result Http.Error (List Trip) -> msg) -> Host -> List (Include Trip) -> List (Filter Trip) -> Cmd msg
+getTrips : (Result Error (List Trip) -> msg) -> Host -> List (Include Trip) -> List (Filter Trip) -> Cmd msg
 getTrips toMsg host includes filters =
     getCustomList toMsg host Mbta.Decode.trip "trips" includes filters
 
 
 {-| -}
-getService : (Result Http.Error Service -> msg) -> Host -> List (Include Service) -> ServiceId -> Cmd msg
+getService : (Result Error Service -> msg) -> Host -> List (Include Service) -> ServiceId -> Cmd msg
 getService toMsg host includes (ServiceId serviceId) =
     getCustomId toMsg host Mbta.Decode.service "services" includes serviceId
 
 
 {-| -}
-getServices : (Result Http.Error (List Service) -> msg) -> Host -> List (Include Service) -> List (Filter Service) -> Cmd msg
+getServices : (Result Error (List Service) -> msg) -> Host -> List (Include Service) -> List (Filter Service) -> Cmd msg
 getServices toMsg host includes filters =
     getCustomList toMsg host Mbta.Decode.service "services" includes filters
 
 
 {-| -}
-getShape : (Result Http.Error Shape -> msg) -> Host -> List (Include Shape) -> ShapeId -> Cmd msg
+getShape : (Result Error Shape -> msg) -> Host -> List (Include Shape) -> ShapeId -> Cmd msg
 getShape toMsg host includes (ShapeId shapeId) =
     getCustomId toMsg host Mbta.Decode.shape "shapes" includes shapeId
 
 
 {-| Must filter by route
 -}
-getShapes : (Result Http.Error (List Shape) -> msg) -> Host -> List (Include Shape) -> List (Filter Shape) -> Cmd msg
+getShapes : (Result Error (List Shape) -> msg) -> Host -> List (Include Shape) -> List (Filter Shape) -> Cmd msg
 getShapes toMsg host includes filters =
     getCustomList toMsg host Mbta.Decode.shape "shapes" includes filters
 
@@ -309,37 +329,37 @@ getShapes toMsg host includes filters =
 
 
 {-| -}
-getStop : (Result Http.Error Stop -> msg) -> Host -> List (Include Stop) -> StopId -> Cmd msg
+getStop : (Result Error Stop -> msg) -> Host -> List (Include Stop) -> StopId -> Cmd msg
 getStop toMsg host includes (StopId stopId) =
     getCustomId toMsg host Mbta.Decode.stop "stops" includes stopId
 
 
 {-| -}
-getStops : (Result Http.Error (List Stop) -> msg) -> Host -> List (Include Stop) -> List (Filter Stop) -> Cmd msg
+getStops : (Result Error (List Stop) -> msg) -> Host -> List (Include Stop) -> List (Filter Stop) -> Cmd msg
 getStops toMsg host includes filters =
     getCustomList toMsg host Mbta.Decode.stop "stops" includes filters
 
 
 {-| -}
-getFacility : (Result Http.Error Facility -> msg) -> Host -> List (Include Facility) -> FacilityId -> Cmd msg
+getFacility : (Result Error Facility -> msg) -> Host -> List (Include Facility) -> FacilityId -> Cmd msg
 getFacility toMsg host includes (FacilityId facilityId) =
     getCustomId toMsg host Mbta.Decode.facility "facilities" includes facilityId
 
 
 {-| -}
-getFacilities : (Result Http.Error (List Facility) -> msg) -> Host -> List (Include Facility) -> List (Filter Facility) -> Cmd msg
+getFacilities : (Result Error (List Facility) -> msg) -> Host -> List (Include Facility) -> List (Filter Facility) -> Cmd msg
 getFacilities toMsg host includes filters =
     getCustomList toMsg host Mbta.Decode.facility "facilities" includes filters
 
 
 {-| -}
-getLiveFacility : (Result Http.Error LiveFacility -> msg) -> Host -> List (Include LiveFacility) -> FacilityId -> Cmd msg
+getLiveFacility : (Result Error LiveFacility -> msg) -> Host -> List (Include LiveFacility) -> FacilityId -> Cmd msg
 getLiveFacility toMsg host includes (FacilityId facilityId) =
     getCustomId toMsg host Mbta.Decode.liveFacility "live-facilities" includes facilityId
 
 
 {-| -}
-getLiveFacilities : (Result Http.Error (List LiveFacility) -> msg) -> Host -> List (Include LiveFacility) -> List (Filter LiveFacility) -> Cmd msg
+getLiveFacilities : (Result Error (List LiveFacility) -> msg) -> Host -> List (Include LiveFacility) -> List (Filter LiveFacility) -> Cmd msg
 getLiveFacilities toMsg host includes filters =
     getCustomList toMsg host Mbta.Decode.liveFacility "live-facilities" includes filters
 
@@ -349,12 +369,12 @@ getLiveFacilities toMsg host includes filters =
 
 
 {-| -}
-getAlert : (Result Http.Error Alert -> msg) -> Host -> List (Include Alert) -> AlertId -> Cmd msg
+getAlert : (Result Error Alert -> msg) -> Host -> List (Include Alert) -> AlertId -> Cmd msg
 getAlert toMsg host includes (AlertId alertId) =
     getCustomId toMsg host Mbta.Decode.alert "alerts" includes alertId
 
 
 {-| -}
-getAlerts : (Result Http.Error (List Alert) -> msg) -> Host -> List (Include Alert) -> List (Filter Alert) -> Cmd msg
+getAlerts : (Result Error (List Alert) -> msg) -> Host -> List (Include Alert) -> List (Filter Alert) -> Cmd msg
 getAlerts toMsg host includes filters =
     getCustomList toMsg host Mbta.Decode.alert "alerts" includes filters
