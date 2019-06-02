@@ -66,7 +66,7 @@ maybeLatLng =
             (\( maybeLat, maybeLng ) ->
                 case ( maybeLat, maybeLng ) of
                     ( Just lat, Just lng ) ->
-                        Decode.succeed
+                        Ok
                             (Just
                                 { latitude = lat
                                 , longitude = lng
@@ -74,13 +74,13 @@ maybeLatLng =
                             )
 
                     ( Nothing, Nothing ) ->
-                        Decode.succeed Nothing
+                        Ok Nothing
 
                     ( Just lat, Nothing ) ->
-                        Decode.fail "longitude is missing but latitude exists"
+                        Err "longitude is missing but latitude exists"
 
                     ( Nothing, Just lng ) ->
-                        Decode.fail "latitude is missing but longitude exists"
+                        Err "latitude is missing but longitude exists"
             )
 
 
@@ -216,7 +216,7 @@ routeDirections =
             (\( names, destinations ) ->
                 case ( names, destinations ) of
                     ( Just [ d0_name, d1_name ], Just [ d0_destination, d1_destination ] ) ->
-                        Decode.succeed
+                        Ok
                             (Just
                                 { d0 = { name = d0_name, destination = d0_destination }
                                 , d1 = { name = d1_name, destination = d1_destination }
@@ -224,10 +224,10 @@ routeDirections =
                             )
 
                     ( Nothing, Nothing ) ->
-                        Decode.succeed Nothing
+                        Ok Nothing
 
                     _ ->
-                        Decode.fail "expected exactly 2 direction_names and exactly 2 direction_destinations"
+                        Err "expected exactly 2 direction_names and exactly 2 direction_destinations"
             )
 
 
@@ -403,7 +403,7 @@ changedDates datesAttribute notesAttribute =
         |> JsonApi.andThen
             (\( datesList, notesList ) ->
                 if List.length datesList == List.length notesList then
-                    Decode.succeed
+                    Ok
                         (List.map2
                             ChangedDate
                             datesList
@@ -411,7 +411,7 @@ changedDates datesAttribute notesAttribute =
                         )
 
                 else
-                    Decode.fail
+                    Err
                         (String.concat
                             [ datesAttribute
                             , " and "

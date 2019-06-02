@@ -159,17 +159,41 @@ url host path filters includes =
 
 getCustomId : (Result Http.Error resource -> msg) -> Host -> JsonApi.Decoder resource -> String -> List (Include resource) -> String -> Cmd msg
 getCustomId toMsg host resourceDecoder path includes id =
+    let
+        documentToMsg : Result Http.Error JsonApi.Document -> msg
+        documentToMsg result =
+            result
+                |> Result.andThen
+                    (\document ->
+                        document
+                            |> JsonApi.decodeOne resourceDecoder
+                            |> Result.mapError Http.BadBody
+                    )
+                |> toMsg
+    in
     Http.get
         { url = url host [ path, id ] [] includes
-        , expect = Http.expectJson toMsg (JsonApi.decoderOne resourceDecoder)
+        , expect = Http.expectJson documentToMsg JsonApi.documentDecoder
         }
 
 
 getCustomList : (Result Http.Error (List resource) -> msg) -> Host -> JsonApi.Decoder resource -> String -> List (Include resource) -> List (Filter resource) -> Cmd msg
 getCustomList toMsg host resourceDecoder path includes filters =
+    let
+        documentToMsg : Result Http.Error JsonApi.Document -> msg
+        documentToMsg result =
+            result
+                |> Result.andThen
+                    (\document ->
+                        document
+                            |> JsonApi.decodeMany resourceDecoder
+                            |> Result.mapError Http.BadBody
+                    )
+                |> toMsg
+    in
     Http.get
         { url = url host [ path ] filters includes
-        , expect = Http.expectJson toMsg (JsonApi.decoderMany resourceDecoder)
+        , expect = Http.expectJson documentToMsg JsonApi.documentDecoder
         }
 
 
