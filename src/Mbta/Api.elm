@@ -167,7 +167,7 @@ getCustomId toMsg host resourceDecoder path includes id =
                     (\document ->
                         document
                             |> JsonApi.decodeOne resourceDecoder
-                            |> Result.mapError Http.BadBody
+                            |> Result.mapError (Http.BadBody << JsonApi.documentErrorToString)
                     )
                 |> toMsg
     in
@@ -187,7 +187,7 @@ getCustomList toMsg host resourceDecoder path includes filters =
                     (\document ->
                         document
                             |> JsonApi.decodeMany resourceDecoder
-                            |> Result.mapError Http.BadBody
+                            |> Result.mapError (Http.BadBody << JsonApi.documentErrorToString)
                     )
                 |> toMsg
     in

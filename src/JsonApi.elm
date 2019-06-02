@@ -3,6 +3,7 @@ module JsonApi exposing
     , Decoder, IdDecoder, idDecoder
     , decode, id, attribute, relationshipOne, relationshipMaybe, relationshipMany, custom
     , andThen
+    , DocumentError, documentErrorToString, ResourceError, resourceErrorToString, IdError, idErrorToString
     )
 
 {-| This module serves as a middle point between the raw JSON in JSON:API
@@ -38,7 +39,7 @@ and the Elm types for the data you get out of it.
                         (\document ->
                             document
                                 |> JsonApi.decodeOne bookDecoder
-                                |> Result.mapError Http.BadBody
+                                |> Result.mapError (Http.BadBody << JsonApi.documentErrorToString)
                         )
                     |> toMsg
         in
@@ -70,6 +71,11 @@ You can make `Decoder`s using a pipeline, modeled off of [`NoRedInk/elm-json-dec
 
 @docs andThen
 
+
+# Error Handling
+
+@docs DocumentError, documentErrorToString, ResourceError, resourceErrorToString, IdError, idErrorToString
+
 -}
 
 import DecodeHelpers
@@ -96,14 +102,14 @@ type Document
         { data : List Resource
         , included : List Resource
         }
-    | Errors (List Decode.Value)
+    | DocumentApiErrors (List Decode.Value)
 
 
 {-| -}
 documentDecoder : Decode.Decoder Document
 documentDecoder =
     Decode.oneOf
-        [ Decode.succeed Errors
+        [ Decode.succeed DocumentApiErrors
             |> Pipeline.required "errors" (Decode.list Decode.value)
         , Decode.succeed (\data included -> DocumentOne { data = data, included = included })
             |> Pipeline.required "data" resourceDecoder
@@ -119,17 +125,18 @@ documentDecoder =
 Fails if the document has a list of resources.
 
 -}
-decodeOne : Decoder a -> Document -> Result String a
+decodeOne : Decoder a -> Document -> Result DocumentError a
 decodeOne decoder document =
     case document of
         DocumentOne { data } ->
             decoder data
+                |> Result.mapError ResourceError
 
         DocumentMany _ ->
-            Err "Expected one resource but got a list"
+            Err ExpectedOne
 
-        Errors errors ->
-            Err (Encode.encode 2 (Encode.list identity errors))
+        DocumentApiErrors errors ->
+            Err (ApiErrors errors)
 
 
 {-| Turn an untyped [`Document`](#Document) representing a list of resources into typed data.
@@ -137,19 +144,20 @@ decodeOne decoder document =
 Fails if the document has only a single resource.
 
 -}
-decodeMany : Decoder a -> Document -> Result String (List a)
+decodeMany : Decoder a -> Document -> Result DocumentError (List a)
 decodeMany decoder document =
     case document of
         DocumentOne _ ->
-            Err "Expected a list of resources but only got one"
+            Err ExpectedMany
 
         DocumentMany { data } ->
             data
                 |> List.map decoder
                 |> Result.Extra.combine
+                |> Result.mapError ResourceError
 
-        Errors errors ->
-            Err (Encode.encode 2 (Encode.list identity errors))
+        DocumentApiErrors errors ->
+            Err (ApiErrors errors)
 
 
 
@@ -227,7 +235,7 @@ to decode the untyped data in a [`Document`](#Document)
 
 -}
 type alias Decoder a =
-    Resource -> Result String a
+    Resource -> Result ResourceError a
 
 
 {-| JSON:API represents ids as
@@ -245,7 +253,7 @@ Create an `IdDecoder` with [`idDecoder`](#idDecoder)
 
 -}
 type alias IdDecoder a =
-    ResourceId -> Result String a
+    ResourceId -> Result IdError a
 
 
 {-| Create an [`IdDecoder`](#IdDecoder)
@@ -273,15 +281,10 @@ idDecoder typeString idConstructor resourceId =
 
     else
         Err
-            (String.concat
-                [ "Tried to decode {type: "
-                , resourceId.resourceType
-                , ", id: "
-                , resourceId.id
-                , "} as type "
-                , typeString
-                ]
-            )
+            { expectedType = typeString
+            , actualType = resourceId.resourceType
+            , actualIdValue = resourceId.id
+            }
 
 
 
@@ -318,6 +321,7 @@ id idDecoder_ =
     custom
         (\resource ->
             idDecoder_ resource.id
+                |> Result.mapError ResourceIdError
         )
 
 
@@ -333,10 +337,10 @@ attribute attributeName attributeDecoder =
             case Dict.get attributeName resource.attributes of
                 Just attributeJson ->
                     Decode.decodeValue attributeDecoder attributeJson
-                        |> Result.mapError Decode.errorToString
+                        |> Result.mapError (AttributeDecodeError attributeName)
 
                 Nothing ->
-                    Err ("Expected attribute " ++ attributeName ++ ", but it's missing")
+                    Err (AttributeMissing attributeName)
         )
 
 
@@ -353,9 +357,10 @@ relationshipOne relationshipName relatedIdDecoder =
             case Dict.get relationshipName resource.relationships of
                 Just (RelationshipOne relatedResourceId) ->
                     relatedIdDecoder relatedResourceId
+                        |> Result.mapError (RelationshipIdError relationshipName)
 
                 _ ->
-                    Err ("Expected resource to have exactly one relationship " ++ relationshipName)
+                    Err (RelationshipNumberError relationshipName "Expected exactly one relationship")
         )
 
 
@@ -376,6 +381,7 @@ relationshipMaybe relationshipName relatedIdDecoder =
                 Just (RelationshipOne relatedResourceId) ->
                     relatedIdDecoder relatedResourceId
                         |> Result.map Just
+                        |> Result.mapError (RelationshipIdError relationshipName)
 
                 Just RelationshipMissing ->
                     Ok Nothing
@@ -384,13 +390,7 @@ relationshipMaybe relationshipName relatedIdDecoder =
                     Ok Nothing
 
                 Just (RelationshipMany _) ->
-                    Err
-                        (String.concat
-                            [ "Expected resource to have exactly one relationship "
-                            , relationshipName
-                            , ", but got a list"
-                            ]
-                        )
+                    Err (RelationshipNumberError relationshipName "Expected one or zero relationship but got a list")
         )
 
 
@@ -415,27 +415,16 @@ relationshipMany relationshipName relatedIdDecoder =
                     relatedResourceIds
                         |> List.map relatedIdDecoder
                         |> Result.Extra.combine
+                        |> Result.mapError (RelationshipIdError relationshipName)
 
                 Nothing ->
                     Ok []
 
                 Just RelationshipMissing ->
-                    Err
-                        (String.concat
-                            [ "Expected resource to have a list of relationships "
-                            , relationshipName
-                            , ", but it was missing"
-                            ]
-                        )
+                    Err (RelationshipNumberError relationshipName "Expected a list of relationships but it was missing")
 
                 Just (RelationshipOne _) ->
-                    Err
-                        (String.concat
-                            [ "Expected resource to have a list of relationships "
-                            , relationshipName
-                            , ", but only got one"
-                            ]
-                        )
+                    Err (RelationshipNumberError relationshipName "Expected a list of relationships but only got one")
         )
 
 
@@ -463,4 +452,115 @@ andThen : (a -> Result String b) -> Decoder a -> Decoder b
 andThen second first =
     \resource ->
         first resource
-            |> Result.andThen second
+            |> Result.andThen (second >> Result.mapError CustomError)
+
+
+
+-- Error handling
+-- TODO tolerate and recover from resource errors. new error type that returns a list of results
+
+
+{-| Describes what went wrong when running a [`Decoder`](#Decoder) on a [`Document`](#Document)
+
+This will happen if a document has valid JSON:API, but the decoder does not know how to understand it.
+
+This is different from [`Json.Decode.Error`](#https://package.elm-lang.org/packages/elm/json/1.1.3/Json-Decode#Error),
+which might happen if the raw json does not follow the JSON:API spec.
+
+See the error with [`errorToString`](#errorToString)
+
+TODO cases
+
+-}
+type DocumentError
+    = ExpectedOne
+    | ExpectedMany
+    | ApiErrors (List Decode.Value)
+    | ResourceError ResourceError
+
+
+{-| -}
+documentErrorToString : DocumentError -> String
+documentErrorToString documentError =
+    case documentError of
+        ExpectedOne ->
+            "Expected one resource but got a list"
+
+        ExpectedMany ->
+            "Expected a list of resources but only got one"
+
+        ApiErrors errors ->
+            "API returned errors: " ++ Encode.encode 2 (Encode.list identity errors)
+
+        ResourceError resourceError ->
+            resourceErrorToString resourceError
+
+
+{-| TODO cases
+-}
+type ResourceError
+    = ResourceIdError IdError
+    | AttributeMissing String
+    | AttributeDecodeError String Decode.Error
+    | RelationshipIdError String IdError
+    | RelationshipNumberError String String
+    | CustomError String
+
+
+{-| -}
+resourceErrorToString : ResourceError -> String
+resourceErrorToString error =
+    case error of
+        ResourceIdError idError ->
+            "Error decoding resource id: " ++ idErrorToString idError
+
+        AttributeMissing attributeName ->
+            "Expected attribute " ++ attributeName ++ ", but it's missing"
+
+        AttributeDecodeError attributeName decodeError ->
+            String.concat
+                [ "Failed to decode attribute "
+                , attributeName
+                , ": "
+                , Decode.errorToString decodeError
+                ]
+
+        RelationshipIdError relationshipName idError ->
+            String.concat
+                [ "Couldn't decode id of relationship "
+                , relationshipName
+                , ": "
+                , idErrorToString idError
+                ]
+
+        RelationshipNumberError relationshipName message ->
+            String.concat
+                [ "Error at relationship "
+                , relationshipName
+                , ": "
+                , message
+                ]
+
+        CustomError s ->
+            s
+
+
+{-| -}
+type alias IdError =
+    { expectedType : String
+    , actualType : String
+    , actualIdValue : String
+    }
+
+
+{-| -}
+idErrorToString : IdError -> String
+idErrorToString idError =
+    String.concat
+        [ "Tried to decode {type: "
+        , idError.actualType
+        , ", id: "
+        , idError.actualIdValue
+        , "} as type "
+        , idError.expectedType
+        ]
