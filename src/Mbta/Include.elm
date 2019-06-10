@@ -1,6 +1,5 @@
 module Mbta.Include exposing
-    ( Included
-    , include, Include, Relationship, andIts
+    ( include, Include, Relationship, andIts
     , predictionVehicle, predictionRoute, predictionSchedule, predictionTrip, predictionStop, predictionAlerts
     , vehicleRoute, vehicleTrip, vehicleStop
     , routeRoutePatterns, routeLine, routeStop
@@ -26,11 +25,6 @@ Use it like
         [ Mbta.Include.include Mbta.Include.tripRoute ]
 
 Any sideloaded resources are put in the [`Included`](#Included) object returned by the Api
-
-
-# Results
-
-@docs Included
 
 
 # Specifying what to include
@@ -116,28 +110,8 @@ Any sideloaded resources are put in the [`Included`](#Included) object returned 
 
 -}
 
-import AssocList exposing (Dict)
 import Mbta exposing (..)
 import Url.Builder
-
-
-{-| The sideloaded data returned by an api call
--}
-type alias Included =
-    { predictions : Dict PredictionId (List Prediction)
-    , vehicles : Dict VehicleId (List Vehicle)
-    , routes : Dict RouteId (List Route)
-    , routePatterns : Dict RoutePatternId (List RoutePattern)
-    , lines : Dict LineId (List Line)
-    , schedules : Dict ScheduleId (List Schedule)
-    , trips : Dict TripId (List Trip)
-    , services : Dict ServiceId (List Service)
-    , shapes : Dict ShapeId (List Shape)
-    , stops : Dict StopId (List Stop)
-    , facilities : Dict FacilityId (List Facility)
-    , liveFacilities : Dict FacilityId (List LiveFacility)
-    , alerts : Dict AlertId (List Alert)
-    }
 
 
 {-| -}

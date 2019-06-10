@@ -2,7 +2,7 @@ module JsonApi exposing
     ( Document, documentDecoder, decodeOne, decodeMany
     , Decoder, IdDecoder, idDecoder
     , decode, id, attribute, relationshipOne, relationshipMaybe, relationshipMany, custom
-    , andThen
+    , map, andThen
     , DocumentError, documentErrorToString, ResourceError, resourceErrorToString, IdError, idErrorToString
     )
 
@@ -69,7 +69,7 @@ You can make `Decoder`s using a pipeline, modeled off of [`NoRedInk/elm-json-dec
 
 # Fancy Decoding
 
-@docs andThen
+@docs map, andThen
 
 
 # Error Handling
@@ -444,6 +444,15 @@ custom decoder constructorDecoder =
 
 
 -- Fancy Decoding
+
+
+{-| Apply a function to the result of a decoder if it succeeds
+-}
+map : (a -> b) -> Decoder a -> Decoder b
+map f decoder =
+    \resource ->
+        decoder resource
+            |> Result.map f
 
 
 {-| Run another decoder that depends on a previous result.
