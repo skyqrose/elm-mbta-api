@@ -88,7 +88,7 @@ import Result.Extra
 -}
 type alias Document included data =
     { data : data
-    , included : included
+    , included : included -> ()
     }
 
 
@@ -240,7 +240,7 @@ documentDecoderOne resourceDecoder =
                     |> Result.map
                         (\resource ->
                             { data = resource
-                            , included = Debug.todo "populate included"
+                            , included = \_ -> ()
                             }
                         )
 
@@ -271,7 +271,7 @@ documentDecoderMany resourceDecoder =
                     |> Result.map
                         (\resources ->
                             { data = resources
-                            , included = Debug.todo "populate included"
+                            , included = \_ -> ()
                             }
                         )
 
