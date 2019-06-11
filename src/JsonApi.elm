@@ -1,6 +1,6 @@
 module JsonApi exposing
-    ( Document, documentData, expectJsonApi, decodeDocumentString, decodeDocumentJsonValue
-    , DocumentDecoder, documentDecoderOne, documentDecoderMany, ResourceDecoder, IdDecoder, idDecoder
+    ( Document, documentData, documentIncluded, expectJsonApi, decodeDocumentString, decodeDocumentJsonValue
+    , DocumentDecoder, documentDecoderOne, documentDecoderMany, ResourceDecoder, IdDecoder, idDecoder, IncludedDecoder
     , decode, id, attribute, relationshipOne, relationshipMaybe, relationshipMany, custom
     , map, andThen, fail
     , Error(..), errorToString, DocumentError(..), documentErrorToString, ResourceError(..), resourceErrorToString, IdError, idErrorToString
@@ -43,12 +43,12 @@ and the Elm types for the data you get out of it.
 
 # Get a JSON:API document
 
-@docs Document, documentData, expectJsonApi, decodeDocumentString, decodeDocumentJsonValue
+@docs Document, documentData, documentIncluded, expectJsonApi, decodeDocumentString, decodeDocumentJsonValue
 
 
 # Make decoders
 
-@docs DocumentDecoder, documentDecoderOne, documentDecoderMany, ResourceDecoder, IdDecoder, idDecoder
+@docs DocumentDecoder, documentDecoderOne, documentDecoderMany, ResourceDecoder, IdDecoder, idDecoder, IncludedDecoder
 
 
 # Pipelines
@@ -85,10 +85,13 @@ import Result.Extra
 
 
 {-| The data returned from a json api endpoint.
+
+Both the `data` type and the `included` type are determined by the [`DocumentDecoder`](#DocumentDecoder) you provide.
+
 -}
 type alias Document included data =
     { data : data
-    , included : included -> ()
+    , included : included
     }
 
 
@@ -97,6 +100,11 @@ type alias Document included data =
 documentData : Document included data -> data
 documentData document =
     document.data
+
+
+documentIncluded : Document included data -> included
+documentIncluded document =
+    document.included
 
 
 {-| For passing to [`Http.get`](https://package.elm-lang.org/packages/elm/http/2.0.0/Http#get)
@@ -246,19 +254,20 @@ type alias DocumentDecoder included data =
 Fails if the document has a list of resources.
 
 -}
-documentDecoderOne : ResourceDecoder resource -> DocumentDecoder included resource
-documentDecoderOne resourceDecoder =
+documentDecoderOne : IncludedDecoder included -> ResourceDecoder resource -> DocumentDecoder included resource
+documentDecoderOne includedDecoder resourceDecoder =
     \document ->
         case document of
-            DocumentOne { data } ->
-                resourceDecoder data
+            DocumentOne { data, included } ->
+                Result.map2
+                    (\decodedData decodedIncluded ->
+                        { data = decodedData
+                        , included = decodedIncluded
+                        }
+                    )
+                    (data |> resourceDecoder)
+                    (included |> decodeIncluded includedDecoder)
                     |> Result.mapError ResourceError
-                    |> Result.map
-                        (\resource ->
-                            { data = resource
-                            , included = \_ -> ()
-                            }
-                        )
 
             DocumentMany _ ->
                 Err ExpectedOne
@@ -272,24 +281,26 @@ documentDecoderOne resourceDecoder =
 Fails if the document has only a single resource.
 
 -}
-documentDecoderMany : ResourceDecoder resource -> DocumentDecoder included (List resource)
-documentDecoderMany resourceDecoder =
+documentDecoderMany : IncludedDecoder included -> ResourceDecoder resource -> DocumentDecoder included (List resource)
+documentDecoderMany includedDecoder resourceDecoder =
     \document ->
         case document of
             DocumentOne _ ->
                 Err ExpectedMany
 
-            DocumentMany { data } ->
-                data
-                    |> List.map resourceDecoder
-                    |> Result.Extra.combine
+            DocumentMany { data, included } ->
+                Result.map2
+                    (\decodedData decodedIncluded ->
+                        { data = decodedData
+                        , included = decodedIncluded
+                        }
+                    )
+                    (data
+                        |> List.map resourceDecoder
+                        |> Result.Extra.combine
+                    )
+                    (included |> decodeIncluded includedDecoder)
                     |> Result.mapError ResourceError
-                    |> Result.map
-                        (\resources ->
-                            { data = resources
-                            , included = \_ -> ()
-                            }
-                        )
 
             DocumentApiErrors errors ->
                 Err (ApiErrors errors)
@@ -357,6 +368,91 @@ idDecoder typeString idConstructor resourceId =
             , actualType = resourceId.resourceType
             , actualIdValue = resourceId.id
             }
+
+
+{-| The included field in JSON:API has all resource types mixed together.
+An IncludedDecoder knows how to sort them all out.
+
+`included` is the resulting collection of resources.
+`accumulatorsByType` is a list of what to do with each type of resource.
+When decoding, the [`DocumentDecoder`](#DocumentDecoder) will reduce over the list of included resources,
+check which resourceDecoder to use based on the resource's type (the same type as used in [`idDecoder`](#IdDecoder)),
+and use the resulting function to add the new resource to the collection.
+
+    { emptyIncluded =
+        { books = []
+        , authors = []
+        }
+    , accumulatorsByType =
+        [ ( "book"
+          , bookResourceDecoder
+                |> JsonApi.map
+                    (\book ->
+                        \included ->
+                            { included
+                                | books = book :: included.books
+                            }
+                    )
+          )
+        , ( "author"
+          , authorResourceDecoder
+                |> JsonApi.map
+                    (\author ->
+                        \included ->
+                            { included
+                                | authors = author :: included.authors
+                            }
+                    )
+          )
+        ]
+    }
+
+-}
+type alias IncludedDecoder included =
+    { emptyIncluded : included
+    , accumulatorsByType : List ( String, ResourceDecoder (included -> included) )
+    }
+
+
+decodeIncluded : IncludedDecoder included -> List Resource -> Result ResourceError included
+decodeIncluded includedDecoder includedResources =
+    let
+        allTypes : String
+        allTypes =
+            includedDecoder.accumulatorsByType
+                |> List.map Tuple.first
+                |> String.join ","
+
+        accumulatorsByType : Dict String (ResourceDecoder (included -> included))
+        accumulatorsByType =
+            Dict.fromList includedDecoder.accumulatorsByType
+    in
+    List.foldl
+        (\resource previousIncludedResult ->
+            previousIncludedResult
+                |> Result.andThen
+                    (\previousIncluded ->
+                        case Dict.get resource.id.resourceType accumulatorsByType of
+                            Just accumulatorResourceDecoder ->
+                                case accumulatorResourceDecoder resource of
+                                    Ok accumulator ->
+                                        Ok (accumulator previousIncluded)
+
+                                    Err newResourceError ->
+                                        Err newResourceError
+
+                            Nothing ->
+                                Err
+                                    (ResourceIdError
+                                        { expectedType = "one of " ++ allTypes
+                                        , actualType = resource.id.resourceType
+                                        , actualIdValue = resource.id.id
+                                        }
+                                    )
+                    )
+        )
+        (Ok includedDecoder.emptyIncluded)
+        includedResources
 
 
 

@@ -72,6 +72,7 @@ import Mbta exposing (..)
 import Mbta.Decode
 import Mbta.Filter exposing (Filter)
 import Mbta.Include exposing (Include)
+import Mbta.Included as Included
 import Url.Builder
 
 
@@ -165,9 +166,9 @@ getCustomId toMsg host resourceDecoder path includes id =
         toMsg_ =
             Result.map JsonApi.documentData >> toMsg
 
-        documentDecoder : JsonApi.DocumentDecoder included resource
+        documentDecoder : JsonApi.DocumentDecoder Included.Included resource
         documentDecoder =
-            JsonApi.documentDecoderOne resourceDecoder
+            JsonApi.documentDecoderOne Included.includedDecoder resourceDecoder
     in
     Http.get
         { url = makeUrl host [ path, id ] [] includes
@@ -182,9 +183,9 @@ getCustomList toMsg host resourceDecoder path includes filters =
         toMsg_ =
             Result.map JsonApi.documentData >> toMsg
 
-        documentDecoder : JsonApi.DocumentDecoder included (List resource)
+        documentDecoder : JsonApi.DocumentDecoder Included.Included (List resource)
         documentDecoder =
-            JsonApi.documentDecoderMany resourceDecoder
+            JsonApi.documentDecoderMany Included.includedDecoder resourceDecoder
     in
     Http.get
         { url = makeUrl host [ path ] filters includes

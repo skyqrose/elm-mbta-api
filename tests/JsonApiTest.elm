@@ -55,14 +55,51 @@ authorResourceDecoder =
         |> relationshipMany "books" bookIdDecoder
 
 
-booksDocumentDecoder : DocumentDecoder included (List Book)
+type alias Included =
+    { books : List Book
+    , authors : List Author
+    }
+
+
+includedDecoder : IncludedDecoder Included
+includedDecoder =
+    { emptyIncluded =
+        { books = []
+        , authors = []
+        }
+    , accumulatorsByType =
+        [ ( "book"
+          , bookResourceDecoder
+                |> JsonApi.map
+                    (\book ->
+                        \included ->
+                            { included
+                                | books = book :: included.books
+                            }
+                    )
+          )
+        , ( "author"
+          , authorResourceDecoder
+                |> JsonApi.map
+                    (\author ->
+                        \included ->
+                            { included
+                                | authors = author :: included.authors
+                            }
+                    )
+          )
+        ]
+    }
+
+
+booksDocumentDecoder : DocumentDecoder Included (List Book)
 booksDocumentDecoder =
-    JsonApi.documentDecoderMany bookResourceDecoder
+    JsonApi.documentDecoderMany includedDecoder bookResourceDecoder
 
 
-authorDocumentDecoder : DocumentDecoder included Author
+authorDocumentDecoder : DocumentDecoder Included Author
 authorDocumentDecoder =
-    JsonApi.documentDecoderOne authorResourceDecoder
+    JsonApi.documentDecoderOne includedDecoder authorResourceDecoder
 
 
 booksJson : String
@@ -118,26 +155,45 @@ authorJson : String
 authorJson =
     """
 {
-    "data":
+    "data": {
+        "id": "author1",
+        "type": "author",
+        "attributes": {},
+        "relationships": {
+            "books": {
+                "data": [
+                    {
+                        "type": "book",
+                        "id": "book1"
+                    },
+                    {
+                        "type": "book",
+                        "id": "book2"
+                    }
+                ]
+            }
+        }
+    },
+    "included": [
         {
-            "id": "author1",
-            "type": "author",
-            "attributes": {},
+            "id": "book1",
+            "type": "book",
+            "attributes": {
+                "title": "Book 1"
+            },
             "relationships": {
-                "books": {
-                    "data": [
-                        {
-                            "type": "book",
-                            "id": "book1"
-                        },
-                        {
-                            "type": "book",
-                            "id": "book2"
-                        }
-                    ]
+                "sequel": {
+                    "data": null
+                },
+                "author": {
+                    "data": {
+                        "type": "author",
+                        "id": "author1"
+                    }
                 }
             }
         }
+    ]
 }
 """
 
@@ -213,5 +269,22 @@ suite =
                                     )
                                 )
                             )
+                        )
+        , test "returns included data" <|
+            \() ->
+                authorJson
+                    |> JsonApi.decodeDocumentString authorDocumentDecoder
+                    |> Result.map JsonApi.documentIncluded
+                    |> Expect.equal
+                        (Ok
+                            { books =
+                                [ { id = BookId "book1"
+                                  , author = AuthorId "author1"
+                                  , title = "Book 1"
+                                  , sequel = Nothing
+                                  }
+                                ]
+                            , authors = []
+                            }
                         )
         ]
