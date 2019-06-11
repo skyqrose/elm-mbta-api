@@ -1,9 +1,9 @@
 module JsonApi exposing
-    ( JsonApiDocument, documentDecoder, decodeOne, decodeMany
-    , ResourceDecoder, IdDecoder, idDecoder
+    ( Document, documentData, expectJsonApi
+    , DocumentDecoder, documentDecoderOne, documentDecoderMany, ResourceDecoder, IdDecoder, idDecoder
     , decode, id, attribute, relationshipOne, relationshipMaybe, relationshipMany, custom
     , map, andThen
-    , DocumentError, documentErrorToString, ResourceError, resourceErrorToString, IdError, idErrorToString
+    , Error(..), errorToString, DocumentError(..), documentErrorToString, ResourceError(..), resourceErrorToString, IdError, idErrorToString
     )
 
 {-| This module serves as a middle point between the raw JSON in JSON:API
@@ -29,34 +29,26 @@ and the Elm types for the data you get out of it.
             |> relationshipOne "author" authorIdDecoder
             |> attribute "title" Json.Decode.string
 
-    getBook : (Result Http.Error Book -> msg) -> Cmd msg
-    getBook toMsg =
-        let
-            documentToMsg : Result Http.Error JsonApi.JsonApiDocument -> msg
-            documentToMsg result =
-                result
-                    |> Result.andThen
-                        (\document ->
-                            document
-                                |> JsonApi.decodeOne bookDecoder
-                                |> Result.mapError (Http.BadBody << JsonApi.documentErrorToString)
-                        )
-                    |> toMsg
-        in
+    booksDocumentDecoder : DocumentDecoder included (List Book)
+    booksDocumentDecoder =
+        documentDecoderMany bookDecoder
+
+    getBooks : (Result DocumentError (Document included (List Book)) -> msg) -> Cmd msg
+    getBooks toMsg =
         Http.get
             { url = url
-            , expect = Http.expectJson documentToMsg JsonApi.documentDecoder
+            , expect = Http.expectJsonApi toMsg booksDocumentDecoder
             }
 
 
-# Decode a document
+# Get a JSON:API document
 
-@docs JsonApiDocument, documentDecoder, decodeOne, decodeMany
+@docs Document, documentData, expectJsonApi
 
 
 # Make decoders
 
-@docs ResourceDecoder, IdDecoder, idDecoder
+@docs DocumentDecoder, documentDecoderOne, documentDecoderMany, ResourceDecoder, IdDecoder, idDecoder
 
 
 # Pipelines
@@ -74,12 +66,13 @@ You can make `ResourceDecoder`s using a pipeline, modeled off of [`NoRedInk/elm-
 
 # Error Handling
 
-@docs DocumentError, documentErrorToString, ResourceError, resourceErrorToString, IdError, idErrorToString
+@docs Error, errorToString, DocumentError, documentErrorToString, ResourceError, resourceErrorToString, IdError, idErrorToString
 
 -}
 
 import DecodeHelpers
 import Dict exposing (Dict)
+import Http
 import Json.Decode as Decode
 import Json.Decode.Pipeline as Pipeline
 import Json.Encode as Encode
@@ -88,11 +81,53 @@ import Result.Extra
 
 
 -- TODO map2 instead of Tuple.Pair >> andThen
--- Decode a document
+-- Make an API call
 
 
-{-| A structured but untyped representation of the data returned by a JSON:API compliant endpoint
+{-| The data returned from a json api endpoint.
 -}
+type alias Document included data =
+    { data : data
+    , included : included
+    }
+
+
+{-| get the data out of a [`Document`](#Document)
+-}
+documentData : Document included data -> data
+documentData document =
+    document.data
+
+
+{-| For passing to [`Http.get`](https://package.elm-lang.org/packages/elm/http/2.0.0/Http#get)
+-}
+expectJsonApi : (Result Error (Document included data) -> msg) -> DocumentDecoder included data -> Http.Expect msg
+expectJsonApi toMsg documentDecoder =
+    let
+        httpToMsg : Result Http.Error (Result DocumentError (Document included data)) -> msg
+        httpToMsg =
+            \httpResult ->
+                httpResult
+                    |> Result.mapError HttpError
+                    |> Result.andThen
+                        (\documentResult ->
+                            documentResult
+                                |> Result.mapError DocumentError
+                        )
+                    |> toMsg
+
+        jsonDecoder : Decode.Decoder (Result DocumentError (Document included data))
+        jsonDecoder =
+            documentJsonDecoder
+                |> Decode.map documentDecoder
+    in
+    Http.expectJson httpToMsg jsonDecoder
+
+
+
+-- Untyped internal JsonApi representation
+
+
 type JsonApiDocument
     = DocumentOne
         { data : Resource
@@ -105,9 +140,8 @@ type JsonApiDocument
     | DocumentApiErrors (List Decode.Value)
 
 
-{-| -}
-documentDecoder : Decode.Decoder JsonApiDocument
-documentDecoder =
+documentJsonDecoder : Decode.Decoder JsonApiDocument
+documentJsonDecoder =
     Decode.oneOf
         [ Decode.succeed DocumentApiErrors
             |> Pipeline.required "errors" (Decode.list Decode.value)
@@ -118,50 +152,6 @@ documentDecoder =
             |> Pipeline.required "data" (Decode.list resourceJsonDecoder)
             |> Pipeline.optional "included" (Decode.list resourceJsonDecoder) []
         ]
-
-
-{-| Turn an untyped [`JsonApiDocument`](#JsonApiDocument) representing a single resource into typed data.
-
-Fails if the document has a list of resources.
-
--}
-decodeOne : ResourceDecoder a -> JsonApiDocument -> Result DocumentError a
-decodeOne resourceDecoder document =
-    case document of
-        DocumentOne { data } ->
-            resourceDecoder data
-                |> Result.mapError ResourceError
-
-        DocumentMany _ ->
-            Err ExpectedOne
-
-        DocumentApiErrors errors ->
-            Err (ApiErrors errors)
-
-
-{-| Turn an untyped [`JsonApiDocument`](#JsonApiDocument) representing a list of resources into typed data.
-
-Fails if the document has only a single resource.
-
--}
-decodeMany : ResourceDecoder a -> JsonApiDocument -> Result DocumentError (List a)
-decodeMany resourceDecoder document =
-    case document of
-        DocumentOne _ ->
-            Err ExpectedMany
-
-        DocumentMany { data } ->
-            data
-                |> List.map resourceDecoder
-                |> Result.Extra.combine
-                |> Result.mapError ResourceError
-
-        DocumentApiErrors errors ->
-            Err (ApiErrors errors)
-
-
-
--- Private internal data types
 
 
 type alias ResourceId =
@@ -194,44 +184,110 @@ type Relationship
 resourceJsonDecoder : Decode.Decoder Resource
 resourceJsonDecoder =
     Decode.succeed Resource
-        |> Pipeline.custom resourceIdDecoder
+        |> Pipeline.custom resourceIdJsonDecoder
         |> Pipeline.required "attributes" (Decode.dict Decode.value)
-        |> Pipeline.optional "relationships" (Decode.dict relationshipDecoder) Dict.empty
+        |> Pipeline.optional "relationships" (Decode.dict relationshipJsonDecoder) Dict.empty
 
 
-relationshipDecoder : Decode.Decoder Relationship
-relationshipDecoder =
+relationshipJsonDecoder : Decode.Decoder Relationship
+relationshipJsonDecoder =
     Decode.oneOf
         [ Decode.field "data" <|
             Decode.oneOf
                 [ Decode.null RelationshipMissing
-                , Decode.map RelationshipOne resourceIdDecoder
-                , Decode.map RelationshipMany (Decode.list resourceIdDecoder)
+                , Decode.map RelationshipOne resourceIdJsonDecoder
+                , Decode.map RelationshipMany (Decode.list resourceIdJsonDecoder)
                 ]
         , Decode.succeed RelationshipMissing
         ]
 
 
-resourceIdDecoder : Decode.Decoder ResourceId
-resourceIdDecoder =
+resourceIdJsonDecoder : Decode.Decoder ResourceId
+resourceIdJsonDecoder =
     Decode.succeed ResourceId
         |> Pipeline.required "type" Decode.string
         |> Pipeline.required "id" Decode.string
 
 
 
--- Make decoders
+-- Public decoders
 -- TODO make these opaque
 
 
-{-| A `ResourceDecoder` knows how to turn untyped JSON:API data into usable Elm data.
+{-| A `DocumentDecoder` knows how to turn JSON:API compliant json data into usable Elm data.
 
-Note that this is a different type than `Json.Decode.Decoder`.
+Note that this is a different type than [`Json.Decode.Decoder`](https://package.elm-lang.org/packages/elm/json/1.1.3/Json-Decode#Decoder).
+
+Use it by passing it to [`expectJsonApi`](#expectJsonApi)
+
+-}
+type alias DocumentDecoder included data =
+    JsonApiDocument -> Result DocumentError (Document included data)
+
+
+{-| Turn JSON:API compliant json representing a single resource into typed data.
+
+Fails if the document has a list of resources.
+
+-}
+documentDecoderOne : ResourceDecoder resource -> DocumentDecoder included resource
+documentDecoderOne resourceDecoder =
+    \document ->
+        case document of
+            DocumentOne { data } ->
+                resourceDecoder data
+                    |> Result.mapError ResourceError
+                    |> Result.map
+                        (\resource ->
+                            { data = resource
+                            , included = Debug.todo "populate included"
+                            }
+                        )
+
+            DocumentMany _ ->
+                Err ExpectedOne
+
+            DocumentApiErrors errors ->
+                Err (ApiErrors errors)
+
+
+{-| Turn JSON:API compliant json representing a list of resources into typed data.
+
+Fails if the document has only a single resource.
+
+-}
+documentDecoderMany : ResourceDecoder resource -> DocumentDecoder included (List resource)
+documentDecoderMany resourceDecoder =
+    \document ->
+        case document of
+            DocumentOne _ ->
+                Err ExpectedMany
+
+            DocumentMany { data } ->
+                data
+                    |> List.map resourceDecoder
+                    |> Result.Extra.combine
+                    |> Result.mapError ResourceError
+                    |> Result.map
+                        (\resources ->
+                            { data = resources
+                            , included = Debug.todo "populate included"
+                            }
+                        )
+
+            DocumentApiErrors errors ->
+                Err (ApiErrors errors)
+
+
+{-| A `ResourceDecoder` knows how to turn an untyped JSON:API resource into usable Elm data.
+
+Note that this is a different type than [`Json.Decode.Decoder`](https://package.elm-lang.org/packages/elm/json/1.1.3/Json-Decode#Decoder).
 A `JsonApi.ResourceDecoder` is specifically for working with JSON in the JSON:API format.
 It does not know how to work on general JSON.
 
-It's used by [`decodeOne`](#decodeOne) and [`decodeMany`](#decodeMany)
-to decode the untyped data in a [`JsonApiDocument`](#JsonApiDocument)
+Create one with a [pipeline](#Pipelines)
+
+Use it to create a [`DocumentDecoder`](#DocumentDecoder) with [`documentDecoderOne`](#documentDecoderOne) or [`documentDecoderMany`](#documentDecoderMany)
 
 -}
 type alias ResourceDecoder a =
@@ -327,7 +383,7 @@ id idDecoder_ =
 
 {-| Use a resource's attribute within a pipeline
 
-Since attributes can be arbitrary JSON, this function takes a general use `Json.Decode.Decoder`.
+Since attributes can be arbitrary JSON, this function takes a general use [`Json.Decode.Decoder`](https://package.elm-lang.org/packages/elm/json/1.1.3/Json-Decode#Decoder).
 
 -}
 attribute : String -> Decode.Decoder attribute -> ResourceDecoder (attribute -> rest) -> ResourceDecoder rest
@@ -469,16 +525,43 @@ andThen second first =
 -- TODO tolerate and recover from resource errors. new error type that returns a list of results
 
 
-{-| Describes what went wrong when running a [`ResourceDecoder`](#ResourceDecoder) on a [`JsonApiDocument`](#JsonApiDocument)
+{-| What went wrong when using [`expectJsonApi`](#expectJsonApi)
 
-This will happen if a document has valid JSON:API, but the decoder does not know how to understand it.
+See the error with [`errorToString`](#errorToString)
+
+TODO have a `InvalidJsonApi` case
+
+TODO document cases
+
+-}
+type Error
+    = HttpError Http.Error
+    | DocumentError DocumentError
+
+
+errorToString : Error -> String
+errorToString error =
+    case error of
+        HttpError httpError ->
+            Debug.toString httpError
+
+        DocumentError documentError ->
+            documentErrorToString documentError
+
+
+{-| Describes what went wrong while trying to create a [`Document`](#Document)
+
+This will happen if a document has valid JSON:API, but the provided [`DocumentDecoder`](#DocumentDecoder) does not know how to understand it.
 
 This is different from [`Json.Decode.Error`](#https://package.elm-lang.org/packages/elm/json/1.1.3/Json-Decode#Error),
 which might happen if the raw json does not follow the JSON:API spec.
 
-See the error with [`errorToString`](#errorToString)
+If a response has json that does not meet the JSON:API spec, it will be a `HttpError Http.BadBody message`
 
-TODO cases
+If a response is valid JSON:API, but the `DocumentDecoder` and its `ResourceDecoder`s fail to turn it into Elm data,
+the other cases will describe what went wrong.
+
+TODO document cases
 
 -}
 type DocumentError
@@ -505,7 +588,7 @@ documentErrorToString documentError =
             resourceErrorToString resourceError
 
 
-{-| TODO cases
+{-| TODO document cases
 -}
 type ResourceError
     = ResourceIdError IdError

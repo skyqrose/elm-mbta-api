@@ -160,38 +160,35 @@ makeUrl host path filters includes =
 
 getCustomId : (Result Error resource -> msg) -> Host -> JsonApi.ResourceDecoder resource -> String -> List (Include resource) -> String -> Cmd msg
 getCustomId toMsg host resourceDecoder path includes id =
-    getCustom
-        toMsg
-        (makeUrl host [ path, id ] [] includes)
-        (JsonApi.decodeOne resourceDecoder)
+    let
+        toMsg_ : Result Error (JsonApi.Document included resource) -> msg
+        toMsg_ =
+            Result.map JsonApi.documentData >> toMsg
+
+        documentDecoder : JsonApi.DocumentDecoder included resource
+        documentDecoder =
+            JsonApi.documentDecoderOne resourceDecoder
+    in
+    Http.get
+        { url = makeUrl host [ path, id ] [] includes
+        , expect = JsonApi.expectJsonApi toMsg_ documentDecoder
+        }
 
 
 getCustomList : (Result Error (List resource) -> msg) -> Host -> JsonApi.ResourceDecoder resource -> String -> List (Include resource) -> List (Filter resource) -> Cmd msg
 getCustomList toMsg host resourceDecoder path includes filters =
-    getCustom
-        toMsg
-        (makeUrl host [ path ] filters includes)
-        (JsonApi.decodeMany resourceDecoder)
-
-
-getCustom : (Result Error data -> msg) -> String -> (JsonApi.JsonApiDocument -> Result JsonApi.DocumentError data) -> Cmd msg
-getCustom toMsg url decodeDocument =
     let
-        documentToMsg : Result Http.Error JsonApi.JsonApiDocument -> msg
-        documentToMsg httpResult =
-            httpResult
-                |> Result.mapError HttpError
-                |> Result.andThen
-                    (\document ->
-                        document
-                            |> decodeDocument
-                            |> Result.mapError DecodeError
-                    )
-                |> toMsg
+        toMsg_ : Result Error (JsonApi.Document included (List resource)) -> msg
+        toMsg_ =
+            Result.map JsonApi.documentData >> toMsg
+
+        documentDecoder : JsonApi.DocumentDecoder included (List resource)
+        documentDecoder =
+            JsonApi.documentDecoderMany resourceDecoder
     in
     Http.get
-        { url = url
-        , expect = Http.expectJson documentToMsg JsonApi.documentDecoder
+        { url = makeUrl host [ path ] filters includes
+        , expect = JsonApi.expectJsonApi toMsg_ documentDecoder
         }
 
 
@@ -211,10 +208,8 @@ TODO document cases
 TODO create illegalCall
 
 -}
-type Error
-    = HttpError Http.Error
-    | DecodeError JsonApi.DocumentError
-    | IllegalCall String
+type alias Error =
+    JsonApi.Error
 
 
 
