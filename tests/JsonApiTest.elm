@@ -39,8 +39,8 @@ authorIdDecoder =
     idDecoder "author" AuthorId
 
 
-bookDecoder : Decoder Book
-bookDecoder =
+bookResourceDecoder : ResourceDecoder Book
+bookResourceDecoder =
     decode Book
         |> id bookIdDecoder
         |> relationshipOne "author" authorIdDecoder
@@ -48,11 +48,21 @@ bookDecoder =
         |> relationshipMaybe "sequel" bookIdDecoder
 
 
-authorDecoder : Decoder Author
-authorDecoder =
+authorResourceDecoder : ResourceDecoder Author
+authorResourceDecoder =
     decode Author
         |> id authorIdDecoder
         |> relationshipMany "books" bookIdDecoder
+
+
+booksDocumentDecoder : DocumentDecoder included (List Book)
+booksDocumentDecoder =
+    JsonApi.documentDecoderMany bookResourceDecoder
+
+
+authorDocumentDecoder : DocumentDecoder included Author
+authorDocumentDecoder =
+    JsonApi.documentDecoderOne authorResourceDecoder
 
 
 booksJson : String
@@ -154,11 +164,11 @@ badTypeJson =
 suite : Test
 suite =
     describe "JsonApi"
-        [ test "decodeMany with id, attributes, relationshipOne, relationshipMaybe" <|
+        [ test "documentDecoderMany with id, attributes, relationshipOne, relationshipMaybe" <|
             \() ->
-                Json.Decode.decodeString
-                    (decoderMany bookDecoder)
-                    booksJson
+                booksJson
+                    |> JsonApi.decodeDocumentString booksDocumentDecoder
+                    |> Result.map JsonApi.documentData
                     |> Expect.equal
                         (Ok
                             [ { id = BookId "book1"
@@ -173,11 +183,11 @@ suite =
                               }
                             ]
                         )
-        , test "decodeOne with id, relationshipMany" <|
+        , test "documentDecoderOne with id, relationshipMany" <|
             \() ->
-                Json.Decode.decodeString
-                    (decoderOne authorDecoder)
-                    authorJson
+                authorJson
+                    |> JsonApi.decodeDocumentString authorDocumentDecoder
+                    |> Result.map JsonApi.documentData
                     |> Expect.equal
                         (Ok
                             { id = AuthorId "author1"
@@ -189,8 +199,19 @@ suite =
                         )
         , test "catches mismatched id types" <|
             \() ->
-                Json.Decode.decodeString
-                    (decoderOne authorDecoder)
-                    badTypeJson
-                    |> Expect.err
+                badTypeJson
+                    |> JsonApi.decodeDocumentString authorDocumentDecoder
+                    |> Expect.equal
+                        (Err
+                            (DocumentError
+                                (ResourceError
+                                    (ResourceIdError
+                                        { expectedType = "author"
+                                        , actualType = "not author"
+                                        , actualIdValue = "author1"
+                                        }
+                                    )
+                                )
+                            )
+                        )
         ]

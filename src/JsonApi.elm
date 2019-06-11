@@ -1,5 +1,5 @@
 module JsonApi exposing
-    ( Document, documentData, expectJsonApi
+    ( Document, documentData, expectJsonApi, decodeDocumentString, decodeDocumentJsonValue
     , DocumentDecoder, documentDecoderOne, documentDecoderMany, ResourceDecoder, IdDecoder, idDecoder
     , decode, id, attribute, relationshipOne, relationshipMaybe, relationshipMany, custom
     , map, andThen
@@ -43,7 +43,7 @@ and the Elm types for the data you get out of it.
 
 # Get a JSON:API document
 
-@docs Document, documentData, expectJsonApi
+@docs Document, documentData, expectJsonApi, decodeDocumentString, decodeDocumentJsonValue
 
 
 # Make decoders
@@ -122,6 +122,22 @@ expectJsonApi toMsg documentDecoder =
                 |> Decode.map documentDecoder
     in
     Http.expectJson httpToMsg jsonDecoder
+
+
+decodeDocumentString : DocumentDecoder included data -> String -> Result Error (Document included data)
+decodeDocumentString documentDecoder jsonString =
+    jsonString
+        |> Decode.decodeString documentJsonDecoder
+        |> Result.mapError NoncompliantJson
+        |> Result.andThen (documentDecoder >> Result.mapError DocumentError)
+
+
+decodeDocumentJsonValue : DocumentDecoder included data -> Decode.Value -> Result Error (Document included data)
+decodeDocumentJsonValue documentDecoder jsonValue =
+    jsonValue
+        |> Decode.decodeValue documentJsonDecoder
+        |> Result.mapError NoncompliantJson
+        |> Result.andThen (documentDecoder >> Result.mapError DocumentError)
 
 
 
@@ -536,6 +552,7 @@ TODO document cases
 -}
 type Error
     = HttpError Http.Error
+    | NoncompliantJson Decode.Error
     | DocumentError DocumentError
 
 
@@ -544,6 +561,9 @@ errorToString error =
     case error of
         HttpError httpError ->
             Debug.toString httpError
+
+        NoncompliantJson decodeError ->
+            Decode.errorToString decodeError
 
         DocumentError documentError ->
             documentErrorToString documentError

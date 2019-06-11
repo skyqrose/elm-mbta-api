@@ -14,7 +14,7 @@ testOne description url json resourceDecoder =
     test description <|
         \() ->
             json
-                |> Json.Decode.decodeString (JsonApi.decoderOne resourceDecoder)
+                |> JsonApi.decodeDocumentString (JsonApi.documentDecoderOne resourceDecoder)
                 |> Expect.ok
 
 
@@ -23,7 +23,7 @@ testMany description url json resourceDecoder =
     test description <|
         \() ->
             json
-                |> Json.Decode.decodeString (JsonApi.decoderMany resourceDecoder)
+                |> JsonApi.decodeDocumentString (JsonApi.documentDecoderMany resourceDecoder)
                 |> Expect.ok
 
 
