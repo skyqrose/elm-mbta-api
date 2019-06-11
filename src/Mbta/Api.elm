@@ -174,10 +174,10 @@ getCustomList toMsg host resourceDecoder path includes filters =
         (JsonApi.decodeMany resourceDecoder)
 
 
-getCustom : (Result Error data -> msg) -> String -> (JsonApi.Document -> Result JsonApi.DocumentError data) -> Cmd msg
+getCustom : (Result Error data -> msg) -> String -> (JsonApi.JsonApiDocument -> Result JsonApi.DocumentError data) -> Cmd msg
 getCustom toMsg url decodeDocument =
     let
-        documentToMsg : Result Http.Error JsonApi.Document -> msg
+        documentToMsg : Result Http.Error JsonApi.JsonApiDocument -> msg
         documentToMsg httpResult =
             httpResult
                 |> Result.mapError HttpError

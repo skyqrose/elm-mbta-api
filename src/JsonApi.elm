@@ -1,5 +1,5 @@
 module JsonApi exposing
-    ( Document, documentDecoder, decodeOne, decodeMany
+    ( JsonApiDocument, documentDecoder, decodeOne, decodeMany
     , ResourceDecoder, IdDecoder, idDecoder
     , decode, id, attribute, relationshipOne, relationshipMaybe, relationshipMany, custom
     , map, andThen
@@ -32,7 +32,7 @@ and the Elm types for the data you get out of it.
     getBook : (Result Http.Error Book -> msg) -> Cmd msg
     getBook toMsg =
         let
-            documentToMsg : Result Http.Error JsonApi.Document -> msg
+            documentToMsg : Result Http.Error JsonApi.JsonApiDocument -> msg
             documentToMsg result =
                 result
                     |> Result.andThen
@@ -51,7 +51,7 @@ and the Elm types for the data you get out of it.
 
 # Decode a document
 
-@docs Document, documentDecoder, decodeOne, decodeMany
+@docs JsonApiDocument, documentDecoder, decodeOne, decodeMany
 
 
 # Make decoders
@@ -93,7 +93,7 @@ import Result.Extra
 
 {-| A structured but untyped representation of the data returned by a JSON:API compliant endpoint
 -}
-type Document
+type JsonApiDocument
     = DocumentOne
         { data : Resource
         , included : List Resource
@@ -106,7 +106,7 @@ type Document
 
 
 {-| -}
-documentDecoder : Decode.Decoder Document
+documentDecoder : Decode.Decoder JsonApiDocument
 documentDecoder =
     Decode.oneOf
         [ Decode.succeed DocumentApiErrors
@@ -120,12 +120,12 @@ documentDecoder =
         ]
 
 
-{-| Turn an untyped [`Document`](#Document) representing a single resource into typed data.
+{-| Turn an untyped [`JsonApiDocument`](#JsonApiDocument) representing a single resource into typed data.
 
 Fails if the document has a list of resources.
 
 -}
-decodeOne : ResourceDecoder a -> Document -> Result DocumentError a
+decodeOne : ResourceDecoder a -> JsonApiDocument -> Result DocumentError a
 decodeOne resourceDecoder document =
     case document of
         DocumentOne { data } ->
@@ -139,12 +139,12 @@ decodeOne resourceDecoder document =
             Err (ApiErrors errors)
 
 
-{-| Turn an untyped [`Document`](#Document) representing a list of resources into typed data.
+{-| Turn an untyped [`JsonApiDocument`](#JsonApiDocument) representing a list of resources into typed data.
 
 Fails if the document has only a single resource.
 
 -}
-decodeMany : ResourceDecoder a -> Document -> Result DocumentError (List a)
+decodeMany : ResourceDecoder a -> JsonApiDocument -> Result DocumentError (List a)
 decodeMany resourceDecoder document =
     case document of
         DocumentOne _ ->
@@ -231,7 +231,7 @@ A `JsonApi.ResourceDecoder` is specifically for working with JSON in the JSON:AP
 It does not know how to work on general JSON.
 
 It's used by [`decodeOne`](#decodeOne) and [`decodeMany`](#decodeMany)
-to decode the untyped data in a [`Document`](#Document)
+to decode the untyped data in a [`JsonApiDocument`](#JsonApiDocument)
 
 -}
 type alias ResourceDecoder a =
@@ -469,7 +469,7 @@ andThen second first =
 -- TODO tolerate and recover from resource errors. new error type that returns a list of results
 
 
-{-| Describes what went wrong when running a [`ResourceDecoder`](#ResourceDecoder) on a [`Document`](#Document)
+{-| Describes what went wrong when running a [`ResourceDecoder`](#ResourceDecoder) on a [`JsonApiDocument`](#JsonApiDocument)
 
 This will happen if a document has valid JSON:API, but the decoder does not know how to understand it.
 
