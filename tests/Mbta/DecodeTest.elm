@@ -9,21 +9,21 @@ import Mbta.Decode
 import Test exposing (..)
 
 
-testOne : String -> String -> String -> JsonApi.Decoder a -> Test
-testOne description url json decoder =
+testOne : String -> String -> String -> JsonApi.ResourceDecoder a -> Test
+testOne description url json resourceDecoder =
     test description <|
         \() ->
             json
-                |> Json.Decode.decodeString (JsonApi.decoderOne decoder)
+                |> Json.Decode.decodeString (JsonApi.decoderOne resourceDecoder)
                 |> Expect.ok
 
 
-testMany : String -> String -> String -> JsonApi.Decoder a -> Test
-testMany description url json decoder =
+testMany : String -> String -> String -> JsonApi.ResourceDecoder a -> Test
+testMany description url json resourceDecoder =
     test description <|
         \() ->
             json
-                |> Json.Decode.decodeString (JsonApi.decoderMany decoder)
+                |> Json.Decode.decodeString (JsonApi.decoderMany resourceDecoder)
                 |> Expect.ok
 
 

@@ -50,14 +50,14 @@ color =
     Decode.map Color Decode.string
 
 
-latLng : JsonApi.Decoder LatLng
+latLng : JsonApi.ResourceDecoder LatLng
 latLng =
     JsonApi.decode LatLng
         |> attribute "latitude" Decode.float
         |> attribute "longitude" Decode.float
 
 
-maybeLatLng : JsonApi.Decoder (Maybe LatLng)
+maybeLatLng : JsonApi.ResourceDecoder (Maybe LatLng)
 maybeLatLng =
     JsonApi.decode Tuple.pair
         |> attribute "latitude" (Decode.nullable Decode.float)
@@ -110,7 +110,7 @@ predictionId =
     JsonApi.idDecoder "prediction" PredictionId
 
 
-prediction : JsonApi.Decoder Prediction
+prediction : JsonApi.ResourceDecoder Prediction
 prediction =
     JsonApi.decode Prediction
         |> id predictionId
@@ -146,7 +146,7 @@ vehicleId =
     JsonApi.idDecoder "vehicle" VehicleId
 
 
-vehicle : JsonApi.Decoder Vehicle
+vehicle : JsonApi.ResourceDecoder Vehicle
 vehicle =
     JsonApi.decode Vehicle
         |> id vehicleId
@@ -192,7 +192,7 @@ routeId =
     JsonApi.idDecoder "route" RouteId
 
 
-route : JsonApi.Decoder Route
+route : JsonApi.ResourceDecoder Route
 route =
     JsonApi.decode Route
         |> id routeId
@@ -207,7 +207,7 @@ route =
         |> attribute "color" color
 
 
-routeDirections : JsonApi.Decoder (Maybe RouteDirections)
+routeDirections : JsonApi.ResourceDecoder (Maybe RouteDirections)
 routeDirections =
     JsonApi.decode Tuple.pair
         |> attribute "direction_names" (Decode.nullable (Decode.list Decode.string))
@@ -236,7 +236,7 @@ routePatternId =
     JsonApi.idDecoder "route_pattern" RoutePatternId
 
 
-routePattern : JsonApi.Decoder RoutePattern
+routePattern : JsonApi.ResourceDecoder RoutePattern
 routePattern =
     JsonApi.decode RoutePattern
         |> id routePatternId
@@ -265,7 +265,7 @@ lineId =
     JsonApi.idDecoder "line" LineId
 
 
-line : JsonApi.Decoder Line
+line : JsonApi.ResourceDecoder Line
 line =
     JsonApi.decode Line
         |> id lineId
@@ -281,7 +281,7 @@ scheduleId =
     JsonApi.idDecoder "schedule" ScheduleId
 
 
-schedule : JsonApi.Decoder Schedule
+schedule : JsonApi.ResourceDecoder Schedule
 schedule =
     JsonApi.decode Schedule
         |> id scheduleId
@@ -318,7 +318,7 @@ tripId =
     JsonApi.idDecoder "trip" TripId
 
 
-trip : JsonApi.Decoder Trip
+trip : JsonApi.ResourceDecoder Trip
 trip =
     JsonApi.decode Trip
         |> id tripId
@@ -353,7 +353,7 @@ serviceId =
     JsonApi.idDecoder "service" ServiceId
 
 
-service : JsonApi.Decoder Service
+service : JsonApi.ResourceDecoder Service
 service =
     JsonApi.decode Service
         |> id serviceId
@@ -395,7 +395,7 @@ serviceTypicality =
         ]
 
 
-changedDates : String -> String -> JsonApi.Decoder (List ChangedDate)
+changedDates : String -> String -> JsonApi.ResourceDecoder (List ChangedDate)
 changedDates datesAttribute notesAttribute =
     JsonApi.decode Tuple.pair
         |> attribute datesAttribute (Decode.list serviceDate)
@@ -427,7 +427,7 @@ shapeId =
     JsonApi.idDecoder "shape" ShapeId
 
 
-shape : JsonApi.Decoder Shape
+shape : JsonApi.ResourceDecoder Shape
 shape =
     JsonApi.decode Shape
         |> id shapeId
@@ -448,7 +448,7 @@ stopId =
     JsonApi.idDecoder "stop" StopId
 
 
-stop : JsonApi.Decoder Stop
+stop : JsonApi.ResourceDecoder Stop
 stop =
     JsonApi.decode Stop
         |> id stopId
@@ -478,7 +478,7 @@ facilityId =
     JsonApi.idDecoder "facility" FacilityId
 
 
-facility : JsonApi.Decoder Facility
+facility : JsonApi.ResourceDecoder Facility
 facility =
     JsonApi.decode Facility
         |> id facilityId
@@ -494,7 +494,7 @@ liveFacilityId =
     JsonApi.idDecoder "live-facility" FacilityId
 
 
-liveFacility : JsonApi.Decoder LiveFacility
+liveFacility : JsonApi.ResourceDecoder LiveFacility
 liveFacility =
     JsonApi.decode LiveFacility
         |> id liveFacilityId
@@ -548,7 +548,7 @@ alertId =
     JsonApi.idDecoder "alert" AlertId
 
 
-alert : JsonApi.Decoder Alert
+alert : JsonApi.ResourceDecoder Alert
 alert =
     JsonApi.decode Alert
         |> id alertId

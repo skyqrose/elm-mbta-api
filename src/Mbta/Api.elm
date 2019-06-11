@@ -158,7 +158,7 @@ makeUrl host path filters includes =
                 )
 
 
-getCustomId : (Result Error resource -> msg) -> Host -> JsonApi.Decoder resource -> String -> List (Include resource) -> String -> Cmd msg
+getCustomId : (Result Error resource -> msg) -> Host -> JsonApi.ResourceDecoder resource -> String -> List (Include resource) -> String -> Cmd msg
 getCustomId toMsg host resourceDecoder path includes id =
     getCustom
         toMsg
@@ -166,7 +166,7 @@ getCustomId toMsg host resourceDecoder path includes id =
         (JsonApi.decodeOne resourceDecoder)
 
 
-getCustomList : (Result Error (List resource) -> msg) -> Host -> JsonApi.Decoder resource -> String -> List (Include resource) -> List (Filter resource) -> Cmd msg
+getCustomList : (Result Error (List resource) -> msg) -> Host -> JsonApi.ResourceDecoder resource -> String -> List (Include resource) -> List (Filter resource) -> Cmd msg
 getCustomList toMsg host resourceDecoder path includes filters =
     getCustom
         toMsg

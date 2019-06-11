@@ -1,6 +1,6 @@
 module JsonApi exposing
     ( Document, documentDecoder, decodeOne, decodeMany
-    , Decoder, IdDecoder, idDecoder
+    , ResourceDecoder, IdDecoder, idDecoder
     , decode, id, attribute, relationshipOne, relationshipMaybe, relationshipMany, custom
     , map, andThen
     , DocumentError, documentErrorToString, ResourceError, resourceErrorToString, IdError, idErrorToString
@@ -22,7 +22,7 @@ and the Elm types for the data you get out of it.
     bookIdDecoder =
         idDecoder "book" BookId
 
-    bookDecoder : Decoder Book
+    bookDecoder : ResourceDecoder Book
     bookDecoder resource =
         decode resource
             |> id bookIdDecoder
@@ -56,12 +56,12 @@ and the Elm types for the data you get out of it.
 
 # Make decoders
 
-@docs Decoder, IdDecoder, idDecoder
+@docs ResourceDecoder, IdDecoder, idDecoder
 
 
 # Pipelines
 
-You can make `Decoder`s using a pipeline, modeled off of [`NoRedInk/elm-json-decode-pipeline`](Pipeline)
+You can make `ResourceDecoder`s using a pipeline, modeled off of [`NoRedInk/elm-json-decode-pipeline`](Pipeline)
 [Pipeline][https://package.elm-lang.org/packages/NoRedInk/elm-json-decode-pipeline/latest/Json-Decode-Pipeline]
 
 @docs decode, id, attribute, relationshipOne, relationshipMaybe, relationshipMany, custom
@@ -112,11 +112,11 @@ documentDecoder =
         [ Decode.succeed DocumentApiErrors
             |> Pipeline.required "errors" (Decode.list Decode.value)
         , Decode.succeed (\data included -> DocumentOne { data = data, included = included })
-            |> Pipeline.required "data" resourceDecoder
-            |> Pipeline.optional "included" (Decode.list resourceDecoder) []
+            |> Pipeline.required "data" resourceJsonDecoder
+            |> Pipeline.optional "included" (Decode.list resourceJsonDecoder) []
         , Decode.succeed (\data included -> DocumentMany { data = data, included = included })
-            |> Pipeline.required "data" (Decode.list resourceDecoder)
-            |> Pipeline.optional "included" (Decode.list resourceDecoder) []
+            |> Pipeline.required "data" (Decode.list resourceJsonDecoder)
+            |> Pipeline.optional "included" (Decode.list resourceJsonDecoder) []
         ]
 
 
@@ -125,11 +125,11 @@ documentDecoder =
 Fails if the document has a list of resources.
 
 -}
-decodeOne : Decoder a -> Document -> Result DocumentError a
-decodeOne decoder document =
+decodeOne : ResourceDecoder a -> Document -> Result DocumentError a
+decodeOne resourceDecoder document =
     case document of
         DocumentOne { data } ->
-            decoder data
+            resourceDecoder data
                 |> Result.mapError ResourceError
 
         DocumentMany _ ->
@@ -144,15 +144,15 @@ decodeOne decoder document =
 Fails if the document has only a single resource.
 
 -}
-decodeMany : Decoder a -> Document -> Result DocumentError (List a)
-decodeMany decoder document =
+decodeMany : ResourceDecoder a -> Document -> Result DocumentError (List a)
+decodeMany resourceDecoder document =
     case document of
         DocumentOne _ ->
             Err ExpectedMany
 
         DocumentMany { data } ->
             data
-                |> List.map decoder
+                |> List.map resourceDecoder
                 |> Result.Extra.combine
                 |> Result.mapError ResourceError
 
@@ -191,8 +191,8 @@ type Relationship
     | RelationshipMany (List ResourceId)
 
 
-resourceDecoder : Decode.Decoder Resource
-resourceDecoder =
+resourceJsonDecoder : Decode.Decoder Resource
+resourceJsonDecoder =
     Decode.succeed Resource
         |> Pipeline.custom resourceIdDecoder
         |> Pipeline.required "attributes" (Decode.dict Decode.value)
@@ -224,17 +224,17 @@ resourceIdDecoder =
 -- TODO make these opaque
 
 
-{-| A `Decoder` knows how to turn untyped JSON:API data into usable Elm data.
+{-| A `ResourceDecoder` knows how to turn untyped JSON:API data into usable Elm data.
 
 Note that this is a different type than `Json.Decode.Decoder`.
-A `JsonApi.Decoder` is specifically for working with JSON in the JSON:API format.
+A `JsonApi.ResourceDecoder` is specifically for working with JSON in the JSON:API format.
 It does not know how to work on general JSON.
 
 It's used by [`decodeOne`](#decodeOne) and [`decodeMany`](#decodeMany)
 to decode the untyped data in a [`Document`](#Document)
 
 -}
-type alias Decoder a =
+type alias ResourceDecoder a =
     Resource -> Result ResourceError a
 
 
@@ -294,9 +294,9 @@ idDecoder typeString idConstructor resourceId =
 {-| Start a decoding pipeline.
 
 Note that while [`NoRedInk/elm-json-decode-pipeline`](Pipeline) starts its pipelines with `Json.Decode.succeed`,
-the different `Decoder` type in this module needs to start its pipelines slightly differently
+the different `ResourceDecoder` type in this module needs to start its pipelines slightly differently
 
-    bookDecoder : Decoder Book
+    bookDecoder : ResourceDecoder Book
     bookDecoder resource =
         decode resource
             |> id bookIdDecoder
@@ -305,7 +305,7 @@ the different `Decoder` type in this module needs to start its pipelines slightl
 [Pipeline](https://package.elm-lang.org/packages/NoRedInk/elm-json-decode-pipeline/latest/Json-Decode-Pipeline)
 
 -}
-decode : constructor -> Decoder constructor
+decode : constructor -> ResourceDecoder constructor
 decode constructor =
     \resource -> Ok constructor
 
@@ -316,7 +316,7 @@ This is for the id of the resource being decoded.
 For the id of a related resource, use one of the `relationship` functions below.
 
 -}
-id : IdDecoder id -> Decoder (id -> rest) -> Decoder rest
+id : IdDecoder id -> ResourceDecoder (id -> rest) -> ResourceDecoder rest
 id idDecoder_ =
     custom
         (\resource ->
@@ -330,7 +330,7 @@ id idDecoder_ =
 Since attributes can be arbitrary JSON, this function takes a general use `Json.Decode.Decoder`.
 
 -}
-attribute : String -> Decode.Decoder attribute -> Decoder (attribute -> rest) -> Decoder rest
+attribute : String -> Decode.Decoder attribute -> ResourceDecoder (attribute -> rest) -> ResourceDecoder rest
 attribute attributeName attributeDecoder =
     custom
         (\resource ->
@@ -350,7 +350,7 @@ This will add an id to the result.
 It will not look up the object in the `includes` and inline it.
 
 -}
-relationshipOne : String -> IdDecoder relatedId -> Decoder (relatedId -> rest) -> Decoder rest
+relationshipOne : String -> IdDecoder relatedId -> ResourceDecoder (relatedId -> rest) -> ResourceDecoder rest
 relationshipOne relationshipName relatedIdDecoder =
     custom
         (\resource ->
@@ -373,7 +373,7 @@ The result will be `Nothing` if
   - There's a relationship whose data is `null`.
 
 -}
-relationshipMaybe : String -> IdDecoder relatedId -> Decoder (Maybe relatedId -> rest) -> Decoder rest
+relationshipMaybe : String -> IdDecoder relatedId -> ResourceDecoder (Maybe relatedId -> rest) -> ResourceDecoder rest
 relationshipMaybe relationshipName relatedIdDecoder =
     custom
         (\resource ->
@@ -406,7 +406,7 @@ Fails to decode if
   - There's a relationship whose data is `null`.
 
 -}
-relationshipMany : String -> IdDecoder relatedId -> Decoder (List relatedId -> rest) -> Decoder rest
+relationshipMany : String -> IdDecoder relatedId -> ResourceDecoder (List relatedId -> rest) -> ResourceDecoder rest
 relationshipMany relationshipName relatedIdDecoder =
     custom
         (\resource ->
@@ -428,17 +428,17 @@ relationshipMany relationshipName relatedIdDecoder =
         )
 
 
-{-| Run an arbitrary [`Decoder`](#Decoder) and include its result in the pipeline
+{-| Run an arbitrary [`ResourceDecoder`](#ResourceDecoder) and include its result in the pipeline
 
 Useful for decoding complex objects
 
 -}
-custom : Decoder a -> Decoder (a -> rest) -> Decoder rest
-custom decoder constructorDecoder =
+custom : ResourceDecoder a -> ResourceDecoder (a -> rest) -> ResourceDecoder rest
+custom resourceDecoder constructorDecoder =
     \resource ->
         Result.map2
             (\x consructor -> consructor x)
-            (decoder resource)
+            (resourceDecoder resource)
             (constructorDecoder resource)
 
 
@@ -446,18 +446,18 @@ custom decoder constructorDecoder =
 -- Fancy Decoding
 
 
-{-| Apply a function to the result of a decoder if it succeeds
+{-| Apply a function to the result of a resourceDecoder if it succeeds
 -}
-map : (a -> b) -> Decoder a -> Decoder b
-map f decoder =
+map : (a -> b) -> ResourceDecoder a -> ResourceDecoder b
+map f resourceDecoder =
     \resource ->
-        decoder resource
+        resourceDecoder resource
             |> Result.map f
 
 
-{-| Run another decoder that depends on a previous result.
+{-| Run another resourceDecoder that depends on a previous result.
 -}
-andThen : (a -> Result String b) -> Decoder a -> Decoder b
+andThen : (a -> Result String b) -> ResourceDecoder a -> ResourceDecoder b
 andThen second first =
     \resource ->
         first resource
@@ -469,7 +469,7 @@ andThen second first =
 -- TODO tolerate and recover from resource errors. new error type that returns a list of results
 
 
-{-| Describes what went wrong when running a [`Decoder`](#Decoder) on a [`Document`](#Document)
+{-| Describes what went wrong when running a [`ResourceDecoder`](#ResourceDecoder) on a [`Document`](#Document)
 
 This will happen if a document has valid JSON:API, but the decoder does not know how to understand it.
 

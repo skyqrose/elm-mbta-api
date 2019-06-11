@@ -47,7 +47,7 @@ emptyIncluded =
     }
 
 
-accumulatorForType : String -> JsonApi.Decoder (Included -> Included)
+accumulatorForType : String -> JsonApi.ResourceDecoder (Included -> Included)
 accumulatorForType resourceType =
     case resourceType of
         "prediction" ->
