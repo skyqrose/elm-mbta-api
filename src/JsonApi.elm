@@ -2,7 +2,7 @@ module JsonApi exposing
     ( Document, documentData, expectJsonApi, decodeDocumentString, decodeDocumentJsonValue
     , DocumentDecoder, documentDecoderOne, documentDecoderMany, ResourceDecoder, IdDecoder, idDecoder
     , decode, id, attribute, relationshipOne, relationshipMaybe, relationshipMany, custom
-    , map, andThen
+    , map, andThen, fail
     , Error(..), errorToString, DocumentError(..), documentErrorToString, ResourceError(..), resourceErrorToString, IdError, idErrorToString
     )
 
@@ -61,7 +61,7 @@ You can make `ResourceDecoder`s using a pipeline, modeled off of [`NoRedInk/elm-
 
 # Fancy Decoding
 
-@docs map, andThen
+@docs map, andThen, fail
 
 
 # Error Handling
@@ -534,6 +534,17 @@ andThen second first =
     \resource ->
         first resource
             |> Result.andThen (second >> Result.mapError CustomError)
+
+
+{-| A decoder that always fails, regardless of the data.
+
+Useful for making custom error messages.
+
+-}
+fail : String -> ResourceDecoder a
+fail message =
+    \resource ->
+        Err (CustomError message)
 
 
 
