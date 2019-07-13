@@ -1,4 +1,8 @@
-module DecodeHelpers exposing (all, enum)
+module DecodeHelpers exposing
+    ( all
+    , enum
+    , fromResult
+    )
 
 import Dict
 import Json.Decode as Decode exposing (Decoder)
@@ -36,3 +40,14 @@ all decoders =
         (Decode.map2 (::))
         (Decode.succeed [])
         decoders
+
+
+{-| -}
+fromResult : Result String x -> Decoder x
+fromResult result =
+    case result of
+        Ok x ->
+            Decode.succeed x
+
+        Err e ->
+            Decode.fail e

@@ -1,5 +1,5 @@
 module Mbta exposing
-    ( Color(..), LatLng, DirectionId(..), WheelchairAccessible(..)
+    ( LatLng, DirectionId(..), WheelchairAccessible(..)
     , PredictionId(..), Prediction, PredictionScheduleRelationship(..)
     , VehicleId(..), Vehicle, CurrentStatus(..)
     , RouteType(..), RouteId(..), Route, RouteDirections, RouteDirection
@@ -32,7 +32,7 @@ though they were changed in some places to make them clearer.
 
 # Util
 
-@docs Color, LatLng, DirectionId, WheelchairAccessible
+@docs LatLng, DirectionId, WheelchairAccessible
 
 
 # Realtime Data
@@ -64,20 +64,13 @@ though they were changed in some places to make them clearer.
 
 -}
 
+import Color
 import Dict
 import Time
 
 
 
 -- Util
-
-
-{-| E.g. `Color "FFFFFF"`
--}
-type
-    Color
-    -- TODO use avh4/elm-color instead
-    = Color String
 
 
 {-| -}
@@ -198,8 +191,8 @@ type alias Route =
     , fareClass : String
     , directions : Maybe RouteDirections
     , sortOrder : Int
-    , textColor : Color
-    , color : Color
+    , textColor : Color.Color
+    , color : Color.Color
     }
 
 
@@ -256,8 +249,8 @@ type alias Line =
     , shortName : String
     , longName : String
     , sortOrder : Int
-    , color : Color
-    , textColor : Color
+    , color : Color.Color
+    , textColor : Color.Color
     }
 
 
