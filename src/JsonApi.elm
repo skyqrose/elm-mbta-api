@@ -715,6 +715,10 @@ type ResourceError
     | CustomError String
 
 
+
+-- TODO include the resource id in the error/string, so it's easier to track down
+
+
 {-| -}
 resourceErrorToString : ResourceError -> String
 resourceErrorToString error =
