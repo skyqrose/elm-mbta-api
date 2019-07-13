@@ -2,31 +2,45 @@ module Mbta.Api exposing
     ( Host(..)
     , ApiResult, Ok, Error(..)
     , Include, Relationship, include, andIts
+    , Filter
     , getPredictions
     , predictionVehicle, predictionRoute, predictionSchedule, predictionTrip, predictionStop, predictionAlerts
+    , filterPredictionsByRouteTypes, filterPredictionsByRouteIds, filterPredictionsByTripIds, filterPredictionsByDirectionId, filterPredictionsByStopIds, filterPredictionsByLatLng, filterPredictionsByLatLngWithRadius
     , getVehicle, getVehicles
     , vehicleRoute, vehicleTrip, vehicleStop
+    , filterVehiclesByIds, filterVehiclesByLabels, filterVehiclesByRouteIds, filterVehiclesByRouteTypes, filterVehiclesByDirectionId, filterVehiclesByTripIds
     , getRoute, getRoutes
     , routeRoutePatterns, routeLine, routeStop
+    , filterRoutesByIds, filterRoutesByRouteTypes, filterRoutesByDirectionId, filterRoutesByStopIds
     , getRoutePattern, getRoutePatterns
     , routePatternRoute, routePatternRepresentativeTrip
+    , filterRoutePatternsByIds, filterRoutePatternsByRouteIds, filterRoutePatternsByDirectionId
     , getLine, getLines
     , lineRoutes
+    , filterLinesByIds
     , getSchedules
     , schedulePrediction, scheduleRoute, scheduleTrip, scheduleStop
+    , filterSchedulesByRouteIds, filterSchedulesByDirectionId, filterSchedulesByTripIds, filterSchedulesByStopSequence, StopSequenceFilter, filterSchedulesByStopIds, filterSchedulesByServiceDate, filterSchedulesByMinTime, filterSchedulesByMaxTime
     , getTrip, getTrips
     , tripPredictions, tripVehicle, tripRoute, tripRoutePattern, tripService, tripShape
+    , filterTripsByIds, filterTripsByNames, filterTripsByRouteIds, filterTripsByRoutePatternIds, filterTripsByDirectionId
     , getService, getServices
+    , filterServicesByIds
     , getShape, getShapes
     , shapeRoute, shapeStops
+    , filterShapesByRouteIds, filterShapesByDirectionId
     , getStop, getStops
     , stopParentStation, stopChildStops, stopRecommendedTransfers, stopFacilities
+    , filterStopsByIds, filterStopsByLocationTypes, filterStopsByRouteTypes, filterStopsByRouteIds, filterStopsByDirectionId, filterStopsByLatLng, filterStopsByLatLngWithRadius
     , getFacility, getFacilities
     , facilityStop
+    , filterFacilitiesByStopIds, filterFacilitiesByFacilityTypes
     , getLiveFacility, getLiveFacilities
     , liveFacilityFacility
+    , filterLiveFacilitiesByIds
     , getAlert, getAlerts
     , alertRoutes, alertTrips, alertStops, alertFacilities
+    , filterAlertsByIds, filterAlertsByRouteTypes, filterAlertsByRouteIds, filterAlertsByDirectionId, filterAlertsByTripIds, filterAlertsByStopIds, filterAlertsByFacilities, filterAlertsByActivities, filterAlertsByDatetime, AlertDatetimeFilter, filterAlertsByLifecycles, filterAlertsBySeverities
     )
 
 {-| Make HTTP requests to get data
@@ -71,6 +85,21 @@ Any sideloaded resources are put in the [`Included`](#Included) object in the re
 @docs Include, Relationship, include, andIts
 
 
+# Filtering
+
+Use it like
+
+    Mbta.Api.getTrips
+        ReceiveTrip
+        apiConfig
+        [ Mbta.filterTripsByRouteIds [ redLineId, orangeLineId ]
+        , Mbta.filterTripsByDirectionId Mbta.D0
+        ]
+        includes
+
+@docs Filter
+
+
 # Realtime Data
 
 
@@ -78,12 +107,14 @@ Any sideloaded resources are put in the [`Included`](#Included) object in the re
 
 @docs getPredictions
 @docs predictionVehicle, predictionRoute, predictionSchedule, predictionTrip, predictionStop, predictionAlerts
+@docs filterPredictionsByRouteTypes, filterPredictionsByRouteIds, filterPredictionsByTripIds, filterPredictionsByDirectionId, filterPredictionsByStopIds, filterPredictionsByLatLng, filterPredictionsByLatLngWithRadius
 
 
 ## [Vehicle](#Mbta.Vehicle)
 
 @docs getVehicle, getVehicles
 @docs vehicleRoute, vehicleTrip, vehicleStop
+@docs filterVehiclesByIds, filterVehiclesByLabels, filterVehiclesByRouteIds, filterVehiclesByRouteTypes, filterVehiclesByDirectionId, filterVehiclesByTripIds
 
 
 # Schedule Data
@@ -92,45 +123,50 @@ Any sideloaded resources are put in the [`Included`](#Included) object in the re
 ## [Route](#Mbta.Route)
 
 @docs getRoute, getRoutes
-
 @docs routeRoutePatterns, routeLine, routeStop
+@docs filterRoutesByIds, filterRoutesByRouteTypes, filterRoutesByDirectionId, filterRoutesByStopIds
 
 
 ## [RoutePattern](#Mbta.RoutePattern)
 
 @docs getRoutePattern, getRoutePatterns
 @docs routePatternRoute, routePatternRepresentativeTrip
+@docs filterRoutePatternsByIds, filterRoutePatternsByRouteIds, filterRoutePatternsByDirectionId
 
 
 ## [Line](#Mbta.Line)
 
 @docs getLine, getLines
 @docs lineRoutes
+@docs filterLinesByIds
 
 
 ## [Schedule](#Mbta.Schedule)
 
 @docs getSchedules
 @docs schedulePrediction, scheduleRoute, scheduleTrip, scheduleStop
+@docs filterSchedulesByRouteIds, filterSchedulesByDirectionId, filterSchedulesByTripIds, filterSchedulesByStopSequence, StopSequenceFilter, filterSchedulesByStopIds, filterSchedulesByServiceDate, filterSchedulesByMinTime, filterSchedulesByMaxTime
 
 
 ## [Trip](#Mbta.Trip)
 
 @docs getTrip, getTrips
 @docs tripPredictions, tripVehicle, tripRoute, tripRoutePattern, tripService, tripShape
+@docs filterTripsByIds, filterTripsByNames, filterTripsByRouteIds, filterTripsByRoutePatternIds, filterTripsByDirectionId
 
 
 ## [Service](#Mbta.Service)
 
 @docs getService, getServices
-
-`Service` does not currently have any relationships to include.
+@docs `Service` does not currently have any relationships to include.
+@docs filterServicesByIds
 
 
 ## [Shape](#Mbta.Shape)
 
 @docs getShape, getShapes
 @docs shapeRoute, shapeStops
+@docs filterShapesByRouteIds, filterShapesByDirectionId
 
 
 # Stop Data
@@ -140,18 +176,21 @@ Any sideloaded resources are put in the [`Included`](#Included) object in the re
 
 @docs getStop, getStops
 @docs stopParentStation, stopChildStops, stopRecommendedTransfers, stopFacilities
+@docs filterStopsByIds, filterStopsByLocationTypes, filterStopsByRouteTypes, filterStopsByRouteIds, filterStopsByDirectionId, filterStopsByLatLng, filterStopsByLatLngWithRadius
 
 
 ## [Facility](#Mbta.Facility)
 
 @docs getFacility, getFacilities
 @docs facilityStop
+@docs filterFacilitiesByStopIds, filterFacilitiesByFacilityTypes
 
 
 ## [Live Facility](#Mbta.Live)
 
 @docs getLiveFacility, getLiveFacilities
 @docs liveFacilityFacility
+@docs filterLiveFacilitiesByIds
 
 
 # Alert Data
@@ -161,16 +200,18 @@ Any sideloaded resources are put in the [`Included`](#Included) object in the re
 
 @docs getAlert, getAlerts
 @docs alertRoutes, alertTrips, alertStops, alertFacilities
+@docs filterAlertsByIds, filterAlertsByRouteTypes, filterAlertsByRouteIds, filterAlertsByDirectionId, filterAlertsByTripIds, filterAlertsByStopIds, filterAlertsByFacilities, filterAlertsByActivities, filterAlertsByDatetime, AlertDatetimeFilter, filterAlertsByLifecycles, filterAlertsBySeverities
 
 -}
 
 import Http
+import Iso8601
 import Json.Decode as Decode
 import JsonApi
 import Mbta exposing (..)
 import Mbta.Decode
-import Mbta.Filter exposing (Filter)
 import Mbta.Included as Included
+import Time
 import Url.Builder
 
 
@@ -269,7 +310,7 @@ makeUrl host path filters includes =
                 (List.concat
                     [ apiKeyQueryParam
                     , includeQueryParameter includes
-                    , Mbta.Filter.queryParameters filters
+                    , filterQueryParameters filters
                     ]
                 )
 
@@ -279,7 +320,7 @@ makeUrl host path filters includes =
                 (List.concat
                     [ config.queryParameters
                     , includeQueryParameter includes
-                    , Mbta.Filter.queryParameters filters
+                    , filterQueryParameters filters
                     ]
                 )
 
@@ -290,7 +331,7 @@ makeUrl host path filters includes =
                 (List.concat
                     [ config.queryParameters
                     , includeQueryParameter includes
-                    , Mbta.Filter.queryParameters filters
+                    , filterQueryParameters filters
                     ]
                 )
 
@@ -362,20 +403,6 @@ include (Relationship s) =
     Include s
 
 
-includeQueryParameter : List (Include a) -> List Url.Builder.QueryParameter
-includeQueryParameter includes =
-    case includes of
-        [] ->
-            []
-
-        _ ->
-            includes
-                |> List.map (\(Include s) -> s)
-                |> String.join ","
-                |> Url.Builder.string "include"
-                |> List.singleton
-
-
 {-| For chaining includes
 
 Adds an included resource's relationships into the sideloaded results.
@@ -393,6 +420,46 @@ Uses the `.` syntax from JSON:API's `?include=` options.
 andIts : Relationship b c -> Relationship a b -> Relationship a c
 andIts (Relationship string1) (Relationship string2) =
     Relationship (string1 ++ "." ++ string2)
+
+
+includeQueryParameter : List (Include a) -> List Url.Builder.QueryParameter
+includeQueryParameter includes =
+    case includes of
+        [] ->
+            []
+
+        _ ->
+            includes
+                |> List.map (\(Include s) -> s)
+                |> String.join ","
+                |> Url.Builder.string "include"
+                |> List.singleton
+
+
+
+-- Filtering
+
+
+{-| An instruction for the API
+It shows up as a query parameter in an api call
+-}
+type Filter resource
+    = Filter (List ( String, List String ))
+
+
+filterQueryParameters : List (Filter a) -> List Url.Builder.QueryParameter
+filterQueryParameters filters =
+    List.concatMap
+        (\(Filter params) ->
+            List.map
+                (\( name, values ) ->
+                    Url.Builder.string
+                        ("filter[" ++ name ++ "]")
+                        (String.join "," values)
+                )
+                params
+        )
+        filters
 
 
 
@@ -443,6 +510,48 @@ predictionAlerts =
     Relationship "alerts"
 
 
+{-| -}
+filterPredictionsByRouteTypes : List RouteType -> Filter Prediction
+filterPredictionsByRouteTypes routeTypes =
+    filterByList "route_type" routeTypeToString routeTypes
+
+
+{-| -}
+filterPredictionsByRouteIds : List RouteId -> Filter Prediction
+filterPredictionsByRouteIds routeIds =
+    filterByList "route" routeIdToString routeIds
+
+
+{-| -}
+filterPredictionsByTripIds : List TripId -> Filter Prediction
+filterPredictionsByTripIds tripIds =
+    filterByList "trip" tripIdToString tripIds
+
+
+{-| -}
+filterPredictionsByDirectionId : DirectionId -> Filter Prediction
+filterPredictionsByDirectionId directionId =
+    filterByDirectionId directionId
+
+
+{-| -}
+filterPredictionsByStopIds : List StopId -> Filter Prediction
+filterPredictionsByStopIds stopIds =
+    filterByList "stop" stopIdToString stopIds
+
+
+{-| -}
+filterPredictionsByLatLng : LatLng -> Filter Prediction
+filterPredictionsByLatLng latLng =
+    filterByLatLng latLng
+
+
+{-| -}
+filterPredictionsByLatLngWithRadius : LatLng -> Float -> Filter Prediction
+filterPredictionsByLatLngWithRadius latLng radius =
+    filterByLatLngWithRadius latLng radius
+
+
 
 -- Vehicle
 
@@ -475,6 +584,42 @@ vehicleTrip =
 vehicleStop : Relationship Vehicle Trip
 vehicleStop =
     Relationship "stop"
+
+
+{-| -}
+filterVehiclesByIds : List VehicleId -> Filter Vehicle
+filterVehiclesByIds vehicleIds =
+    filterByList "id" (\(VehicleId id) -> id) vehicleIds
+
+
+{-| -}
+filterVehiclesByLabels : List String -> Filter Vehicle
+filterVehiclesByLabels labels =
+    filterByList "label" identity labels
+
+
+{-| -}
+filterVehiclesByRouteIds : List RouteId -> Filter Vehicle
+filterVehiclesByRouteIds routeIds =
+    filterByList "route" routeIdToString routeIds
+
+
+{-| -}
+filterVehiclesByRouteTypes : List RouteType -> Filter Vehicle
+filterVehiclesByRouteTypes routeTypes =
+    filterByList "route_type" routeTypeToString routeTypes
+
+
+{-| -}
+filterVehiclesByDirectionId : DirectionId -> Filter Vehicle
+filterVehiclesByDirectionId directionId =
+    filterByDirectionId directionId
+
+
+{-| -}
+filterVehiclesByTripIds : List TripId -> Filter Vehicle
+filterVehiclesByTripIds tripIds =
+    filterByList "trip" tripIdToString tripIds
 
 
 
@@ -516,6 +661,30 @@ routeStop =
     Relationship "stop"
 
 
+{-| -}
+filterRoutesByIds : List RouteId -> Filter Route
+filterRoutesByIds routeIds =
+    filterByList "id" routeIdToString routeIds
+
+
+{-| -}
+filterRoutesByRouteTypes : List RouteType -> Filter Route
+filterRoutesByRouteTypes routeTypes =
+    filterByList "type" routeTypeToString routeTypes
+
+
+{-| -}
+filterRoutesByDirectionId : DirectionId -> Filter Route
+filterRoutesByDirectionId directionId =
+    filterByDirectionId directionId
+
+
+{-| -}
+filterRoutesByStopIds : List StopId -> Filter Route
+filterRoutesByStopIds stopIds =
+    filterByList "stop" stopIdToString stopIds
+
+
 
 -- RoutePattern
 
@@ -544,6 +713,24 @@ routePatternRepresentativeTrip =
     Relationship "representative_trip"
 
 
+{-| -}
+filterRoutePatternsByIds : List RoutePatternId -> Filter RoutePattern
+filterRoutePatternsByIds routePatternIds =
+    filterByList "id" routePatternIdToString routePatternIds
+
+
+{-| -}
+filterRoutePatternsByRouteIds : List RouteId -> Filter RoutePattern
+filterRoutePatternsByRouteIds routeIds =
+    filterByList "route" routeIdToString routeIds
+
+
+{-| -}
+filterRoutePatternsByDirectionId : DirectionId -> Filter RoutePattern
+filterRoutePatternsByDirectionId directionId =
+    filterByDirectionId directionId
+
+
 
 -- Line
 
@@ -564,6 +751,12 @@ getLines toMsg host includes filters =
 lineRoutes : Relationship Line Route
 lineRoutes =
     Relationship "routes"
+
+
+{-| -}
+filterLinesByIds : List LineId -> Filter Line
+filterLinesByIds lineIds =
+    filterByList "id" (\(LineId id) -> id) lineIds
 
 
 
@@ -599,6 +792,74 @@ schedulePrediction =
 scheduleRoute : Relationship Schedule Route
 scheduleRoute =
     Relationship "route"
+
+
+{-| -}
+filterSchedulesByRouteIds : List RouteId -> Filter Schedule
+filterSchedulesByRouteIds routeIds =
+    filterByList "route" routeIdToString routeIds
+
+
+{-| -}
+filterSchedulesByDirectionId : DirectionId -> Filter Schedule
+filterSchedulesByDirectionId directionId =
+    filterByDirectionId directionId
+
+
+{-| -}
+filterSchedulesByTripIds : List TripId -> Filter Schedule
+filterSchedulesByTripIds tripIds =
+    filterByList "trip" tripIdToString tripIds
+
+
+{-| -}
+filterSchedulesByStopSequence : List StopSequenceFilter -> Filter Schedule
+filterSchedulesByStopSequence stopSequences =
+    let
+        stopSequenceToString : StopSequenceFilter -> String
+        stopSequenceToString stopSequenceFilter =
+            case stopSequenceFilter of
+                StopSequence stopSequence ->
+                    String.fromInt stopSequence
+
+                First ->
+                    "first"
+
+                Last ->
+                    "last"
+    in
+    filterByList "stop_sequence" stopSequenceToString stopSequences
+
+
+{-| -}
+type StopSequenceFilter
+    = StopSequence Int
+    | First
+    | Last
+
+
+{-| -}
+filterSchedulesByStopIds : List StopId -> Filter Schedule
+filterSchedulesByStopIds stopIds =
+    filterByList "stop" stopIdToString stopIds
+
+
+{-| -}
+filterSchedulesByServiceDate : ServiceDate -> Filter Schedule
+filterSchedulesByServiceDate serviceDate =
+    filterByOne "date" (\(ServiceDate s) -> s) serviceDate
+
+
+{-| -}
+filterSchedulesByMinTime : String -> Filter Schedule
+filterSchedulesByMinTime minTime =
+    filterByOne "min_time" identity minTime
+
+
+{-| -}
+filterSchedulesByMaxTime : String -> Filter Schedule
+filterSchedulesByMaxTime maxTime =
+    filterByOne "max_time" identity maxTime
 
 
 
@@ -653,6 +914,36 @@ tripShape =
     Relationship "shape"
 
 
+{-| -}
+filterTripsByIds : List TripId -> Filter Trip
+filterTripsByIds tripIds =
+    filterByList "id" tripIdToString tripIds
+
+
+{-| -}
+filterTripsByNames : List String -> Filter Trip
+filterTripsByNames names =
+    filterByList "name" identity names
+
+
+{-| -}
+filterTripsByRouteIds : List RouteId -> Filter Trip
+filterTripsByRouteIds routeIds =
+    filterByList "route" routeIdToString routeIds
+
+
+{-| -}
+filterTripsByRoutePatternIds : List RoutePatternId -> Filter Trip
+filterTripsByRoutePatternIds routePatternIds =
+    filterByList "route_pattern" routePatternIdToString routePatternIds
+
+
+{-| -}
+filterTripsByDirectionId : DirectionId -> Filter Trip
+filterTripsByDirectionId directionId =
+    filterByDirectionId directionId
+
+
 
 -- Service
 
@@ -671,6 +962,15 @@ getServices toMsg host includes filters =
 
 
 -- (no includes from Service)
+
+
+{-| -}
+filterServicesByIds : List ServiceId -> Filter Service
+filterServicesByIds serviceIds =
+    filterByList "id" (\(ServiceId id) -> id) serviceIds
+
+
+
 -- Shape
 
 
@@ -697,6 +997,19 @@ shapeRoute =
 shapeStops : Relationship Shape Stop
 shapeStops =
     Relationship "stops"
+
+
+{-| TODO Must filter by route. How to enforce/ document
+-}
+filterShapesByRouteIds : List RouteId -> Filter Shape
+filterShapesByRouteIds routeIds =
+    filterByList "route" routeIdToString routeIds
+
+
+{-| -}
+filterShapesByDirectionId : DirectionId -> Filter Shape
+filterShapesByDirectionId directionId =
+    filterByDirectionId directionId
 
 
 
@@ -740,6 +1053,64 @@ stopFacilities =
     Relationship "facilities"
 
 
+{-| -}
+filterStopsByIds : List StopId -> Filter Stop
+filterStopsByIds stopIds =
+    filterByList "id" stopIdToString stopIds
+
+
+{-| -}
+filterStopsByLocationTypes : List LocationType -> Filter Stop
+filterStopsByLocationTypes locationTypes =
+    let
+        locationTypeToString : LocationType -> String
+        locationTypeToString locationType =
+            case locationType of
+                LocationType_0_Stop ->
+                    "0"
+
+                LocationType_1_Station ->
+                    "1"
+
+                LocationType_2_Entrance ->
+                    "2"
+
+                LocationType_3_Node ->
+                    "3"
+    in
+    filterByList "location_type" locationTypeToString locationTypes
+
+
+{-| -}
+filterStopsByRouteTypes : List RouteType -> Filter Stop
+filterStopsByRouteTypes routeTypes =
+    filterByList "route_type" routeTypeToString routeTypes
+
+
+{-| -}
+filterStopsByRouteIds : List RouteId -> Filter Stop
+filterStopsByRouteIds routeIds =
+    filterByList "route" routeIdToString routeIds
+
+
+{-| -}
+filterStopsByDirectionId : DirectionId -> Filter Stop
+filterStopsByDirectionId directionId =
+    filterByDirectionId directionId
+
+
+{-| -}
+filterStopsByLatLng : LatLng -> Filter Stop
+filterStopsByLatLng latLng =
+    filterByLatLng latLng
+
+
+{-| -}
+filterStopsByLatLngWithRadius : LatLng -> Float -> Filter Stop
+filterStopsByLatLngWithRadius latLng radius =
+    filterByLatLngWithRadius latLng radius
+
+
 
 -- Facility
 
@@ -760,6 +1131,28 @@ getFacilities toMsg host includes filters =
 facilityStop : Relationship Facility Stop
 facilityStop =
     Relationship "stop"
+
+
+{-| -}
+filterFacilitiesByStopIds : List StopId -> Filter Facility
+filterFacilitiesByStopIds stopIds =
+    filterByList "stop" stopIdToString stopIds
+
+
+{-| -}
+filterFacilitiesByFacilityTypes : List FacilityType -> Filter Facility
+filterFacilitiesByFacilityTypes facilityTypes =
+    filterByList "type" (\(FacilityType facilityType) -> facilityType) facilityTypes
+
+
+
+-- LiveFacility
+
+
+{-| -}
+filterLiveFacilitiesByIds : List FacilityId -> Filter LiveFacility
+filterLiveFacilitiesByIds facilityIds =
+    filterByList "id" facilityIdToString facilityIds
 
 
 
@@ -823,3 +1216,218 @@ alertStops =
 alertFacilities : Relationship Alert Facility
 alertFacilities =
     Relationship "facilities"
+
+
+{-| -}
+filterAlertsByIds : List AlertId -> Filter Alert
+filterAlertsByIds alertIds =
+    filterByList "id" (\(AlertId id) -> id) alertIds
+
+
+{-| -}
+filterAlertsByRouteTypes : List RouteType -> Filter Alert
+filterAlertsByRouteTypes routeTypes =
+    filterByList "route_type" routeTypeToString routeTypes
+
+
+{-| -}
+filterAlertsByRouteIds : List RouteId -> Filter Alert
+filterAlertsByRouteIds routeIds =
+    filterByList "route" routeIdToString routeIds
+
+
+{-| -}
+filterAlertsByDirectionId : DirectionId -> Filter Alert
+filterAlertsByDirectionId directionId =
+    filterByDirectionId directionId
+
+
+{-| -}
+filterAlertsByTripIds : List TripId -> Filter Alert
+filterAlertsByTripIds tripIds =
+    filterByList "trip" tripIdToString tripIds
+
+
+{-| -}
+filterAlertsByStopIds : List StopId -> Filter Alert
+filterAlertsByStopIds stopIds =
+    filterByList "stop" stopIdToString stopIds
+
+
+{-| -}
+filterAlertsByFacilities : List FacilityId -> Filter Alert
+filterAlertsByFacilities facilityIds =
+    filterByList "facility" facilityIdToString facilityIds
+
+
+{-| -}
+filterAlertsByActivities : List InformedEntityActivity -> Filter Alert
+filterAlertsByActivities activities =
+    let
+        activityToString : InformedEntityActivity -> String
+        activityToString activity =
+            case activity of
+                Activity_Board ->
+                    "BOARD"
+
+                Activity_BringingBike ->
+                    "BRINGING_BIKE"
+
+                Activity_Exit ->
+                    "EXIT"
+
+                Activity_ParkCar ->
+                    "PARK_CAR"
+
+                Activity_Ride ->
+                    "RIDE"
+
+                Activity_StoreBike ->
+                    "STORE_BIKE"
+
+                Activity_UsingEscalator ->
+                    "USING_ESCALATOR"
+
+                Activity_UsingWheelchair ->
+                    "USING_WHEELCHAIR"
+    in
+    filterByList "activity" activityToString activities
+
+
+{-| -}
+filterAlertsByDatetime : AlertDatetimeFilter -> Filter Alert
+filterAlertsByDatetime datetime =
+    let
+        datetimeFilterToString : AlertDatetimeFilter -> String
+        datetimeFilterToString datetimeFilter =
+            case datetimeFilter of
+                Datetime posix ->
+                    Iso8601.fromTime posix
+
+                Now ->
+                    "NOW"
+    in
+    filterByOne "datetime" datetimeFilterToString datetime
+
+
+{-| -}
+type AlertDatetimeFilter
+    = Datetime Time.Posix
+    | Now
+
+
+{-| -}
+filterAlertsByLifecycles : List AlertLifecycle -> Filter Alert
+filterAlertsByLifecycles lifecycles =
+    let
+        lifecycleToString : AlertLifecycle -> String
+        lifecycleToString lifecycle =
+            case lifecycle of
+                Alert_New ->
+                    "NEW"
+
+                Alert_Ongoing ->
+                    "ONGOING"
+
+                Alert_OngoingUpcoming ->
+                    "ONGOING_UPCOMING"
+
+                Alert_Upcoming ->
+                    "UPCOMING"
+    in
+    filterByList "lifecycle" lifecycleToString lifecycles
+
+
+{-| -}
+filterAlertsBySeverities : List Int -> Filter Alert
+filterAlertsBySeverities severities =
+    filterByList "severity" String.fromInt severities
+
+
+
+-- Private functions for building filters
+
+
+filterByOne : String -> (a -> String) -> a -> Filter b
+filterByOne key toString value =
+    Filter [ ( key, [ toString value ] ) ]
+
+
+filterByList : String -> (a -> String) -> List a -> Filter b
+filterByList key toString values =
+    Filter [ ( key, List.map toString values ) ]
+
+
+filterByDirectionId : DirectionId -> Filter a
+filterByDirectionId directionId =
+    let
+        directionIdString =
+            case directionId of
+                D0 ->
+                    "0"
+
+                D1 ->
+                    "1"
+    in
+    Filter [ ( "direction_id", [ directionIdString ] ) ]
+
+
+filterByLatLng : LatLng -> Filter a
+filterByLatLng latLng =
+    Filter
+        [ ( "latitude", [ String.fromFloat latLng.latitude ] )
+        , ( "longitude", [ String.fromFloat latLng.longitude ] )
+        ]
+
+
+filterByLatLngWithRadius : LatLng -> Float -> Filter a
+filterByLatLngWithRadius latLng radius =
+    Filter
+        [ ( "latitude", [ String.fromFloat latLng.latitude ] )
+        , ( "longitude", [ String.fromFloat latLng.longitude ] )
+        , ( "radius", [ String.fromFloat radius ] )
+        ]
+
+
+routeTypeToString : RouteType -> String
+routeTypeToString routeType =
+    case routeType of
+        RouteType_0_LightRail ->
+            "0"
+
+        RouteType_1_HeavyRail ->
+            "1"
+
+        RouteType_2_CommuterRail ->
+            "2"
+
+        RouteType_3_Bus ->
+            "3"
+
+        RouteType_4_Ferry ->
+            "4"
+
+
+routeIdToString : RouteId -> String
+routeIdToString (RouteId routeId) =
+    routeId
+
+
+routePatternIdToString : RoutePatternId -> String
+routePatternIdToString (RoutePatternId routePatternId) =
+    routePatternId
+
+
+tripIdToString : TripId -> String
+tripIdToString (TripId tripId) =
+    tripId
+
+
+stopIdToString : StopId -> String
+stopIdToString (StopId stopId) =
+    stopId
+
+
+facilityIdToString : FacilityId -> String
+facilityIdToString (FacilityId facilityId) =
+    facilityId
