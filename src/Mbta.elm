@@ -2,7 +2,7 @@ module Mbta exposing
     ( Color(..), LatLng, DirectionId(..), WheelchairAccessible(..)
     , PredictionId(..), Prediction, PredictionScheduleRelationship(..)
     , VehicleId(..), Vehicle, CurrentStatus(..)
-    , Route, RouteDirections, RouteDirection
+    , RouteType(..), RouteId(..), Route, RouteDirections, RouteDirection
     , RoutePatternId(..), RoutePattern, RoutePatternTypicality(..)
     , LineId(..), Line, ScheduleId(..)
     , Schedule, StopSequence(..), PickupDropOffType(..)
@@ -12,7 +12,6 @@ module Mbta exposing
     , StopId(..), Stop, LocationType(..)
     , FacilityId(..), Facility, LiveFacility, FacilityType(..), FacilityProperties, FacilityPropertyValue(..)
     , AlertId(..), Alert, AlertLifecycle(..), ActivePeriod, InformedEntity, InformedEntityActivity(..)
-    , RouteId(..), RouteType(..)
     )
 
 {-| The types for all data coming from the MBTA API
@@ -44,7 +43,7 @@ though they were changed in some places to make them clearer.
 
 # Schedule Data
 
-@docs RouteType RouteId, Route, RouteDirections, RouteDirection
+@docs RouteType, RouteId, Route, RouteDirections, RouteDirection
 @docs RoutePatternId, RoutePattern, RoutePatternTypicality
 @docs LineId, Line, ScheduleId
 @docs Schedule, StopSequence, PickupDropOffType
@@ -56,7 +55,7 @@ though they were changed in some places to make them clearer.
 # Stops
 
 @docs StopId, Stop, LocationType
-@docs FacilityId, Facility, LiveFacility, FacilityType, FacilityProperties, FacilityProperty, FacilityPropertyName, FacilityPropertyValue
+@docs FacilityId, Facility, LiveFacility, FacilityType, FacilityProperties, FacilityPropertyValue
 
 
 # Alerts

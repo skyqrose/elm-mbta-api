@@ -133,6 +133,11 @@ For use in [`Mbta.Api.getAlerts`](#Mbta.Api.getAlerts)
 
 @docs alertsByIds, alertsByRouteTypes, alertsByRouteIds, alertsByDirectionId, alertsByTripIds, alertsByStopIds, alertsByFacilities, alertsByActivities, alertsByDatetime, AlertDatetimeFilter, alertsByLifecycles, alertsBySeverities
 
+
+## Internal Use
+
+@docs queryParameters
+
 -}
 
 import Iso8601

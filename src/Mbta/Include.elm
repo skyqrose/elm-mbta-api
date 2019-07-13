@@ -108,6 +108,10 @@ Any sideloaded resources are put in the [`Included`](#Included) object returned 
 
 @docs alertRoutes, alertTrips, alertStops, alertFacilities
 
+## Internal Use
+
+@docs queryParameter
+
 -}
 
 import Mbta exposing (..)
@@ -170,31 +174,37 @@ andIts (Relationship string1) (Relationship string2) =
 -- Prediction
 
 
+{-| -}
 predictionVehicle : Relationship Prediction Vehicle
 predictionVehicle =
     Relationship "vehicle"
 
 
+{-| -}
 predictionRoute : Relationship Prediction Route
 predictionRoute =
     Relationship "route"
 
 
+{-| -}
 predictionSchedule : Relationship Prediction Schedule
 predictionSchedule =
     Relationship "schedule"
 
 
+{-| -}
 predictionTrip : Relationship Prediction Trip
 predictionTrip =
     Relationship "trip"
 
 
+{-| -}
 predictionStop : Relationship Prediction Stop
 predictionStop =
     Relationship "stop"
 
 
+{-| -}
 predictionAlerts : Relationship Prediction Alert
 predictionAlerts =
     Relationship "alerts"
@@ -204,16 +214,19 @@ predictionAlerts =
 -- Vehicle
 
 
+{-| -}
 vehicleRoute : Relationship Vehicle Route
 vehicleRoute =
     Relationship "route"
 
 
+{-| -}
 vehicleTrip : Relationship Vehicle Trip
 vehicleTrip =
     Relationship "trip"
 
 
+{-| -}
 vehicleStop : Relationship Vehicle Trip
 vehicleStop =
     Relationship "stop"
@@ -224,11 +237,13 @@ vehicleStop =
 -- Route
 
 
+{-| -}
 routeRoutePatterns : Relationship Route RoutePattern
 routeRoutePatterns =
     Relationship "route_patterns"
 
 
+{-| -}
 routeLine : Relationship Route Line
 routeLine =
     Relationship "line"
@@ -248,11 +263,13 @@ routeStop =
 -- RoutePattern
 
 
+{-| -}
 routePatternRoute : Relationship RoutePattern Route
 routePatternRoute =
     Relationship "route"
 
 
+{-| -}
 routePatternRepresentativeTrip : Relationship RoutePattern Trip
 routePatternRepresentativeTrip =
     Relationship "representative_trip"
@@ -262,6 +279,7 @@ routePatternRepresentativeTrip =
 -- Line
 
 
+{-| -}
 lineRoutes : Relationship Line Route
 lineRoutes =
     Relationship "routes"
@@ -271,21 +289,25 @@ lineRoutes =
 -- Schedule
 
 
+{-| -}
 scheduleStop : Relationship Schedule Stop
 scheduleStop =
     Relationship "stop"
 
 
+{-| -}
 scheduleTrip : Relationship Schedule Trip
 scheduleTrip =
     Relationship "trip"
 
 
+{-| -}
 schedulePrediction : Relationship Schedule Prediction
 schedulePrediction =
     Relationship "prediction"
 
 
+{-| -}
 scheduleRoute : Relationship Schedule Route
 scheduleRoute =
     Relationship "route"
@@ -295,31 +317,37 @@ scheduleRoute =
 -- Trip
 
 
+{-| -}
 tripPredictions : Relationship Trip Prediction
 tripPredictions =
     Relationship "predictions"
 
 
+{-| -}
 tripVehicle : Relationship Trip Vehicle
 tripVehicle =
     Relationship "vehicle"
 
 
+{-| -}
 tripRoute : Relationship Trip Route
 tripRoute =
     Relationship "route"
 
 
+{-| -}
 tripRoutePattern : Relationship Trip RoutePattern
 tripRoutePattern =
     Relationship "route_pattern"
 
 
+{-| -}
 tripService : Relationship Trip Service
 tripService =
     Relationship "service"
 
 
+{-| -}
 tripShape : Relationship Trip Shape
 tripShape =
     Relationship "shape"
@@ -331,11 +359,13 @@ tripShape =
 -- Shape
 
 
+{-| -}
 shapeRoute : Relationship Shape Route
 shapeRoute =
     Relationship "route"
 
 
+{-| -}
 shapeStops : Relationship Shape Stop
 shapeStops =
     Relationship "stops"
@@ -346,21 +376,25 @@ shapeStops =
 -- Stop
 
 
+{-| -}
 stopParentStation : Relationship Stop Stop
 stopParentStation =
     Relationship "parent_station"
 
 
+{-| -}
 stopChildStops : Relationship Stop Stop
 stopChildStops =
     Relationship "child_stops"
 
 
+{-| -}
 stopRecommendedTransfers : Relationship Stop Stop
 stopRecommendedTransfers =
     Relationship "recommended_transfers"
 
 
+{-| -}
 stopFacilities : Relationship Stop Facility
 stopFacilities =
     Relationship "facilities"
@@ -370,6 +404,7 @@ stopFacilities =
 -- Facility
 
 
+{-| -}
 facilityStop : Relationship Facility Stop
 facilityStop =
     Relationship "stop"
@@ -379,6 +414,7 @@ facilityStop =
 -- LiveFacility
 
 
+{-| -}
 liveFacilityFacility : Relationship LiveFacility Facility
 liveFacilityFacility =
     Relationship "facility"
@@ -389,21 +425,25 @@ liveFacilityFacility =
 -- Alert
 
 
+{-| -}
 alertRoutes : Relationship Alert Route
 alertRoutes =
     Relationship "routes"
 
 
+{-| -}
 alertTrips : Relationship Alert Trip
 alertTrips =
     Relationship "trips"
 
 
+{-| -}
 alertStops : Relationship Alert Stop
 alertStops =
     Relationship "stops"
 
 
+{-| -}
 alertFacilities : Relationship Alert Facility
 alertFacilities =
     Relationship "facilities"
