@@ -216,8 +216,8 @@ jsonApiErrorToApiError jsonApiError =
             DecodeError (JsonApi.documentErrorToString documentError)
 
 
-getCustomId : (ApiResult resource -> msg) -> Host -> JsonApi.ResourceDecoder resource -> String -> List (Include resource) -> String -> Cmd msg
-getCustomId toMsg host resourceDecoder path includes id =
+getOne : (ApiResult resource -> msg) -> Host -> JsonApi.ResourceDecoder resource -> String -> List (Include resource) -> String -> Cmd msg
+getOne toMsg host resourceDecoder path includes id =
     let
         toMsg_ : Result JsonApi.Error (JsonApi.Document Included.Included resource) -> msg
         toMsg_ =
@@ -233,8 +233,8 @@ getCustomId toMsg host resourceDecoder path includes id =
         }
 
 
-getCustomList : (ApiResult (List resource) -> msg) -> Host -> JsonApi.ResourceDecoder resource -> String -> List (Include resource) -> List (Filter resource) -> Cmd msg
-getCustomList toMsg host resourceDecoder path includes filters =
+getList : (ApiResult (List resource) -> msg) -> Host -> JsonApi.ResourceDecoder resource -> String -> List (Include resource) -> List (Filter resource) -> Cmd msg
+getList toMsg host resourceDecoder path includes filters =
     let
         toMsg_ : Result JsonApi.Error (JsonApi.Document Included.Included (List resource)) -> msg
         toMsg_ =
@@ -258,19 +258,19 @@ getCustomList toMsg host resourceDecoder path includes filters =
 -}
 getPredictions : (ApiResult (List Prediction) -> msg) -> Host -> List (Include Prediction) -> List (Filter Prediction) -> Cmd msg
 getPredictions toMsg host includes filters =
-    getCustomList toMsg host Mbta.Decode.prediction "predictions" includes filters
+    getList toMsg host Mbta.Decode.prediction "predictions" includes filters
 
 
 {-| -}
 getVehicle : (ApiResult Vehicle -> msg) -> Host -> List (Include Vehicle) -> VehicleId -> Cmd msg
 getVehicle toMsg host includes (VehicleId vehicleId) =
-    getCustomId toMsg host Mbta.Decode.vehicle "vehicles" includes vehicleId
+    getOne toMsg host Mbta.Decode.vehicle "vehicles" includes vehicleId
 
 
 {-| -}
 getVehicles : (ApiResult (List Vehicle) -> msg) -> Host -> List (Include Vehicle) -> List (Filter Vehicle) -> Cmd msg
 getVehicles toMsg host includes filters =
-    getCustomList toMsg host Mbta.Decode.vehicle "vehicles" includes filters
+    getList toMsg host Mbta.Decode.vehicle "vehicles" includes filters
 
 
 
@@ -280,81 +280,81 @@ getVehicles toMsg host includes filters =
 {-| -}
 getRoute : (ApiResult Route -> msg) -> Host -> List (Include Route) -> RouteId -> Cmd msg
 getRoute toMsg host includes (RouteId routeId) =
-    getCustomId toMsg host Mbta.Decode.route "routes" includes routeId
+    getOne toMsg host Mbta.Decode.route "routes" includes routeId
 
 
 {-| -}
 getRoutes : (ApiResult (List Route) -> msg) -> Host -> List (Include Route) -> List (Filter Route) -> Cmd msg
 getRoutes toMsg host includes filters =
-    getCustomList toMsg host Mbta.Decode.route "routes" includes filters
+    getList toMsg host Mbta.Decode.route "routes" includes filters
 
 
 {-| -}
 getRoutePattern : (ApiResult RoutePattern -> msg) -> Host -> List (Include RoutePattern) -> RoutePatternId -> Cmd msg
 getRoutePattern toMsg host includes (RoutePatternId routePatternId) =
-    getCustomId toMsg host Mbta.Decode.routePattern "route-patterns" includes routePatternId
+    getOne toMsg host Mbta.Decode.routePattern "route-patterns" includes routePatternId
 
 
 {-| -}
 getRoutePatterns : (ApiResult (List RoutePattern) -> msg) -> Host -> List (Include RoutePattern) -> List (Filter RoutePattern) -> Cmd msg
 getRoutePatterns toMsg host includes filters =
-    getCustomList toMsg host Mbta.Decode.routePattern "route-patterns" includes filters
+    getList toMsg host Mbta.Decode.routePattern "route-patterns" includes filters
 
 
 {-| -}
 getLine : (ApiResult Line -> msg) -> Host -> List (Include Line) -> LineId -> Cmd msg
 getLine toMsg host includes (LineId lineId) =
-    getCustomId toMsg host Mbta.Decode.line "lines" includes lineId
+    getOne toMsg host Mbta.Decode.line "lines" includes lineId
 
 
 {-| -}
 getLines : (ApiResult (List Line) -> msg) -> Host -> List (Include Line) -> List (Filter Line) -> Cmd msg
 getLines toMsg host includes filters =
-    getCustomList toMsg host Mbta.Decode.line "lines" includes filters
+    getList toMsg host Mbta.Decode.line "lines" includes filters
 
 
 {-| Requires filtering by at least one of route, stop, or trip.
 -}
 getSchedules : (ApiResult (List Schedule) -> msg) -> Host -> List (Include Schedule) -> List (Filter Schedule) -> Cmd msg
 getSchedules toMsg host includes filters =
-    getCustomList toMsg host Mbta.Decode.schedule "schedules" includes filters
+    getList toMsg host Mbta.Decode.schedule "schedules" includes filters
 
 
 {-| -}
 getTrip : (ApiResult Trip -> msg) -> Host -> List (Include Trip) -> TripId -> Cmd msg
 getTrip toMsg host includes (TripId tripId) =
-    getCustomId toMsg host Mbta.Decode.trip "trips" includes tripId
+    getOne toMsg host Mbta.Decode.trip "trips" includes tripId
 
 
 {-| -}
 getTrips : (ApiResult (List Trip) -> msg) -> Host -> List (Include Trip) -> List (Filter Trip) -> Cmd msg
 getTrips toMsg host includes filters =
-    getCustomList toMsg host Mbta.Decode.trip "trips" includes filters
+    getList toMsg host Mbta.Decode.trip "trips" includes filters
 
 
 {-| -}
 getService : (ApiResult Service -> msg) -> Host -> List (Include Service) -> ServiceId -> Cmd msg
 getService toMsg host includes (ServiceId serviceId) =
-    getCustomId toMsg host Mbta.Decode.service "services" includes serviceId
+    getOne toMsg host Mbta.Decode.service "services" includes serviceId
 
 
 {-| -}
 getServices : (ApiResult (List Service) -> msg) -> Host -> List (Include Service) -> List (Filter Service) -> Cmd msg
 getServices toMsg host includes filters =
-    getCustomList toMsg host Mbta.Decode.service "services" includes filters
+    getList toMsg host Mbta.Decode.service "services" includes filters
 
 
 {-| -}
 getShape : (ApiResult Shape -> msg) -> Host -> List (Include Shape) -> ShapeId -> Cmd msg
 getShape toMsg host includes (ShapeId shapeId) =
-    getCustomId toMsg host Mbta.Decode.shape "shapes" includes shapeId
+    getOne toMsg host Mbta.Decode.shape "shapes" includes shapeId
 
 
 {-| Must filter by route
 -}
 getShapes : (ApiResult (List Shape) -> msg) -> Host -> List (Include Shape) -> List (Filter Shape) -> Cmd msg
 getShapes toMsg host includes filters =
-    getCustomList toMsg host Mbta.Decode.shape "shapes" includes filters
+    getList toMsg host Mbta.Decode.shape "shapes" includes filters
 
 
 
@@ -364,37 +364,37 @@ getShapes toMsg host includes filters =
 {-| -}
 getStop : (ApiResult Stop -> msg) -> Host -> List (Include Stop) -> StopId -> Cmd msg
 getStop toMsg host includes (StopId stopId) =
-    getCustomId toMsg host Mbta.Decode.stop "stops" includes stopId
+    getOne toMsg host Mbta.Decode.stop "stops" includes stopId
 
 
 {-| -}
 getStops : (ApiResult (List Stop) -> msg) -> Host -> List (Include Stop) -> List (Filter Stop) -> Cmd msg
 getStops toMsg host includes filters =
-    getCustomList toMsg host Mbta.Decode.stop "stops" includes filters
+    getList toMsg host Mbta.Decode.stop "stops" includes filters
 
 
 {-| -}
 getFacility : (ApiResult Facility -> msg) -> Host -> List (Include Facility) -> FacilityId -> Cmd msg
 getFacility toMsg host includes (FacilityId facilityId) =
-    getCustomId toMsg host Mbta.Decode.facility "facilities" includes facilityId
+    getOne toMsg host Mbta.Decode.facility "facilities" includes facilityId
 
 
 {-| -}
 getFacilities : (ApiResult (List Facility) -> msg) -> Host -> List (Include Facility) -> List (Filter Facility) -> Cmd msg
 getFacilities toMsg host includes filters =
-    getCustomList toMsg host Mbta.Decode.facility "facilities" includes filters
+    getList toMsg host Mbta.Decode.facility "facilities" includes filters
 
 
 {-| -}
 getLiveFacility : (ApiResult LiveFacility -> msg) -> Host -> List (Include LiveFacility) -> FacilityId -> Cmd msg
 getLiveFacility toMsg host includes (FacilityId facilityId) =
-    getCustomId toMsg host Mbta.Decode.liveFacility "live-facilities" includes facilityId
+    getOne toMsg host Mbta.Decode.liveFacility "live-facilities" includes facilityId
 
 
 {-| -}
 getLiveFacilities : (ApiResult (List LiveFacility) -> msg) -> Host -> List (Include LiveFacility) -> List (Filter LiveFacility) -> Cmd msg
 getLiveFacilities toMsg host includes filters =
-    getCustomList toMsg host Mbta.Decode.liveFacility "live-facilities" includes filters
+    getList toMsg host Mbta.Decode.liveFacility "live-facilities" includes filters
 
 
 
@@ -404,10 +404,10 @@ getLiveFacilities toMsg host includes filters =
 {-| -}
 getAlert : (ApiResult Alert -> msg) -> Host -> List (Include Alert) -> AlertId -> Cmd msg
 getAlert toMsg host includes (AlertId alertId) =
-    getCustomId toMsg host Mbta.Decode.alert "alerts" includes alertId
+    getOne toMsg host Mbta.Decode.alert "alerts" includes alertId
 
 
 {-| -}
 getAlerts : (ApiResult (List Alert) -> msg) -> Host -> List (Include Alert) -> List (Filter Alert) -> Cmd msg
 getAlerts toMsg host includes filters =
-    getCustomList toMsg host Mbta.Decode.alert "alerts" includes filters
+    getList toMsg host Mbta.Decode.alert "alerts" includes filters
