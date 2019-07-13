@@ -7,7 +7,7 @@ module Mbta exposing
     , LineId(..), Line, ScheduleId(..)
     , Schedule, StopSequence(..), PickupDropOffType(..)
     , TripId(..), Trip, BikesAllowed(..), BlockId(..)
-    , ServiceId(..), Service, ServiceDate(..), ServiceType(..), ServiceTypicality(..), ChangedDate
+    , ServiceId(..), Service, ServiceDate, serviceDateFromIso8601, serviceDateToIso8601, ServiceType(..), ServiceTypicality(..), ChangedDate
     , ShapeId(..), Shape
     , StopId(..), Stop, LocationType(..)
     , FacilityId(..), Facility, LiveFacility, FacilityType(..), FacilityProperties, FacilityPropertyValue(..)
@@ -48,7 +48,7 @@ though they were changed in some places to make them clearer.
 @docs LineId, Line, ScheduleId
 @docs Schedule, StopSequence, PickupDropOffType
 @docs TripId, Trip, BikesAllowed, BlockId
-@docs ServiceId, Service, ServiceDate, ServiceType, ServiceTypicality, ChangedDate
+@docs ServiceId, Service, ServiceDate, serviceDateFromIso8601, serviceDateToIso8601, ServiceType, ServiceTypicality, ChangedDate
 @docs ShapeId, Shape
 
 
@@ -352,15 +352,25 @@ type alias Service =
     }
 
 
-{-| e.g. `ServiceDate "2019-12-31"`
+{-| Refers to a day of service, not a calendar day. Service after midnight still belongs to the previous calendar day's `ServiceDate`.
+-}
+type ServiceDate
+    = ServiceDate String
 
-Refers to a day of service, not a calendar day. Service after midnight still belongs to the previous calendar day's `ServiceDate`.
+
+{-|
+
+    serviceDateFromIso8601 "2019-12-31"`
 
 -}
-type
+serviceDateFromIso8601 : String -> ServiceDate
+serviceDateFromIso8601 =
     ServiceDate
-    -- TODO better format for dates
-    = ServiceDate String
+
+
+serviceDateToIso8601 : ServiceDate -> String
+serviceDateToIso8601 (ServiceDate iso8601) =
+    iso8601
 
 
 {-| This is called `schedule_type` in the MBTA API. It was changed here to avoid ambiguity with [`Schedule`](#Schedule), which is unrelated to [`Service`](#Service)

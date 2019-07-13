@@ -847,7 +847,7 @@ filterSchedulesByStopIds stopIds =
 {-| -}
 filterSchedulesByServiceDate : ServiceDate -> Filter Schedule
 filterSchedulesByServiceDate serviceDate =
-    filterByOne "date" (\(ServiceDate s) -> s) serviceDate
+    filterByOne "date" Mbta.serviceDateToIso8601 serviceDate
 
 
 {-| -}

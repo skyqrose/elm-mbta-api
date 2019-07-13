@@ -370,7 +370,7 @@ service =
 
 serviceDate : Decode.Decoder ServiceDate
 serviceDate =
-    Decode.map ServiceDate Decode.string
+    Decode.map Mbta.serviceDateFromIso8601 Decode.string
 
 
 serviceType : Decode.Decoder ServiceType
