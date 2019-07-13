@@ -7,8 +7,7 @@
     "exposed-modules": [
         "Mbta",
         "Mbta.Api",
-        "Mbta.Filter",
-        "Mbta.Include"
+        "Mbta.Filter"
     ],
     "elm-version": "0.19.0 <= v < 0.20.0",
     "dependencies": {

@@ -52,13 +52,13 @@ though they were changed in some places to make them clearer.
 @docs ShapeId, Shape
 
 
-# Stops
+# Stop Data
 
 @docs StopId, Stop, LocationType
 @docs FacilityId, Facility, LiveFacility, FacilityType, FacilityProperties, FacilityPropertyValue
 
 
-# Alerts
+# Alert Data
 
 @docs AlertId, Alert, AlertLifecycle, ActivePeriod, InformedEntity, InformedEntityActivity
 
@@ -408,7 +408,7 @@ type alias Shape =
 
 
 
--- Stops
+-- Stop Data
 
 
 {-| -}

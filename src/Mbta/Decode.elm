@@ -440,7 +440,7 @@ shape =
 
 
 
--- Stops
+-- Stop Data
 
 
 stopId : JsonApi.IdDecoder StopId
@@ -540,7 +540,7 @@ group nameValuePairs =
 
 
 
--- Alerts
+-- Alert Data
 
 
 alertId : JsonApi.IdDecoder AlertId

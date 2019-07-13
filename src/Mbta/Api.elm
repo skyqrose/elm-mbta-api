@@ -1,19 +1,32 @@
 module Mbta.Api exposing
     ( Host(..)
     , ApiResult, Ok, Error(..)
+    , Include, Relationship, include, andIts
     , getPredictions
+    , predictionVehicle, predictionRoute, predictionSchedule, predictionTrip, predictionStop, predictionAlerts
     , getVehicle, getVehicles
+    , vehicleRoute, vehicleTrip, vehicleStop
     , getRoute, getRoutes
+    , routeRoutePatterns, routeLine, routeStop
     , getRoutePattern, getRoutePatterns
+    , routePatternRoute, routePatternRepresentativeTrip
     , getLine, getLines
+    , lineRoutes
     , getSchedules
+    , schedulePrediction, scheduleRoute, scheduleTrip, scheduleStop
     , getTrip, getTrips
+    , tripPredictions, tripVehicle, tripRoute, tripRoutePattern, tripService, tripShape
     , getService, getServices
     , getShape, getShapes
+    , shapeRoute, shapeStops
     , getStop, getStops
+    , stopParentStation, stopChildStops, stopRecommendedTransfers, stopFacilities
     , getFacility, getFacilities
+    , facilityStop
     , getLiveFacility, getLiveFacilities
+    , liveFacilityFacility
     , getAlert, getAlerts
+    , alertRoutes, alertTrips, alertStops, alertFacilities
     )
 
 {-| Make HTTP requests to get data
@@ -41,33 +54,113 @@ though note that some calls require at least one filter to be specified.
 @docs ApiResult, Ok, Error
 
 
+# Including
+
+Sideload related resources
+
+Use it like
+
+    Mbta.Api.getTrip
+        ReceiveTrip
+        apiConfig
+        [ Mbta.Api.include Mbta.Api.tripRoute ]
+        filters
+
+Any sideloaded resources are put in the [`Included`](#Included) object in the result.
+
+@docs Include, Relationship, include, andIts
+
+
 # Realtime Data
 
+
+## [Prediction](#Mbta.Prediction)
+
 @docs getPredictions
+@docs predictionVehicle, predictionRoute, predictionSchedule, predictionTrip, predictionStop, predictionAlerts
+
+
+## [Vehicle](#Mbta.Vehicle)
+
 @docs getVehicle, getVehicles
+@docs vehicleRoute, vehicleTrip, vehicleStop
 
 
 # Schedule Data
 
+
+## [Route](#Mbta.Route)
+
 @docs getRoute, getRoutes
+
+@docs routeRoutePatterns, routeLine, routeStop
+
+
+## [RoutePattern](#Mbta.RoutePattern)
+
 @docs getRoutePattern, getRoutePatterns
+@docs routePatternRoute, routePatternRepresentativeTrip
+
+
+## [Line](#Mbta.Line)
+
 @docs getLine, getLines
+@docs lineRoutes
+
+
+## [Schedule](#Mbta.Schedule)
+
 @docs getSchedules
+@docs schedulePrediction, scheduleRoute, scheduleTrip, scheduleStop
+
+
+## [Trip](#Mbta.Trip)
+
 @docs getTrip, getTrips
+@docs tripPredictions, tripVehicle, tripRoute, tripRoutePattern, tripService, tripShape
+
+
+## [Service](#Mbta.Service)
+
 @docs getService, getServices
+
+`Service` does not currently have any relationships to include.
+
+
+## [Shape](#Mbta.Shape)
+
 @docs getShape, getShapes
+@docs shapeRoute, shapeStops
 
 
-# Stops
+# Stop Data
+
+
+## [Stop](#Mbta.Stop)
 
 @docs getStop, getStops
+@docs stopParentStation, stopChildStops, stopRecommendedTransfers, stopFacilities
+
+
+## [Facility](#Mbta.Facility)
+
 @docs getFacility, getFacilities
+@docs facilityStop
+
+
+## [Live Facility](#Mbta.Live)
+
 @docs getLiveFacility, getLiveFacilities
+@docs liveFacilityFacility
 
 
-# Alerts
+# Alert Data
+
+
+## [Alert](#Mbta.Alert)
 
 @docs getAlert, getAlerts
+@docs alertRoutes, alertTrips, alertStops, alertFacilities
 
 -}
 
@@ -77,7 +170,6 @@ import JsonApi
 import Mbta exposing (..)
 import Mbta.Decode
 import Mbta.Filter exposing (Filter)
-import Mbta.Include exposing (Include)
 import Mbta.Included as Included
 import Url.Builder
 
@@ -176,7 +268,7 @@ makeUrl host path filters includes =
                 path
                 (List.concat
                     [ apiKeyQueryParam
-                    , Mbta.Include.queryParameter includes
+                    , includeQueryParameter includes
                     , Mbta.Filter.queryParameters filters
                     ]
                 )
@@ -186,7 +278,7 @@ makeUrl host path filters includes =
                 (config.basePath ++ path)
                 (List.concat
                     [ config.queryParameters
-                    , Mbta.Include.queryParameter includes
+                    , includeQueryParameter includes
                     , Mbta.Filter.queryParameters filters
                     ]
                 )
@@ -197,7 +289,7 @@ makeUrl host path filters includes =
                 (config.basePath ++ path)
                 (List.concat
                     [ config.queryParameters
-                    , Mbta.Include.queryParameter includes
+                    , includeQueryParameter includes
                     , Mbta.Filter.queryParameters filters
                     ]
                 )
@@ -251,7 +343,61 @@ getList toMsg host resourceDecoder path includes filters =
 
 
 
+-- Including
+
+
+{-| -}
+type Include mainResource
+    = Include String
+
+
+{-| -}
+type Relationship from to
+    = Relationship String
+
+
+{-| -}
+include : Relationship from to -> Include from
+include (Relationship s) =
+    Include s
+
+
+includeQueryParameter : List (Include a) -> List Url.Builder.QueryParameter
+includeQueryParameter includes =
+    case includes of
+        [] ->
+            []
+
+        _ ->
+            includes
+                |> List.map (\(Include s) -> s)
+                |> String.join ","
+                |> Url.Builder.string "include"
+                |> List.singleton
+
+
+{-| For chaining includes
+
+Adds an included resource's relationships into the sideloaded results.
+
+Uses the `.` syntax from JSON:API's `?include=` options.
+
+    includeRouteAndLineForAVehicle : Include Vehicle
+    includeRouteAndLineForAVehicle =
+        Include.include
+            (Include.vehicleRoute
+                |> Include.andIts Include.routeLine
+            )
+
+-}
+andIts : Relationship b c -> Relationship a b -> Relationship a c
+andIts (Relationship string1) (Relationship string2) =
+    Relationship (string1 ++ "." ++ string2)
+
+
+
 -- Realtime Data
+-- Prediction
 
 
 {-| At least one filter (not counting `directionId`) is required
@@ -259,6 +405,46 @@ getList toMsg host resourceDecoder path includes filters =
 getPredictions : (ApiResult (List Prediction) -> msg) -> Host -> List (Include Prediction) -> List (Filter Prediction) -> Cmd msg
 getPredictions toMsg host includes filters =
     getList toMsg host Mbta.Decode.prediction "predictions" includes filters
+
+
+{-| -}
+predictionVehicle : Relationship Prediction Vehicle
+predictionVehicle =
+    Relationship "vehicle"
+
+
+{-| -}
+predictionRoute : Relationship Prediction Route
+predictionRoute =
+    Relationship "route"
+
+
+{-| -}
+predictionSchedule : Relationship Prediction Schedule
+predictionSchedule =
+    Relationship "schedule"
+
+
+{-| -}
+predictionTrip : Relationship Prediction Trip
+predictionTrip =
+    Relationship "trip"
+
+
+{-| -}
+predictionStop : Relationship Prediction Stop
+predictionStop =
+    Relationship "stop"
+
+
+{-| -}
+predictionAlerts : Relationship Prediction Alert
+predictionAlerts =
+    Relationship "alerts"
+
+
+
+-- Vehicle
 
 
 {-| -}
@@ -273,8 +459,27 @@ getVehicles toMsg host includes filters =
     getList toMsg host Mbta.Decode.vehicle "vehicles" includes filters
 
 
+{-| -}
+vehicleRoute : Relationship Vehicle Route
+vehicleRoute =
+    Relationship "route"
+
+
+{-| -}
+vehicleTrip : Relationship Vehicle Trip
+vehicleTrip =
+    Relationship "trip"
+
+
+{-| -}
+vehicleStop : Relationship Vehicle Trip
+vehicleStop =
+    Relationship "stop"
+
+
 
 -- Schedule Data
+-- Route
 
 
 {-| -}
@@ -290,6 +495,32 @@ getRoutes toMsg host includes filters =
 
 
 {-| -}
+routeRoutePatterns : Relationship Route RoutePattern
+routeRoutePatterns =
+    Relationship "route_patterns"
+
+
+{-| -}
+routeLine : Relationship Route Line
+routeLine =
+    Relationship "line"
+
+
+{-| Only valid when getting a list of routes with [`getRoutes`](#Mbta.Api.getRoutes), and when [`filter stop TODO`](TODO) is used.
+
+If this relationship is given when invalid, the result will be a TODO error
+
+-}
+routeStop : Relationship Route Stop
+routeStop =
+    Relationship "stop"
+
+
+
+-- RoutePattern
+
+
+{-| -}
 getRoutePattern : (ApiResult RoutePattern -> msg) -> Host -> List (Include RoutePattern) -> RoutePatternId -> Cmd msg
 getRoutePattern toMsg host includes (RoutePatternId routePatternId) =
     getOne toMsg host Mbta.Decode.routePattern "route-patterns" includes routePatternId
@@ -299,6 +530,22 @@ getRoutePattern toMsg host includes (RoutePatternId routePatternId) =
 getRoutePatterns : (ApiResult (List RoutePattern) -> msg) -> Host -> List (Include RoutePattern) -> List (Filter RoutePattern) -> Cmd msg
 getRoutePatterns toMsg host includes filters =
     getList toMsg host Mbta.Decode.routePattern "route-patterns" includes filters
+
+
+{-| -}
+routePatternRoute : Relationship RoutePattern Route
+routePatternRoute =
+    Relationship "route"
+
+
+{-| -}
+routePatternRepresentativeTrip : Relationship RoutePattern Trip
+routePatternRepresentativeTrip =
+    Relationship "representative_trip"
+
+
+
+-- Line
 
 
 {-| -}
@@ -313,11 +560,49 @@ getLines toMsg host includes filters =
     getList toMsg host Mbta.Decode.line "lines" includes filters
 
 
+{-| -}
+lineRoutes : Relationship Line Route
+lineRoutes =
+    Relationship "routes"
+
+
+
+-- Schedule
+
+
 {-| Requires filtering by at least one of route, stop, or trip.
 -}
 getSchedules : (ApiResult (List Schedule) -> msg) -> Host -> List (Include Schedule) -> List (Filter Schedule) -> Cmd msg
 getSchedules toMsg host includes filters =
     getList toMsg host Mbta.Decode.schedule "schedules" includes filters
+
+
+{-| -}
+scheduleStop : Relationship Schedule Stop
+scheduleStop =
+    Relationship "stop"
+
+
+{-| -}
+scheduleTrip : Relationship Schedule Trip
+scheduleTrip =
+    Relationship "trip"
+
+
+{-| -}
+schedulePrediction : Relationship Schedule Prediction
+schedulePrediction =
+    Relationship "prediction"
+
+
+{-| -}
+scheduleRoute : Relationship Schedule Route
+scheduleRoute =
+    Relationship "route"
+
+
+
+-- Trip
 
 
 {-| -}
@@ -333,6 +618,46 @@ getTrips toMsg host includes filters =
 
 
 {-| -}
+tripPredictions : Relationship Trip Prediction
+tripPredictions =
+    Relationship "predictions"
+
+
+{-| -}
+tripVehicle : Relationship Trip Vehicle
+tripVehicle =
+    Relationship "vehicle"
+
+
+{-| -}
+tripRoute : Relationship Trip Route
+tripRoute =
+    Relationship "route"
+
+
+{-| -}
+tripRoutePattern : Relationship Trip RoutePattern
+tripRoutePattern =
+    Relationship "route_pattern"
+
+
+{-| -}
+tripService : Relationship Trip Service
+tripService =
+    Relationship "service"
+
+
+{-| -}
+tripShape : Relationship Trip Shape
+tripShape =
+    Relationship "shape"
+
+
+
+-- Service
+
+
+{-| -}
 getService : (ApiResult Service -> msg) -> Host -> List (Include Service) -> ServiceId -> Cmd msg
 getService toMsg host includes (ServiceId serviceId) =
     getOne toMsg host Mbta.Decode.service "services" includes serviceId
@@ -342,6 +667,11 @@ getService toMsg host includes (ServiceId serviceId) =
 getServices : (ApiResult (List Service) -> msg) -> Host -> List (Include Service) -> List (Filter Service) -> Cmd msg
 getServices toMsg host includes filters =
     getList toMsg host Mbta.Decode.service "services" includes filters
+
+
+
+-- (no includes from Service)
+-- Shape
 
 
 {-| -}
@@ -357,8 +687,21 @@ getShapes toMsg host includes filters =
     getList toMsg host Mbta.Decode.shape "shapes" includes filters
 
 
+{-| -}
+shapeRoute : Relationship Shape Route
+shapeRoute =
+    Relationship "route"
 
--- Stops
+
+{-| -}
+shapeStops : Relationship Shape Stop
+shapeStops =
+    Relationship "stops"
+
+
+
+-- Stop Data
+-- Stop
 
 
 {-| -}
@@ -374,6 +717,34 @@ getStops toMsg host includes filters =
 
 
 {-| -}
+stopParentStation : Relationship Stop Stop
+stopParentStation =
+    Relationship "parent_station"
+
+
+{-| -}
+stopChildStops : Relationship Stop Stop
+stopChildStops =
+    Relationship "child_stops"
+
+
+{-| -}
+stopRecommendedTransfers : Relationship Stop Stop
+stopRecommendedTransfers =
+    Relationship "recommended_transfers"
+
+
+{-| -}
+stopFacilities : Relationship Stop Facility
+stopFacilities =
+    Relationship "facilities"
+
+
+
+-- Facility
+
+
+{-| -}
 getFacility : (ApiResult Facility -> msg) -> Host -> List (Include Facility) -> FacilityId -> Cmd msg
 getFacility toMsg host includes (FacilityId facilityId) =
     getOne toMsg host Mbta.Decode.facility "facilities" includes facilityId
@@ -383,6 +754,16 @@ getFacility toMsg host includes (FacilityId facilityId) =
 getFacilities : (ApiResult (List Facility) -> msg) -> Host -> List (Include Facility) -> List (Filter Facility) -> Cmd msg
 getFacilities toMsg host includes filters =
     getList toMsg host Mbta.Decode.facility "facilities" includes filters
+
+
+{-| -}
+facilityStop : Relationship Facility Stop
+facilityStop =
+    Relationship "stop"
+
+
+
+-- LiveFacility
 
 
 {-| -}
@@ -397,8 +778,15 @@ getLiveFacilities toMsg host includes filters =
     getList toMsg host Mbta.Decode.liveFacility "live-facilities" includes filters
 
 
+{-| -}
+liveFacilityFacility : Relationship LiveFacility Facility
+liveFacilityFacility =
+    Relationship "facility"
 
--- Alerts
+
+
+-- Alert Data
+-- Alert
 
 
 {-| -}
@@ -411,3 +799,27 @@ getAlert toMsg host includes (AlertId alertId) =
 getAlerts : (ApiResult (List Alert) -> msg) -> Host -> List (Include Alert) -> List (Filter Alert) -> Cmd msg
 getAlerts toMsg host includes filters =
     getList toMsg host Mbta.Decode.alert "alerts" includes filters
+
+
+{-| -}
+alertRoutes : Relationship Alert Route
+alertRoutes =
+    Relationship "routes"
+
+
+{-| -}
+alertTrips : Relationship Alert Trip
+alertTrips =
+    Relationship "trips"
+
+
+{-| -}
+alertStops : Relationship Alert Stop
+alertStops =
+    Relationship "stops"
+
+
+{-| -}
+alertFacilities : Relationship Alert Facility
+alertFacilities =
+    Relationship "facilities"
