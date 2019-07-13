@@ -108,6 +108,7 @@ Any sideloaded resources are put in the [`Included`](#Included) object returned 
 
 @docs alertRoutes, alertTrips, alertStops, alertFacilities
 
+
 ## Internal Use
 
 @docs queryParameter
