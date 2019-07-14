@@ -1,6 +1,7 @@
 {
   "scripts": {
     "build": "elm make",
+    "watch": "npm run build; chokidar src/ -c 'npm run build'",
     "format": "elm-format --yes .",
     "test": "elm-test && elm-format --validate ."
   },
@@ -8,6 +9,7 @@
     "elm": "^0.19.0-no-deps"
   },
   "devDependencies": {
+    "chokidar-cli": "^1.2.2",
     "elm-format": "^0.8.1",
     "elm-test": "^0.19.0-rev6"
   }
