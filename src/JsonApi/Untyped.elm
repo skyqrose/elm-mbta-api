@@ -108,8 +108,7 @@ resourceDecoder : Decode.Decoder Resource
 resourceDecoder =
     Decode.succeed Resource
         |> Pipeline.custom resourceIdDecoder
-        -- TODO attributes is optional. have default
-        |> Pipeline.required "attributes" (Decode.dict Decode.value)
+        |> Pipeline.optional "attributes" (Decode.dict Decode.value) Dict.empty
         |> Pipeline.optional "relationships" (Decode.dict relationshipDecoder) Dict.empty
 
 
