@@ -9,6 +9,10 @@ module JsonApi exposing
 {-| This module serves as a middle point between the raw JSON in JSON:API
 and the Elm types for the data you get out of it.
 
+TODO better summary that gets across this module's role in decoding
+
+TODO I think the bookDecoder is using an old interface for making decoders
+
     type BookId
         = BookId String
 
@@ -74,8 +78,8 @@ import DecodeHelpers
 import Dict exposing (Dict)
 import Http
 import Json.Decode as Decode
-import Json.Decode.Pipeline as Pipeline
 import Json.Encode as Encode
+import JsonApi.Untyped as Untyped
 import Result.Extra
 
 
@@ -126,7 +130,7 @@ expectJsonApi toMsg documentDecoder =
 
         jsonDecoder : Decode.Decoder (Result DocumentError (Document included data))
         jsonDecoder =
-            documentJsonDecoder
+            Untyped.documentDecoder
                 |> Decode.map documentDecoder
     in
     Http.expectJson httpToMsg jsonDecoder
@@ -135,7 +139,7 @@ expectJsonApi toMsg documentDecoder =
 decodeDocumentString : DocumentDecoder included data -> String -> Result Error (Document included data)
 decodeDocumentString documentDecoder jsonString =
     jsonString
-        |> Decode.decodeString documentJsonDecoder
+        |> Decode.decodeString Untyped.documentDecoder
         |> Result.mapError NoncompliantJson
         |> Result.andThen (documentDecoder >> Result.mapError DocumentError)
 
@@ -143,94 +147,9 @@ decodeDocumentString documentDecoder jsonString =
 decodeDocumentJsonValue : DocumentDecoder included data -> Decode.Value -> Result Error (Document included data)
 decodeDocumentJsonValue documentDecoder jsonValue =
     jsonValue
-        |> Decode.decodeValue documentJsonDecoder
+        |> Decode.decodeValue Untyped.documentDecoder
         |> Result.mapError NoncompliantJson
         |> Result.andThen (documentDecoder >> Result.mapError DocumentError)
-
-
-
--- Untyped internal JsonApi representation
-
-
-type JsonApiDocument
-    = DocumentOne
-        { data : Resource
-        , included : List Resource
-        }
-    | DocumentMany
-        { data : List Resource
-        , included : List Resource
-        }
-    | DocumentApiErrors (List Decode.Value)
-
-
-documentJsonDecoder : Decode.Decoder JsonApiDocument
-documentJsonDecoder =
-    Decode.oneOf
-        [ Decode.succeed DocumentApiErrors
-            |> Pipeline.required "errors" (Decode.list Decode.value)
-        , Decode.succeed (\data included -> DocumentOne { data = data, included = included })
-            |> Pipeline.required "data" resourceJsonDecoder
-            |> Pipeline.optional "included" (Decode.list resourceJsonDecoder) []
-        , Decode.succeed (\data included -> DocumentMany { data = data, included = included })
-            |> Pipeline.required "data" (Decode.list resourceJsonDecoder)
-            |> Pipeline.optional "included" (Decode.list resourceJsonDecoder) []
-        ]
-
-
-type alias ResourceId =
-    { resourceType : String
-    , id : String
-    }
-
-
-type alias Resource =
-    { id : ResourceId
-    , attributes : Attributes
-    , relationships : Relationships
-    }
-
-
-type alias Attributes =
-    Dict String Decode.Value
-
-
-type alias Relationships =
-    Dict String Relationship
-
-
-type Relationship
-    = RelationshipMissing
-    | RelationshipOne ResourceId
-    | RelationshipMany (List ResourceId)
-
-
-resourceJsonDecoder : Decode.Decoder Resource
-resourceJsonDecoder =
-    Decode.succeed Resource
-        |> Pipeline.custom resourceIdJsonDecoder
-        |> Pipeline.required "attributes" (Decode.dict Decode.value)
-        |> Pipeline.optional "relationships" (Decode.dict relationshipJsonDecoder) Dict.empty
-
-
-relationshipJsonDecoder : Decode.Decoder Relationship
-relationshipJsonDecoder =
-    Decode.oneOf
-        [ Decode.field "data" <|
-            Decode.oneOf
-                [ Decode.null RelationshipMissing
-                , Decode.map RelationshipOne resourceIdJsonDecoder
-                , Decode.map RelationshipMany (Decode.list resourceIdJsonDecoder)
-                ]
-        , Decode.succeed RelationshipMissing
-        ]
-
-
-resourceIdJsonDecoder : Decode.Decoder ResourceId
-resourceIdJsonDecoder =
-    Decode.succeed ResourceId
-        |> Pipeline.required "type" Decode.string
-        |> Pipeline.required "id" Decode.string
 
 
 
@@ -246,7 +165,7 @@ Use it by passing it to [`expectJsonApi`](#expectJsonApi)
 
 -}
 type alias DocumentDecoder included data =
-    JsonApiDocument -> Result DocumentError (Document included data)
+    Untyped.Document -> Result DocumentError (Document included data)
 
 
 {-| Turn JSON:API compliant json representing a single resource into typed data.
@@ -256,9 +175,9 @@ Fails if the document has a list of resources.
 -}
 documentDecoderOne : IncludedDecoder included -> ResourceDecoder resource -> DocumentDecoder included resource
 documentDecoderOne includedDecoder resourceDecoder =
-    \document ->
-        case document of
-            DocumentOne { data, included } ->
+    \untypedDocument ->
+        case untypedDocument of
+            Untyped.DocumentOne { data, included } ->
                 Result.map2
                     (\decodedData decodedIncluded ->
                         { data = decodedData
@@ -269,10 +188,10 @@ documentDecoderOne includedDecoder resourceDecoder =
                     (included |> decodeIncluded includedDecoder)
                     |> Result.mapError ResourceError
 
-            DocumentMany _ ->
+            Untyped.DocumentMany _ ->
                 Err ExpectedOne
 
-            DocumentApiErrors errors ->
+            Untyped.DocumentApiErrors errors ->
                 Err (ApiErrors errors)
 
 
@@ -283,12 +202,12 @@ Fails if the document has only a single resource.
 -}
 documentDecoderMany : IncludedDecoder included -> ResourceDecoder resource -> DocumentDecoder included (List resource)
 documentDecoderMany includedDecoder resourceDecoder =
-    \document ->
-        case document of
-            DocumentOne _ ->
+    \untypedDocument ->
+        case untypedDocument of
+            Untyped.DocumentOne _ ->
                 Err ExpectedMany
 
-            DocumentMany { data, included } ->
+            Untyped.DocumentMany { data, included } ->
                 Result.map2
                     (\decodedData decodedIncluded ->
                         { data = decodedData
@@ -302,7 +221,7 @@ documentDecoderMany includedDecoder resourceDecoder =
                     (included |> decodeIncluded includedDecoder)
                     |> Result.mapError ResourceError
 
-            DocumentApiErrors errors ->
+            Untyped.DocumentApiErrors errors ->
                 Err (ApiErrors errors)
 
 
@@ -318,7 +237,7 @@ Use it to create a [`DocumentDecoder`](#DocumentDecoder) with [`documentDecoderO
 
 -}
 type alias ResourceDecoder a =
-    Resource -> Result ResourceError a
+    Untyped.Resource -> Result ResourceError a
 
 
 {-| JSON:API represents ids as
@@ -336,7 +255,7 @@ Create an `IdDecoder` with [`idDecoder`](#idDecoder)
 
 -}
 type alias IdDecoder a =
-    ResourceId -> Result IdError a
+    Untyped.ResourceId -> Result IdError a
 
 
 {-| Create an [`IdDecoder`](#IdDecoder)
@@ -358,16 +277,17 @@ This lets the Elm Compiler check that different id types don't get mixed up with
 
 -}
 idDecoder : String -> (String -> id) -> IdDecoder id
-idDecoder typeString idConstructor resourceId =
-    if resourceId.resourceType == typeString then
-        Ok (idConstructor resourceId.id)
+idDecoder typeString idConstructor =
+    \untypedResourceId ->
+        if untypedResourceId.resourceType == typeString then
+            Ok (idConstructor untypedResourceId.id)
 
-    else
-        Err
-            { expectedType = typeString
-            , actualType = resourceId.resourceType
-            , actualIdValue = resourceId.id
-            }
+        else
+            Err
+                { expectedType = typeString
+                , actualType = untypedResourceId.resourceType
+                , actualIdValue = untypedResourceId.id
+                }
 
 
 {-| The included field in JSON:API has all resource types mixed together.
@@ -414,7 +334,7 @@ type alias IncludedDecoder included =
     }
 
 
-decodeIncluded : IncludedDecoder included -> List Resource -> Result ResourceError included
+decodeIncluded : IncludedDecoder included -> List Untyped.Resource -> Result ResourceError included
 decodeIncluded includedDecoder includedResources =
     let
         allTypes : String
@@ -475,7 +395,7 @@ the different `ResourceDecoder` type in this module needs to start its pipelines
 -}
 decode : constructor -> ResourceDecoder constructor
 decode constructor =
-    \resource -> Ok constructor
+    \untypedResource -> Ok constructor
 
 
 {-| Use an id within a pipeline
@@ -487,8 +407,8 @@ For the id of a related resource, use one of the `relationship` functions below.
 id : IdDecoder id -> ResourceDecoder (id -> rest) -> ResourceDecoder rest
 id idDecoder_ =
     custom
-        (\resource ->
-            idDecoder_ resource.id
+        (\untypedResource ->
+            idDecoder_ untypedResource.id
                 |> Result.mapError ResourceIdError
         )
 
@@ -501,8 +421,8 @@ Since attributes can be arbitrary JSON, this function takes a general use [`Json
 attribute : String -> Decode.Decoder attribute -> ResourceDecoder (attribute -> rest) -> ResourceDecoder rest
 attribute attributeName attributeDecoder =
     custom
-        (\resource ->
-            case Dict.get attributeName resource.attributes of
+        (\untypedResource ->
+            case Dict.get attributeName untypedResource.attributes of
                 Just attributeJson ->
                     Decode.decodeValue attributeDecoder attributeJson
                         |> Result.mapError (AttributeDecodeError attributeName)
@@ -521,9 +441,9 @@ It will not look up the object in the `includes` and inline it.
 relationshipOne : String -> IdDecoder relatedId -> ResourceDecoder (relatedId -> rest) -> ResourceDecoder rest
 relationshipOne relationshipName relatedIdDecoder =
     custom
-        (\resource ->
-            case Dict.get relationshipName resource.relationships of
-                Just (RelationshipOne relatedResourceId) ->
+        (\untypedResource ->
+            case Dict.get relationshipName untypedResource.relationships of
+                Just (Untyped.RelationshipOne relatedResourceId) ->
                     relatedIdDecoder relatedResourceId
                         |> Result.mapError (RelationshipIdError relationshipName)
 
@@ -544,20 +464,20 @@ The result will be `Nothing` if
 relationshipMaybe : String -> IdDecoder relatedId -> ResourceDecoder (Maybe relatedId -> rest) -> ResourceDecoder rest
 relationshipMaybe relationshipName relatedIdDecoder =
     custom
-        (\resource ->
-            case Dict.get relationshipName resource.relationships of
-                Just (RelationshipOne relatedResourceId) ->
+        (\untypedResource ->
+            case Dict.get relationshipName untypedResource.relationships of
+                Just (Untyped.RelationshipOne relatedResourceId) ->
                     relatedIdDecoder relatedResourceId
                         |> Result.map Just
                         |> Result.mapError (RelationshipIdError relationshipName)
 
-                Just RelationshipMissing ->
+                Just Untyped.RelationshipMissing ->
                     Ok Nothing
 
                 Nothing ->
                     Ok Nothing
 
-                Just (RelationshipMany _) ->
+                Just (Untyped.RelationshipMany _) ->
                     Err (RelationshipNumberError relationshipName "Expected one or zero relationship but got a list")
         )
 
@@ -577,9 +497,9 @@ Fails to decode if
 relationshipMany : String -> IdDecoder relatedId -> ResourceDecoder (List relatedId -> rest) -> ResourceDecoder rest
 relationshipMany relationshipName relatedIdDecoder =
     custom
-        (\resource ->
-            case Dict.get relationshipName resource.relationships of
-                Just (RelationshipMany relatedResourceIds) ->
+        (\untypedResource ->
+            case Dict.get relationshipName untypedResource.relationships of
+                Just (Untyped.RelationshipMany relatedResourceIds) ->
                     relatedResourceIds
                         |> List.map relatedIdDecoder
                         |> Result.Extra.combine
@@ -588,10 +508,10 @@ relationshipMany relationshipName relatedIdDecoder =
                 Nothing ->
                     Ok []
 
-                Just RelationshipMissing ->
+                Just Untyped.RelationshipMissing ->
                     Err (RelationshipNumberError relationshipName "Expected a list of relationships but it was missing")
 
-                Just (RelationshipOne _) ->
+                Just (Untyped.RelationshipOne _) ->
                     Err (RelationshipNumberError relationshipName "Expected a list of relationships but only got one")
         )
 
@@ -603,11 +523,11 @@ Useful for decoding complex objects
 -}
 custom : ResourceDecoder a -> ResourceDecoder (a -> rest) -> ResourceDecoder rest
 custom resourceDecoder constructorDecoder =
-    \resource ->
+    \untypedResource ->
         Result.map2
             (\x consructor -> consructor x)
-            (resourceDecoder resource)
-            (constructorDecoder resource)
+            (resourceDecoder untypedResource)
+            (constructorDecoder untypedResource)
 
 
 
@@ -618,8 +538,8 @@ custom resourceDecoder constructorDecoder =
 -}
 map : (a -> b) -> ResourceDecoder a -> ResourceDecoder b
 map f resourceDecoder =
-    \resource ->
-        resourceDecoder resource
+    \untypedResource ->
+        resourceDecoder untypedResource
             |> Result.map f
 
 
@@ -627,8 +547,8 @@ map f resourceDecoder =
 -}
 andThen : (a -> Result String b) -> ResourceDecoder a -> ResourceDecoder b
 andThen second first =
-    \resource ->
-        first resource
+    \untypedResource ->
+        first untypedResource
             |> Result.andThen (second >> Result.mapError CustomError)
 
 
