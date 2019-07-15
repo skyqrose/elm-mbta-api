@@ -1,8 +1,9 @@
 module JsonApi exposing
     ( Document, documentData, documentIncluded, expectJsonApi, decodeDocumentString, decodeDocumentJsonValue
-    , DocumentDecoder, documentDecoderOne, documentDecoderMany, ResourceDecoder, IdDecoder, idDecoder, IncludedDecoder
+    , DocumentDecoder, documentDecoderOne, documentDecoderMany, ResourceDecoder, IdDecoder, idDecoder
     , decode, id, attribute, relationshipOne, relationshipMaybe, relationshipMany, custom
     , map, andThen
+    , IncludedDecoder
     , Error(..), errorToString, DocumentError(..), documentErrorToString, ResourceError(..), resourceErrorToString, IdError, idErrorToString
     )
 

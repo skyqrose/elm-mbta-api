@@ -106,14 +106,30 @@ Use it like
 ## [Prediction](#Mbta.Prediction)
 
 @docs getPredictions
+
+
+### Includes
+
 @docs predictionVehicle, predictionRoute, predictionSchedule, predictionTrip, predictionStop, predictionAlerts
+
+
+### Filters
+
 @docs filterPredictionsByRouteTypes, filterPredictionsByRouteIds, filterPredictionsByTripIds, filterPredictionsByDirectionId, filterPredictionsByStopIds, filterPredictionsByLatLng, filterPredictionsByLatLngWithRadius
 
 
 ## [Vehicle](#Mbta.Vehicle)
 
 @docs getVehicle, getVehicles
+
+
+### Includes
+
 @docs vehicleRoute, vehicleTrip, vehicleStop
+
+
+### Filters
+
 @docs filterVehiclesByIds, filterVehiclesByLabels, filterVehiclesByRouteIds, filterVehiclesByRouteTypes, filterVehiclesByDirectionId, filterVehiclesByTripIds
 
 
@@ -123,49 +139,105 @@ Use it like
 ## [Route](#Mbta.Route)
 
 @docs getRoute, getRoutes
+
+
+### Includes
+
 @docs routeRoutePatterns, routeLine, routeStop
+
+
+### Filters
+
 @docs filterRoutesByIds, filterRoutesByRouteTypes, filterRoutesByDirectionId, filterRoutesByStopIds
 
 
 ## [RoutePattern](#Mbta.RoutePattern)
 
 @docs getRoutePattern, getRoutePatterns
+
+
+### Includes
+
 @docs routePatternRoute, routePatternRepresentativeTrip
+
+
+### Filters
+
 @docs filterRoutePatternsByIds, filterRoutePatternsByRouteIds, filterRoutePatternsByDirectionId
 
 
 ## [Line](#Mbta.Line)
 
 @docs getLine, getLines
+
+
+### Includes
+
 @docs lineRoutes
+
+
+### Filters
+
 @docs filterLinesByIds
 
 
 ## [Schedule](#Mbta.Schedule)
 
 @docs getSchedules
+
+
+### Includes
+
 @docs schedulePrediction, scheduleRoute, scheduleTrip, scheduleStop
+
+
+### Filters
+
 @docs filterSchedulesByRouteIds, filterSchedulesByDirectionId, filterSchedulesByTripIds, filterSchedulesByStopSequence, StopSequenceFilter, filterSchedulesByStopIds, filterSchedulesByServiceDate, filterSchedulesByMinTime, filterSchedulesByMaxTime
 
 
 ## [Trip](#Mbta.Trip)
 
 @docs getTrip, getTrips
+
+
+### Includes
+
 @docs tripPredictions, tripVehicle, tripRoute, tripRoutePattern, tripService, tripShape
+
+
+### Filters
+
 @docs filterTripsByIds, filterTripsByNames, filterTripsByRouteIds, filterTripsByRoutePatternIds, filterTripsByDirectionId
 
 
 ## [Service](#Mbta.Service)
 
 @docs getService, getServices
-@docs `Service` does not currently have any relationships to include.
+
+
+### Includes
+
+`Service` does not currently have any relationships to include.
+
+
+### Filters
+
 @docs filterServicesByIds
 
 
 ## [Shape](#Mbta.Shape)
 
 @docs getShape, getShapes
+
+
+### Includes
+
 @docs shapeRoute, shapeStops
+
+
+### Filters
+
 @docs filterShapesByRouteIds, filterShapesByDirectionId
 
 
@@ -175,21 +247,45 @@ Use it like
 ## [Stop](#Mbta.Stop)
 
 @docs getStop, getStops
+
+
+### Includes
+
 @docs stopParentStation, stopChildStops, stopRecommendedTransfers, stopFacilities
+
+
+### Filters
+
 @docs filterStopsByIds, filterStopsByLocationTypes, filterStopsByRouteTypes, filterStopsByRouteIds, filterStopsByDirectionId, filterStopsByLatLng, filterStopsByLatLngWithRadius
 
 
 ## [Facility](#Mbta.Facility)
 
 @docs getFacility, getFacilities
+
+
+### Includes
+
 @docs facilityStop
+
+
+### Filters
+
 @docs filterFacilitiesByStopIds, filterFacilitiesByFacilityTypes
 
 
 ## [Live Facility](#Mbta.Live)
 
 @docs getLiveFacility, getLiveFacilities
+
+
+### Includes
+
 @docs liveFacilityFacility
+
+
+### Filters
+
 @docs filterLiveFacilitiesByIds
 
 
@@ -199,7 +295,15 @@ Use it like
 ## [Alert](#Mbta.Alert)
 
 @docs getAlert, getAlerts
+
+
+### Includes
+
 @docs alertRoutes, alertTrips, alertStops, alertFacilities
+
+
+### Filters
+
 @docs filterAlertsByIds, filterAlertsByRouteTypes, filterAlertsByRouteIds, filterAlertsByDirectionId, filterAlertsByTripIds, filterAlertsByStopIds, filterAlertsByFacilities, filterAlertsByActivities, filterAlertsByDatetime, AlertDatetimeFilter, filterAlertsByLifecycles, filterAlertsBySeverities
 
 -}
