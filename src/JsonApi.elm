@@ -52,7 +52,7 @@ TODO I think the bookDecoder is using an old interface for making decoders
 
 # Make decoders
 
-@docs DocumentDecoder, documentDecoderOne, documentDecoderMany, ResourceDecoder, IdDecoder, idDecoder, IncludedDecoder
+@docs DocumentDecoder, documentDecoderOne, documentDecoderMany, ResourceDecoder, IdDecoder, idDecoder
 
 
 # Pipelines
@@ -66,6 +66,15 @@ You can make `ResourceDecoder`s using a pipeline, modeled off of [`NoRedInk/elm-
 # Fancy Decoding
 
 @docs map, andThen
+
+
+# Decoding included resources
+
+The `included` field may contain multiple types of resource objects mixed together.
+Elm cannot handle lists with multiple types, so you must define your own collection type,
+and provide instructions for how to decode a resource and add it to the collection.
+
+@docs IncludedDecoder
 
 
 # Error Handling
@@ -184,8 +193,8 @@ documentDecoderOne includedDecoder resourceDecoder =
                         , included = decodedIncluded
                         }
                     )
-                    (data |> resourceDecoder)
-                    (included |> decodeIncluded includedDecoder)
+                    (resourceDecoder data)
+                    (decodeIncluded includedDecoder included)
                     |> Result.mapError ResourceError
 
             Untyped.DocumentMany _ ->
@@ -218,7 +227,7 @@ documentDecoderMany includedDecoder resourceDecoder =
                         |> List.map resourceDecoder
                         |> Result.Extra.combine
                     )
-                    (included |> decodeIncluded includedDecoder)
+                    (decodeIncluded includedDecoder included)
                     |> Result.mapError ResourceError
 
             Untyped.DocumentApiErrors errors ->
@@ -288,91 +297,6 @@ idDecoder typeString idConstructor =
                 , actualType = untypedResourceId.resourceType
                 , actualIdValue = untypedResourceId.id
                 }
-
-
-{-| The included field in JSON:API has all resource types mixed together.
-An IncludedDecoder knows how to sort them all out.
-
-`included` is the resulting collection of resources.
-`accumulatorsByType` is a list of what to do with each type of resource.
-When decoding, the [`DocumentDecoder`](#DocumentDecoder) will reduce over the list of included resources,
-check which resourceDecoder to use based on the resource's type (the same type as used in [`idDecoder`](#IdDecoder)),
-and use the resulting function to add the new resource to the collection.
-
-    { emptyIncluded =
-        { books = []
-        , authors = []
-        }
-    , accumulatorsByType =
-        [ ( "book"
-          , bookResourceDecoder
-                |> JsonApi.map
-                    (\book ->
-                        \included ->
-                            { included
-                                | books = book :: included.books
-                            }
-                    )
-          )
-        , ( "author"
-          , authorResourceDecoder
-                |> JsonApi.map
-                    (\author ->
-                        \included ->
-                            { included
-                                | authors = author :: included.authors
-                            }
-                    )
-          )
-        ]
-    }
-
--}
-type alias IncludedDecoder included =
-    { emptyIncluded : included
-    , accumulatorsByType : List ( String, ResourceDecoder (included -> included) )
-    }
-
-
-decodeIncluded : IncludedDecoder included -> List Untyped.Resource -> Result ResourceError included
-decodeIncluded includedDecoder includedResources =
-    let
-        allTypes : String
-        allTypes =
-            includedDecoder.accumulatorsByType
-                |> List.map Tuple.first
-                |> String.join ","
-
-        accumulatorsByType : Dict String (ResourceDecoder (included -> included))
-        accumulatorsByType =
-            Dict.fromList includedDecoder.accumulatorsByType
-    in
-    List.foldl
-        (\resource previousIncludedResult ->
-            previousIncludedResult
-                |> Result.andThen
-                    (\previousIncluded ->
-                        case Dict.get resource.id.resourceType accumulatorsByType of
-                            Just accumulatorResourceDecoder ->
-                                case accumulatorResourceDecoder resource of
-                                    Ok accumulator ->
-                                        Ok (accumulator previousIncluded)
-
-                                    Err newResourceError ->
-                                        Err newResourceError
-
-                            Nothing ->
-                                Err
-                                    (ResourceIdError
-                                        { expectedType = "one of " ++ allTypes
-                                        , actualType = resource.id.resourceType
-                                        , actualIdValue = resource.id.id
-                                        }
-                                    )
-                    )
-        )
-        (Ok includedDecoder.emptyIncluded)
-        includedResources
 
 
 
@@ -550,6 +474,110 @@ andThen second first =
     \untypedResource ->
         first untypedResource
             |> Result.andThen (second >> Result.mapError CustomError)
+
+
+
+-- Decoding included resources
+
+
+{-| The included field in JSON:API has all resource types mixed together.
+An IncludedDecoder knows how to sort them all out.
+
+`included` is the resulting application-specific collection of resources.
+`accumulatorsByType` is a list of what to do with each type of resource.
+When decoding, the [`DocumentDecoder`](#DocumentDecoder) will reduce over the list of included resources,
+check which resourceDecoder to use based on the resource's type (the same type as used in [`idDecoder`](#IdDecoder)),
+and use the resulting function to add the new resource to the collection.
+
+    { emptyIncluded =
+        { books = []
+        , authors = []
+        }
+    , accumulatorsByType =
+        [ ( "book"
+          , bookResourceDecoder
+                |> JsonApi.map
+                    (\book ->
+                        \included ->
+                            { included
+                                | books = book :: included.books
+                            }
+                    )
+          )
+        , ( "author"
+          , authorResourceDecoder
+                |> JsonApi.map
+                    (\author ->
+                        \included ->
+                            { included
+                                | authors = author :: included.authors
+                            }
+                    )
+          )
+        ]
+    }
+
+-}
+type alias IncludedDecoder included =
+    { emptyIncluded : included
+    , accumulatorsByType : List ( String, ResourceDecoder (included -> included) )
+    }
+
+
+{-| `AccumulatorsByType` knows how to add a resource to an application-specific collection
+
+See [`IncludedDecoder`](#IncludedDecoder) for an exmaple.
+
+-}
+type alias AccumulatorsByType included =
+    Dict String (ResourceDecoder (included -> included))
+
+
+addOne : AccumulatorsByType mixed -> mixed -> Untyped.Resource -> Result ResourceError mixed
+addOne accumulatorsByType mixed resource =
+    case Dict.get resource.id.resourceType accumulatorsByType of
+        Just accumulatorResourceDecoder ->
+            case accumulatorResourceDecoder resource of
+                Ok accumulator ->
+                    Ok (accumulator mixed)
+
+                Err newResourceError ->
+                    Err newResourceError
+
+        Nothing ->
+            let
+                allTypes : String
+                allTypes =
+                    accumulatorsByType
+                        |> Dict.keys
+                        |> String.join ","
+            in
+            Err
+                (ResourceIdError
+                    { expectedType = "one of " ++ allTypes
+                    , actualType = resource.id.resourceType
+                    , actualIdValue = resource.id.id
+                    }
+                )
+
+
+addMany : AccumulatorsByType mixed -> mixed -> List Untyped.Resource -> Result ResourceError mixed
+addMany accumulatorsByType mixed resources =
+    List.foldl
+        (\resource previousResult ->
+            previousResult
+                |> Result.andThen
+                    (\previousMixed ->
+                        addOne accumulatorsByType previousMixed resource
+                    )
+        )
+        (Ok mixed)
+        resources
+
+
+decodeIncluded : IncludedDecoder included -> List Untyped.Resource -> Result ResourceError included
+decodeIncluded { emptyIncluded, accumulatorsByType } resources =
+    addMany (Dict.fromList accumulatorsByType) emptyIncluded resources
 
 
 
