@@ -3,8 +3,10 @@ module JsonApi exposing
     , DocumentDecoder, documentDecoderOne, documentDecoderMany, ResourceDecoder, IdDecoder, idDecoder
     , decode, id, attribute, relationshipOne, relationshipMaybe, relationshipMany, custom
     , map, andThen, oneOf
-    , IncludedDecoder
     , decodeResourceString, decodeResourceValue
+    , mapId, oneOfId
+    , decodeIdString, decodeIdValue
+    , IncludedDecoder
     , Error(..), errorToString, DocumentError(..), documentErrorToString, ResourceError(..), resourceErrorToString, IdError, idErrorToString
     )
 
@@ -65,9 +67,26 @@ You can make `ResourceDecoder`s using a pipeline, modeled off of [`NoRedInk/elm-
 @docs decode, id, attribute, relationshipOne, relationshipMaybe, relationshipMany, custom
 
 
-# Fancy Decoding
+# Fancy Resource Decoding
 
 @docs map, andThen, oneOf
+
+Typically, you will get a whole JSON:API document, and decode the whole thing at once.
+But if you get json for a resource outside of its document,
+you can decode it with these.
+
+@docs decodeResourceString, decodeResourceValue
+
+
+# Fancy Id Decoding
+
+@docs mapId, oneOfId
+
+Typically, you will get a whole JSON:API document, and decode the whole thing at once.
+But if you get json for an id outside of its document,
+you can decode it with these.
+
+@docs decodeIdString, decodeIdValue
 
 
 # Decoding included resources
@@ -80,12 +99,6 @@ and provide instructions for how to decode a resource and add it to the collecti
 
 
 # Decoding resources
-
-Typically, you will get a whole JSON:API document, and decode the whole thing at once.
-But if you get json for a resource outside of its document,
-you can decode it with these.
-
-@docs decodeResourceString, decodeResourceValue
 
 
 # Error Handling
@@ -466,7 +479,7 @@ custom resourceDecoder constructorDecoder =
 
 
 
--- Fancy Decoding
+-- Fancy Resource Decoding
 
 
 {-| Apply a function to the result of a resourceDecoder if it succeeds
@@ -525,6 +538,112 @@ oneOf decoders =
                         , actualIdValue = untypedResource.id.id
                         }
                     )
+
+
+{-| -}
+decodeResourceString : ResourceDecoder a -> String -> Result ResourceError a
+decodeResourceString resourceDecoder jsonString =
+    jsonString
+        |> Decode.decodeString Untyped.resourceDecoder
+        |> Result.mapError resourceErrorFromDecodeError
+        |> Result.andThen resourceDecoder
+
+
+{-| -}
+decodeResourceValue : ResourceDecoder a -> Decode.Value -> Result ResourceError a
+decodeResourceValue resourceDecoder jsonValue =
+    jsonValue
+        |> Decode.decodeValue Untyped.resourceDecoder
+        |> Result.mapError resourceErrorFromDecodeError
+        |> Result.andThen resourceDecoder
+
+
+resourceErrorFromDecodeError : Decode.Error -> ResourceError
+resourceErrorFromDecodeError decodeError =
+    decodeError
+        |> Decode.errorToString
+        |> CustomError
+
+
+
+-- Fancy Id Decoding
+
+
+{-| Apply a function to the result of a resourceDecoder if it succeeds
+-}
+mapId : (a -> b) -> IdDecoder a -> IdDecoder b
+mapId f decoder =
+    \untypedId ->
+        decoder untypedId
+            |> Result.map f
+
+
+{-| If you have an id that may be one of multiple types,
+this will choose the appropriate IdDecoder based on the JSON:API type of the object
+
+Every result must be the same type, so you may want to use [`map`](#map)
+to convert your decoders.
+
+    authorIdFromAnyResource : ResourceDecoder AuthorId
+    authorIdFromAnyResource =
+        oneOf <|
+            Dict.fromList
+                [ ( "book", bookDecoder |> map (\book -> book.author) )
+                , ( "author", authorDecoder |> map (\author -> id) )
+                ]
+
+-}
+oneOfId : Dict String (IdDecoder a) -> IdDecoder a
+oneOfId decoders =
+    \untypedId ->
+        case Dict.get untypedId.resourceType decoders of
+            Just decoder ->
+                decoder untypedId
+
+            Nothing ->
+                let
+                    allTypes : String
+                    allTypes =
+                        decoders
+                            |> Dict.keys
+                            |> String.join ","
+                in
+                Err
+                    { expectedType = "oneOf " ++ allTypes
+                    , actualType = untypedId.resourceType
+                    , actualIdValue = untypedId.id
+                    }
+
+
+{-| -}
+decodeIdString : IdDecoder a -> String -> Result IdError a
+decodeIdString decoder jsonString =
+    jsonString
+        |> Decode.decodeString Untyped.resourceIdDecoder
+        |> Result.mapError idErrorFromDecodeError
+        |> Result.andThen decoder
+
+
+{-| -}
+decodeIdValue : IdDecoder a -> Decode.Value -> Result IdError a
+decodeIdValue decoder jsonValue =
+    jsonValue
+        |> Decode.decodeValue Untyped.resourceIdDecoder
+        |> Result.mapError idErrorFromDecodeError
+        |> Result.andThen decoder
+
+
+
+-- TODO standardize on `id` vs `resourceId`
+
+
+idErrorFromDecodeError : Decode.Error -> IdError
+idErrorFromDecodeError decodeError =
+    -- TODO a not-hacky way to represent Decode.Error. (resourceErrorFromDecodeError too)
+    { expectedType = ""
+    , actualType = "decode error"
+    , actualIdValue = Decode.errorToString decodeError
+    }
 
 
 
@@ -595,38 +714,6 @@ decodeIncluded { emptyIncluded, accumulator } untypedResources =
         )
         (Ok emptyIncluded)
         untypedResources
-
-
-
--- Decode resources
-
-
-{-| -}
-decodeResourceString : ResourceDecoder a -> String -> Result ResourceError a
-decodeResourceString resourceDecoder jsonString =
-    jsonString
-        |> Decode.decodeString Untyped.resourceDecoder
-        |> Result.mapError
-            (\decodeError ->
-                decodeError
-                    |> Decode.errorToString
-                    |> CustomError
-            )
-        |> Result.andThen resourceDecoder
-
-
-{-| -}
-decodeResourceValue : ResourceDecoder a -> Decode.Value -> Result ResourceError a
-decodeResourceValue resourceDecoder jsonValue =
-    jsonValue
-        |> Decode.decodeValue Untyped.resourceDecoder
-        |> Result.mapError
-            (\decodeError ->
-                decodeError
-                    |> Decode.errorToString
-                    |> CustomError
-            )
-        |> Result.andThen resourceDecoder
 
 
 
