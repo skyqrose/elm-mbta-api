@@ -560,7 +560,7 @@ includedDecoder =
             (\mixedAdd ->
                 \(Included mixed) -> Included (mixedAdd mixed)
             )
-            Mixed.add
+            Mixed.insert
     }
 
 

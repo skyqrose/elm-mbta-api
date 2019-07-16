@@ -31,7 +31,7 @@ testMany description url json resourceDecoder =
 includedDecoder : JsonApi.IncludedDecoder Mixed.Mixed
 includedDecoder =
     { emptyIncluded = Mixed.empty
-    , accumulator = Mixed.add
+    , accumulator = Mixed.insert
     }
 
 

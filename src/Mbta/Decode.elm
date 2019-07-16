@@ -1,8 +1,8 @@
 module Mbta.Decode exposing
-    ( prediction, vehicle
-    , route, routePattern, line, schedule, trip, service, shape
-    , stop, facility, liveFacility
-    , alert
+    ( predictionId, prediction, vehicleId, vehicle
+    , routeId, route, routePatternId, routePattern, lineId, line, scheduleId, schedule, tripId, trip, serviceId, service, shapeId, shape
+    , stopId, stop, facilityId, facility, liveFacility
+    , alertId, alert
     )
 
 {-|
@@ -10,17 +10,22 @@ module Mbta.Decode exposing
 
 # Realtime Data
 
-@docs prediction, vehicle
+@docs predictionId, prediction, vehicleId, vehicle
 
 
 # Schedule Data
 
-@docs route, routePattern, line, schedule, trip, service, shape
+@docs routeId, route, routePatternId, routePattern, lineId, line, scheduleId, schedule, tripId, trip, serviceId, service, shapeId, shape
 
 
-# Stops
+# Stop Data
 
-@docs stop, facility, liveFacility
+@docs stopId, stop, facilityId, facility, liveFacility
+
+
+# Alert Data
+
+@docs alertId, alert
 
 -}
 
