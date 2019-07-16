@@ -3,7 +3,7 @@
     "build": "elm make",
     "watch": "npm run build; chokidar src/ -c 'npm run build'",
     "format": "elm-format --yes .",
-    "test": "elm-test && elm-format --validate ."
+    "test": "elm make && elm-test && elm-format --validate . && elm make --docs=docs.json"
   },
   "dependencies": {
     "elm": "^0.19.0-no-deps"
