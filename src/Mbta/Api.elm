@@ -83,6 +83,8 @@ Use it like
 Any sideloaded resources are put in the [`Included`](#Included) object in the result.
 
 @docs Include, Relationship, include, andIts
+@docs Included
+@docs getIncludedPrediction, getIncludedVehicle, getIncludedRoute, getIncludedRoutePattern, getIncludedLine, getIncludedSchedule, getIncludedTrip, getIncludedService, getIncludedShape, getIncludedStop, getIncludedFacility, getIncludedLiveFacility, getIncludedAlert
 
 
 # Filtering
@@ -308,13 +310,14 @@ Use it like
 
 -}
 
+import AssocList as Dict
 import Http
 import Iso8601
 import Json.Decode as Decode
 import JsonApi
 import Mbta exposing (..)
 import Mbta.Decode
-import Mbta.Included as Included
+import Mbta.Mixed as Mixed
 import Time
 import Url.Builder
 
@@ -368,7 +371,7 @@ type alias ApiResult data =
 {-| -}
 type alias Ok data =
     { data : data
-    , included : Included.Included
+    , included : Included
     }
 
 
@@ -456,13 +459,13 @@ jsonApiErrorToApiError jsonApiError =
 getOne : (ApiResult resource -> msg) -> Host -> JsonApi.ResourceDecoder resource -> String -> List (Include resource) -> String -> Cmd msg
 getOne toMsg host resourceDecoder path includes id =
     let
-        toMsg_ : Result JsonApi.Error (JsonApi.Document Included.Included resource) -> msg
+        toMsg_ : Result JsonApi.Error (JsonApi.Document Included resource) -> msg
         toMsg_ =
             Result.mapError jsonApiErrorToApiError >> toMsg
 
-        documentDecoder : JsonApi.DocumentDecoder Included.Included resource
+        documentDecoder : JsonApi.DocumentDecoder Included resource
         documentDecoder =
-            JsonApi.documentDecoderOne Included.includedDecoder resourceDecoder
+            JsonApi.documentDecoderOne includedDecoder resourceDecoder
     in
     Http.get
         { url = makeUrl host [ path, id ] [] includes
@@ -473,13 +476,13 @@ getOne toMsg host resourceDecoder path includes id =
 getList : (ApiResult (List resource) -> msg) -> Host -> JsonApi.ResourceDecoder resource -> String -> List (Include resource) -> List (Filter resource) -> Cmd msg
 getList toMsg host resourceDecoder path includes filters =
     let
-        toMsg_ : Result JsonApi.Error (JsonApi.Document Included.Included (List resource)) -> msg
+        toMsg_ : Result JsonApi.Error (JsonApi.Document Included (List resource)) -> msg
         toMsg_ =
             Result.mapError jsonApiErrorToApiError >> toMsg
 
-        documentDecoder : JsonApi.DocumentDecoder Included.Included (List resource)
+        documentDecoder : JsonApi.DocumentDecoder Included (List resource)
         documentDecoder =
-            JsonApi.documentDecoderMany Included.includedDecoder resourceDecoder
+            JsonApi.documentDecoderMany includedDecoder resourceDecoder
     in
     Http.get
         { url = makeUrl host [ path ] filters includes
@@ -538,6 +541,103 @@ includeQueryParameter includes =
                 |> String.join ","
                 |> Url.Builder.string "include"
                 |> List.singleton
+
+
+{-| The data returned in the includes field of an API call.
+Use the getters below to look up a resource by its id
+-}
+type Included
+    = Included Mixed.Mixed
+
+
+includedDecoder : JsonApi.IncludedDecoder Included
+includedDecoder =
+    { emptyIncluded = Included Mixed.empty
+    , accumulator =
+        JsonApi.map
+            (\mixedAdd ->
+                \(Included mixed) -> Included (mixedAdd mixed)
+            )
+            Mixed.add
+    }
+
+
+{-| -}
+getIncludedPrediction : PredictionId -> Included -> Maybe Prediction
+getIncludedPrediction predictionId (Included mixed) =
+    Dict.get predictionId mixed.predictions
+
+
+{-| -}
+getIncludedVehicle : VehicleId -> Included -> Maybe Vehicle
+getIncludedVehicle vehicleId (Included mixed) =
+    Dict.get vehicleId mixed.vehicles
+
+
+{-| -}
+getIncludedRoute : RouteId -> Included -> Maybe Route
+getIncludedRoute routeId (Included mixed) =
+    Dict.get routeId mixed.routes
+
+
+{-| -}
+getIncludedRoutePattern : RoutePatternId -> Included -> Maybe RoutePattern
+getIncludedRoutePattern routePatternId (Included mixed) =
+    Dict.get routePatternId mixed.routePatterns
+
+
+{-| -}
+getIncludedLine : LineId -> Included -> Maybe Line
+getIncludedLine lineId (Included mixed) =
+    Dict.get lineId mixed.lines
+
+
+{-| -}
+getIncludedSchedule : ScheduleId -> Included -> Maybe Schedule
+getIncludedSchedule scheduleId (Included mixed) =
+    Dict.get scheduleId mixed.schedules
+
+
+{-| -}
+getIncludedTrip : TripId -> Included -> Maybe Trip
+getIncludedTrip tripId (Included mixed) =
+    Dict.get tripId mixed.trips
+
+
+{-| -}
+getIncludedService : ServiceId -> Included -> Maybe Service
+getIncludedService serviceId (Included mixed) =
+    Dict.get serviceId mixed.services
+
+
+{-| -}
+getIncludedShape : ShapeId -> Included -> Maybe Shape
+getIncludedShape shapeId (Included mixed) =
+    Dict.get shapeId mixed.shapes
+
+
+{-| -}
+getIncludedStop : StopId -> Included -> Maybe Stop
+getIncludedStop stopId (Included mixed) =
+    Dict.get stopId mixed.stops
+
+
+{-| -}
+getIncludedFacility : FacilityId -> Included -> Maybe Facility
+getIncludedFacility facilityId (Included mixed) =
+    Dict.get facilityId mixed.facilities
+
+
+{-| -}
+getIncludedLiveFacility : FacilityId -> Included -> Maybe LiveFacility
+getIncludedLiveFacility facilityId (Included mixed) =
+    Dict.get facilityId mixed.liveFacilities
+
+
+{-| -}
+getIncludedAlert : AlertId -> Included -> Maybe Alert
+getIncludedAlert alertId (Included mixed) =
+    Dict.get alertId mixed.alerts
 
 
 

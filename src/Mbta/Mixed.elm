@@ -1,12 +1,10 @@
-module Mbta.Included exposing
-    ( Included
-    , includedDecoder
+module Mbta.Mixed exposing
+    ( Mixed
+    , add
+    , empty
     )
 
-{-| The sideloaded data returned by an api call
-
-@docs Included
-
+{-| A heterogenous collection of resources
 -}
 
 import AssocList
@@ -16,7 +14,7 @@ import Mbta exposing (..)
 import Mbta.Decode
 
 
-type alias Included =
+type alias Mixed =
     { predictions : AssocList.Dict PredictionId Prediction
     , vehicles : AssocList.Dict VehicleId Vehicle
     , routes : AssocList.Dict RouteId Route
@@ -33,8 +31,8 @@ type alias Included =
     }
 
 
-emptyIncluded : Included
-emptyIncluded =
+empty : Mixed
+empty =
     { predictions = AssocList.empty
     , vehicles = AssocList.empty
     , routes = AssocList.empty
@@ -51,8 +49,8 @@ emptyIncluded =
     }
 
 
-accumulator : JsonApi.ResourceDecoder (Included -> Included)
-accumulator =
+add : JsonApi.ResourceDecoder (Mixed -> Mixed)
+add =
     [ ( "prediction"
       , Mbta.Decode.prediction
             |> JsonApi.map
@@ -186,10 +184,3 @@ accumulator =
     ]
         |> Dict.fromList
         |> JsonApi.oneOf
-
-
-includedDecoder : JsonApi.IncludedDecoder Included
-includedDecoder =
-    { emptyIncluded = emptyIncluded
-    , accumulator = accumulator
-    }
