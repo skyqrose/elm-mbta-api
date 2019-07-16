@@ -6,7 +6,7 @@ import Json.Decode
 import JsonApi
 import Mbta exposing (..)
 import Mbta.Decode
-import Mbta.Included as Included
+import Mbta.Mixed as Mixed
 import Test exposing (..)
 
 
@@ -15,7 +15,7 @@ testOne description url json resourceDecoder =
     test description <|
         \() ->
             json
-                |> JsonApi.decodeDocumentString (JsonApi.documentDecoderOne Included.includedDecoder resourceDecoder)
+                |> JsonApi.decodeDocumentString (JsonApi.documentDecoderOne includedDecoder resourceDecoder)
                 |> Expect.ok
 
 
@@ -24,8 +24,15 @@ testMany description url json resourceDecoder =
     test description <|
         \() ->
             json
-                |> JsonApi.decodeDocumentString (JsonApi.documentDecoderMany Included.includedDecoder resourceDecoder)
+                |> JsonApi.decodeDocumentString (JsonApi.documentDecoderMany includedDecoder resourceDecoder)
                 |> Expect.ok
+
+
+includedDecoder : JsonApi.IncludedDecoder Mixed.Mixed
+includedDecoder =
+    { emptyIncluded = Mixed.empty
+    , accumulator = Mixed.add
+    }
 
 
 suite : Test

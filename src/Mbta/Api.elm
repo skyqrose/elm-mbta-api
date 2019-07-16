@@ -2,6 +2,8 @@ module Mbta.Api exposing
     ( Host(..)
     , ApiResult, Ok, Error(..)
     , Include, Relationship, include, andIts
+    , Included
+    , getIncludedPrediction, getIncludedVehicle, getIncludedRoute, getIncludedRoutePattern, getIncludedLine, getIncludedSchedule, getIncludedTrip, getIncludedService, getIncludedShape, getIncludedStop, getIncludedFacility, getIncludedLiveFacility, getIncludedAlert
     , Filter
     , getPredictions
     , predictionVehicle, predictionRoute, predictionSchedule, predictionTrip, predictionStop, predictionAlerts
