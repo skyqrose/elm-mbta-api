@@ -6,6 +6,7 @@ module JsonApi.Untyped exposing
     , Resource
     , ResourceId
     , documentDecoder
+    , resourceDecoder
     )
 
 {-| JSON:API data that's been decoded into its JSON:API structure,

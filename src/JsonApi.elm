@@ -4,6 +4,7 @@ module JsonApi exposing
     , decode, id, attribute, relationshipOne, relationshipMaybe, relationshipMany, custom
     , map, andThen, oneOf
     , IncludedDecoder
+    , decodeResourceString, decodeResourceValue
     , Error(..), errorToString, DocumentError(..), documentErrorToString, ResourceError(..), resourceErrorToString, IdError, idErrorToString
     )
 
@@ -76,6 +77,15 @@ Elm cannot handle lists with multiple types, so you must define your own collect
 and provide instructions for how to decode a resource and add it to the collection.
 
 @docs IncludedDecoder
+
+
+# Decoding resources
+
+Typically, you will get a whole JSON:API document, and decode the whole thing at once.
+But if you get json for a resource outside of its document,
+you can decode it with these.
+
+@docs decodeResourceString, decodeResourceValue
 
 
 # Error Handling
@@ -585,6 +595,38 @@ decodeIncluded { emptyIncluded, accumulator } untypedResources =
         )
         (Ok emptyIncluded)
         untypedResources
+
+
+
+-- Decode resources
+
+
+{-| -}
+decodeResourceString : ResourceDecoder a -> String -> Result ResourceError a
+decodeResourceString resourceDecoder jsonString =
+    jsonString
+        |> Decode.decodeString Untyped.resourceDecoder
+        |> Result.mapError
+            (\decodeError ->
+                decodeError
+                    |> Decode.errorToString
+                    |> CustomError
+            )
+        |> Result.andThen resourceDecoder
+
+
+{-| -}
+decodeResourceValue : ResourceDecoder a -> Decode.Value -> Result ResourceError a
+decodeResourceValue resourceDecoder jsonValue =
+    jsonValue
+        |> Decode.decodeValue Untyped.resourceDecoder
+        |> Result.mapError
+            (\decodeError ->
+                decodeError
+                    |> Decode.errorToString
+                    |> CustomError
+            )
+        |> Result.andThen resourceDecoder
 
 
 
