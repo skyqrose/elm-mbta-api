@@ -9,56 +9,57 @@ module Mbta.Included exposing
 
 -}
 
-import AssocList as Dict exposing (Dict)
+import AssocList
+import Dict
 import JsonApi
 import Mbta exposing (..)
 import Mbta.Decode
 
 
 type alias Included =
-    { predictions : Dict PredictionId Prediction
-    , vehicles : Dict VehicleId Vehicle
-    , routes : Dict RouteId Route
-    , routePatterns : Dict RoutePatternId RoutePattern
-    , lines : Dict LineId Line
-    , schedules : Dict ScheduleId Schedule
-    , trips : Dict TripId Trip
-    , services : Dict ServiceId Service
-    , shapes : Dict ShapeId Shape
-    , stops : Dict StopId Stop
-    , facilities : Dict FacilityId Facility
-    , liveFacilities : Dict FacilityId LiveFacility
-    , alerts : Dict AlertId Alert
+    { predictions : AssocList.Dict PredictionId Prediction
+    , vehicles : AssocList.Dict VehicleId Vehicle
+    , routes : AssocList.Dict RouteId Route
+    , routePatterns : AssocList.Dict RoutePatternId RoutePattern
+    , lines : AssocList.Dict LineId Line
+    , schedules : AssocList.Dict ScheduleId Schedule
+    , trips : AssocList.Dict TripId Trip
+    , services : AssocList.Dict ServiceId Service
+    , shapes : AssocList.Dict ShapeId Shape
+    , stops : AssocList.Dict StopId Stop
+    , facilities : AssocList.Dict FacilityId Facility
+    , liveFacilities : AssocList.Dict FacilityId LiveFacility
+    , alerts : AssocList.Dict AlertId Alert
     }
 
 
 emptyIncluded : Included
 emptyIncluded =
-    { predictions = Dict.empty
-    , vehicles = Dict.empty
-    , routes = Dict.empty
-    , routePatterns = Dict.empty
-    , lines = Dict.empty
-    , schedules = Dict.empty
-    , trips = Dict.empty
-    , services = Dict.empty
-    , shapes = Dict.empty
-    , stops = Dict.empty
-    , facilities = Dict.empty
-    , liveFacilities = Dict.empty
-    , alerts = Dict.empty
+    { predictions = AssocList.empty
+    , vehicles = AssocList.empty
+    , routes = AssocList.empty
+    , routePatterns = AssocList.empty
+    , lines = AssocList.empty
+    , schedules = AssocList.empty
+    , trips = AssocList.empty
+    , services = AssocList.empty
+    , shapes = AssocList.empty
+    , stops = AssocList.empty
+    , facilities = AssocList.empty
+    , liveFacilities = AssocList.empty
+    , alerts = AssocList.empty
     }
 
 
-accumulatorsByType : List ( String, JsonApi.ResourceDecoder (Included -> Included) )
-accumulatorsByType =
+accumulator : JsonApi.ResourceDecoder (Included -> Included)
+accumulator =
     [ ( "prediction"
       , Mbta.Decode.prediction
             |> JsonApi.map
                 (\prediction ->
                     \included ->
                         { included
-                            | predictions = Dict.insert prediction.id prediction included.predictions
+                            | predictions = AssocList.insert prediction.id prediction included.predictions
                         }
                 )
       )
@@ -68,7 +69,7 @@ accumulatorsByType =
                 (\vehicle ->
                     \included ->
                         { included
-                            | vehicles = Dict.insert vehicle.id vehicle included.vehicles
+                            | vehicles = AssocList.insert vehicle.id vehicle included.vehicles
                         }
                 )
       )
@@ -78,7 +79,7 @@ accumulatorsByType =
                 (\route ->
                     \included ->
                         { included
-                            | routes = Dict.insert route.id route included.routes
+                            | routes = AssocList.insert route.id route included.routes
                         }
                 )
       )
@@ -88,7 +89,7 @@ accumulatorsByType =
                 (\routePattern ->
                     \included ->
                         { included
-                            | routePatterns = Dict.insert routePattern.id routePattern included.routePatterns
+                            | routePatterns = AssocList.insert routePattern.id routePattern included.routePatterns
                         }
                 )
       )
@@ -98,7 +99,7 @@ accumulatorsByType =
                 (\line ->
                     \included ->
                         { included
-                            | lines = Dict.insert line.id line included.lines
+                            | lines = AssocList.insert line.id line included.lines
                         }
                 )
       )
@@ -108,7 +109,7 @@ accumulatorsByType =
                 (\schedule ->
                     \included ->
                         { included
-                            | schedules = Dict.insert schedule.id schedule included.schedules
+                            | schedules = AssocList.insert schedule.id schedule included.schedules
                         }
                 )
       )
@@ -118,7 +119,7 @@ accumulatorsByType =
                 (\trip ->
                     \included ->
                         { included
-                            | trips = Dict.insert trip.id trip included.trips
+                            | trips = AssocList.insert trip.id trip included.trips
                         }
                 )
       )
@@ -128,7 +129,7 @@ accumulatorsByType =
                 (\service ->
                     \included ->
                         { included
-                            | services = Dict.insert service.id service included.services
+                            | services = AssocList.insert service.id service included.services
                         }
                 )
       )
@@ -138,7 +139,7 @@ accumulatorsByType =
                 (\shape ->
                     \included ->
                         { included
-                            | shapes = Dict.insert shape.id shape included.shapes
+                            | shapes = AssocList.insert shape.id shape included.shapes
                         }
                 )
       )
@@ -148,7 +149,7 @@ accumulatorsByType =
                 (\stop ->
                     \included ->
                         { included
-                            | stops = Dict.insert stop.id stop included.stops
+                            | stops = AssocList.insert stop.id stop included.stops
                         }
                 )
       )
@@ -158,7 +159,7 @@ accumulatorsByType =
                 (\facility ->
                     \included ->
                         { included
-                            | facilities = Dict.insert facility.id facility included.facilities
+                            | facilities = AssocList.insert facility.id facility included.facilities
                         }
                 )
       )
@@ -168,7 +169,7 @@ accumulatorsByType =
                 (\liveFacility ->
                     \included ->
                         { included
-                            | liveFacilities = Dict.insert liveFacility.id liveFacility included.liveFacilities
+                            | liveFacilities = AssocList.insert liveFacility.id liveFacility included.liveFacilities
                         }
                 )
       )
@@ -178,15 +179,17 @@ accumulatorsByType =
                 (\alert ->
                     \included ->
                         { included
-                            | alerts = Dict.insert alert.id alert included.alerts
+                            | alerts = AssocList.insert alert.id alert included.alerts
                         }
                 )
       )
     ]
+        |> Dict.fromList
+        |> JsonApi.oneOf
 
 
 includedDecoder : JsonApi.IncludedDecoder Included
 includedDecoder =
     { emptyIncluded = emptyIncluded
-    , accumulatorsByType = accumulatorsByType
+    , accumulator = accumulator
     }

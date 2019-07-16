@@ -67,7 +67,7 @@ includedDecoder =
         { books = []
         , authors = []
         }
-    , accumulatorsByType =
+    , accumulator =
         [ ( "book"
           , bookResourceDecoder
                 |> JsonApi.map
@@ -89,6 +89,8 @@ includedDecoder =
                     )
           )
         ]
+            |> Dict.fromList
+            |> JsonApi.oneOf
     }
 
 
