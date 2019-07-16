@@ -477,6 +477,45 @@ andThen second first =
             |> Result.andThen (second >> Result.mapError CustomError)
 
 
+{-| If you have a resource object that may be one of multiple types,
+this will choose the appropriate ResourceDecoder based on the JSON:API type of the object.
+
+Every resource must be the same type, so you may want to use [`map`](#map)
+to convert your decoders to the same result type.
+
+    authorIdFromAnyResource : ResourceDecoder AuthorId
+    authorIdFromAnyResource =
+        oneOf <|
+            Dict.fromList
+                [ ( "book", bookDecoder |> map (\book -> book.author) )
+                , ( "author", authorDecoder |> map (\author -> id) )
+                ]
+
+-}
+oneOf : Dict String (ResourceDecoder a) -> ResourceDecoder a
+oneOf decoders =
+    \untypedResource ->
+        case Dict.get untypedResource.id.resourceType decoders of
+            Just decoder ->
+                decoder untypedResource
+
+            Nothing ->
+                let
+                    allTypes : String
+                    allTypes =
+                        decoders
+                            |> Dict.keys
+                            |> String.join ","
+                in
+                Err
+                    (ResourceIdError
+                        { expectedType = "oneOf " ++ allTypes
+                        , actualType = untypedResource.id.resourceType
+                        , actualIdValue = untypedResource.id.id
+                        }
+                    )
+
+
 
 -- Decoding included resources
 
@@ -534,32 +573,10 @@ type alias AccumulatorsByType included =
     Dict String (ResourceDecoder (included -> included))
 
 
-addOne : AccumulatorsByType mixed -> mixed -> Untyped.Resource -> Result ResourceError mixed
-addOne accumulatorsByType mixed resource =
-    case Dict.get resource.id.resourceType accumulatorsByType of
-        Just accumulatorResourceDecoder ->
-            case accumulatorResourceDecoder resource of
-                Ok accumulator ->
-                    Ok (accumulator mixed)
-
-                Err newResourceError ->
-                    Err newResourceError
-
-        Nothing ->
-            let
-                allTypes : String
-                allTypes =
-                    accumulatorsByType
-                        |> Dict.keys
-                        |> String.join ","
-            in
-            Err
-                (ResourceIdError
-                    { expectedType = "one of " ++ allTypes
-                    , actualType = resource.id.resourceType
-                    , actualIdValue = resource.id.id
-                    }
-                )
+addOne : AccumulatorsByType mixed -> mixed -> ResourceDecoder mixed
+addOne accumulatorsByType mixed =
+    oneOf accumulatorsByType
+        |> map (\accumulator -> accumulator mixed)
 
 
 addMany : AccumulatorsByType mixed -> mixed -> List Untyped.Resource -> Result ResourceError mixed
