@@ -1,6 +1,7 @@
 module JsonApiTest exposing (suite)
 
 import DecodeHelpers
+import Dict
 import Expect
 import Json.Decode
 import JsonApi exposing (..)
