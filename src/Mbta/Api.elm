@@ -6,10 +6,10 @@ module Mbta.Api exposing
     , getIncludedPrediction, getIncludedVehicle, getIncludedRoute, getIncludedRoutePattern, getIncludedLine, getIncludedSchedule, getIncludedTrip, getIncludedService, getIncludedShape, getIncludedStop, getIncludedFacility, getIncludedLiveFacility, getIncludedAlert
     , Filter
     , StreamData, StreamError(..), getStreamData, getStreamIncluded, updateStream
-    , getPredictions
+    , getPredictions, streamPredictions
     , predictionVehicle, predictionRoute, predictionSchedule, predictionTrip, predictionStop, predictionAlerts
     , filterPredictionsByRouteTypes, filterPredictionsByRouteIds, filterPredictionsByTripIds, filterPredictionsByDirectionId, filterPredictionsByStopIds, filterPredictionsByLatLng, filterPredictionsByLatLngWithRadius
-    , getVehicle, getVehicles
+    , getVehicle, getVehicles, streamVehicles
     , vehicleRoute, vehicleTrip, vehicleStop
     , filterVehiclesByIds, filterVehiclesByLabels, filterVehiclesByRouteIds, filterVehiclesByRouteTypes, filterVehiclesByDirectionId, filterVehiclesByTripIds
     , getRoute, getRoutes
@@ -41,7 +41,7 @@ module Mbta.Api exposing
     , getLiveFacility, getLiveFacilities
     , liveFacilityFacility
     , filterLiveFacilitiesByIds
-    , getAlert, getAlerts
+    , getAlert, getAlerts, streamAlerts
     , alertRoutes, alertTrips, alertStops, alertFacilities
     , filterAlertsByIds, filterAlertsByRouteTypes, filterAlertsByRouteIds, filterAlertsByDirectionId, filterAlertsByTripIds, filterAlertsByStopIds, filterAlertsByFacilities, filterAlertsByActivities, filterAlertsByDatetime, AlertDatetimeFilter, filterAlertsByLifecycles, filterAlertsBySeverities
     )
@@ -115,7 +115,7 @@ Use it like
 
 ## [Prediction](#Mbta.Prediction)
 
-@docs getPredictions
+@docs getPredictions, streamPredictions
 
 
 ### Includes
@@ -130,7 +130,7 @@ Use it like
 
 ## [Vehicle](#Mbta.Vehicle)
 
-@docs getVehicle, getVehicles
+@docs getVehicle, getVehicles, streamVehicles
 
 
 ### Includes
@@ -304,7 +304,7 @@ Use it like
 
 ## [Alert](#Mbta.Alert)
 
-@docs getAlert, getAlerts
+@docs getAlert, getAlerts, streamAlerts
 
 
 ### Includes
@@ -679,6 +679,11 @@ filterQueryParameters filters =
 -- Streaming
 
 
+{-| The data from a stream.
+
+Put this in your model.
+
+-}
 type StreamData resource
     = StreamData
         { dataField : Mixed.Mixed -> List resource
@@ -686,24 +691,33 @@ type StreamData resource
         }
 
 
+{-| TODO explain what each variant means
+-}
 type StreamError
     = BadOrder String
     | UnrecognizedEvent String
 
 
+{-| The main resources that you're watching for updates in the stream.
+-}
 getStreamData : StreamData resource -> RemoteData.RemoteData StreamError (List resource)
 getStreamData (StreamData streamData) =
     RemoteData.map streamData.dataField streamData.mixed
 
 
-{-| The streaming API doesn't separate the main resources from included data,
+{-| Any data that you side loaded by specifying `Include` parameters
+
+The streaming API doesn't separate the main resources from included data,
 so the main result will show up in this `Included`, too.
+
 -}
 getStreamIncluded : StreamData resource -> RemoteData.RemoteData StreamError Included
 getStreamIncluded (StreamData streamData) =
     RemoteData.map Included streamData.mixed
 
 
+{-| When you get new data coming in through the stream, use this to update the [`StreamData`](#StreamData) in your model.
+-}
 updateStream : String -> Decode.Value -> StreamData resource -> StreamData resource
 updateStream eventString dataJson (StreamData streamData) =
     StreamData
@@ -761,34 +775,35 @@ streamReset dataJson =
     dataJson
         |> Decode.decodeValue (Decode.list Decode.value)
         |> Result.mapError (\decodeError -> Debug.todo "decodeError to streamError")
-        |> Result.andThen (\resourceJsons ->
-            List.foldl
-                (\resourceJson mixedResult ->
-                    mixedResult
-                        |> Result.andThen
-                            (\mixed ->
-                                streamInsert resourceJson mixed
-                            )
-                )
-                (Result.Ok Mixed.empty)
-                resourceJsons
-        )
+        |> Result.andThen
+            (\resourceJsons ->
+                List.foldl
+                    (\resourceJson mixedResult ->
+                        mixedResult
+                            |> Result.andThen
+                                (\mixed ->
+                                    streamInsert resourceJson mixed
+                                )
+                    )
+                    (Result.Ok Mixed.empty)
+                    resourceJsons
+            )
 
 
 streamInsert : Decode.Value -> Mixed.Mixed -> Result StreamError Mixed.Mixed
 streamInsert resourceJson mixed =
     resourceJson
-    |> JsonApi.decodeResourceValue Mixed.insert
-    |> Result.mapError (\resourceError -> Debug.todo "resourceError to streamError")
-    |> Result.map (\mixedInserter -> mixedInserter mixed)
+        |> JsonApi.decodeResourceValue Mixed.insert
+        |> Result.mapError (\resourceError -> Debug.todo "resourceError to streamError")
+        |> Result.map (\mixedInserter -> mixedInserter mixed)
 
 
 streamRemove : Decode.Value -> Mixed.Mixed -> Result StreamError Mixed.Mixed
 streamRemove idJson mixed =
     idJson
-    |> JsonApi.decodeIdValue Mixed.remove
-    |> Result.mapError (\idError -> Debug.todo "idError to streamError")
-    |> Result.map (\mixedRemover -> mixedRemover mixed)
+        |> JsonApi.decodeIdValue Mixed.remove
+        |> Result.mapError (\idError -> Debug.todo "idError to streamError")
+        |> Result.map (\mixedRemover -> mixedRemover mixed)
 
 
 
@@ -801,6 +816,17 @@ streamRemove idJson mixed =
 getPredictions : (ApiResult (List Prediction) -> msg) -> Host -> List (Include Prediction) -> List (Filter Prediction) -> Cmd msg
 getPredictions toMsg host includes filters =
     getList toMsg host Mbta.Decode.prediction "predictions" includes filters
+
+
+{-| -}
+streamPredictions : Host -> List (Include Prediction) -> List (Filter Prediction) -> ( StreamData Prediction, String )
+streamPredictions host includes filters =
+    ( StreamData
+        { dataField = .predictions >> Dict.values
+        , mixed = RemoteData.Loading
+        }
+    , makeUrl host [ "predictions" ] filters includes
+    )
 
 
 {-| -}
@@ -895,6 +921,17 @@ getVehicle toMsg host includes (VehicleId vehicleId) =
 getVehicles : (ApiResult (List Vehicle) -> msg) -> Host -> List (Include Vehicle) -> List (Filter Vehicle) -> Cmd msg
 getVehicles toMsg host includes filters =
     getList toMsg host Mbta.Decode.vehicle "vehicles" includes filters
+
+
+{-| -}
+streamVehicles : Host -> List (Include Vehicle) -> List (Filter Vehicle) -> ( StreamData Vehicle, String )
+streamVehicles host includes filters =
+    ( StreamData
+        { dataField = .vehicles >> Dict.values
+        , mixed = RemoteData.Loading
+        }
+    , makeUrl host [ "vehicles" ] filters includes
+    )
 
 
 {-| -}
@@ -1521,6 +1558,17 @@ getAlert toMsg host includes (AlertId alertId) =
 getAlerts : (ApiResult (List Alert) -> msg) -> Host -> List (Include Alert) -> List (Filter Alert) -> Cmd msg
 getAlerts toMsg host includes filters =
     getList toMsg host Mbta.Decode.alert "alerts" includes filters
+
+
+{-| -}
+streamAlerts : Host -> List (Include Alert) -> List (Filter Alert) -> ( StreamData Alert, String )
+streamAlerts host includes filters =
+    ( StreamData
+        { dataField = .alerts >> Dict.values
+        , mixed = RemoteData.Loading
+        }
+    , makeUrl host [ "alerts" ] filters includes
+    )
 
 
 {-| -}
