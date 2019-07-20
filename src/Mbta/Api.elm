@@ -738,12 +738,12 @@ updateStreamMixedResult eventString dataJson mixedResult =
 
         ( RemoteData.Success mixed, "add" ) ->
             mixed
-                |> streamAdd dataJson
+                |> streamInsert dataJson
                 |> RemoteData.fromResult
 
         ( RemoteData.Success mixed, "update" ) ->
             mixed
-                |> streamUpdate dataJson
+                |> streamInsert dataJson
                 |> RemoteData.fromResult
 
         ( RemoteData.Success mixed, "remove" ) ->
@@ -758,22 +758,37 @@ updateStreamMixedResult eventString dataJson mixedResult =
 
 streamReset : Decode.Value -> Result StreamError Mixed.Mixed
 streamReset dataJson =
-    Debug.todo ""
+    dataJson
+        |> Decode.decodeValue (Decode.list Decode.value)
+        |> Result.mapError (\decodeError -> Debug.todo "decodeError to streamError")
+        |> Result.andThen (\resourceJsons ->
+            List.foldl
+                (\resourceJson mixedResult ->
+                    mixedResult
+                        |> Result.andThen
+                            (\mixed ->
+                                streamInsert resourceJson mixed
+                            )
+                )
+                (Result.Ok Mixed.empty)
+                resourceJsons
+        )
 
 
-streamAdd : Decode.Value -> Mixed.Mixed -> Result StreamError Mixed.Mixed
-streamAdd resourceJson mixed =
-    Debug.todo ""
-
-
-streamUpdate : Decode.Value -> Mixed.Mixed -> Result StreamError Mixed.Mixed
-streamUpdate resourceJson mixed =
-    Debug.todo ""
+streamInsert : Decode.Value -> Mixed.Mixed -> Result StreamError Mixed.Mixed
+streamInsert resourceJson mixed =
+    resourceJson
+    |> JsonApi.decodeResourceValue Mixed.insert
+    |> Result.mapError (\resourceError -> Debug.todo "resourceError to streamError")
+    |> Result.map (\mixedInserter -> mixedInserter mixed)
 
 
 streamRemove : Decode.Value -> Mixed.Mixed -> Result StreamError Mixed.Mixed
-streamRemove resourceJson mixed =
-    Debug.todo ""
+streamRemove idJson mixed =
+    idJson
+    |> JsonApi.decodeIdValue Mixed.remove
+    |> Result.mapError (\idError -> Debug.todo "idError to streamError")
+    |> Result.map (\mixedRemover -> mixedRemover mixed)
 
 
 
