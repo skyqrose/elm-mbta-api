@@ -5,6 +5,7 @@ module Mbta.Api exposing
     , Included
     , getIncludedPrediction, getIncludedVehicle, getIncludedRoute, getIncludedRoutePattern, getIncludedLine, getIncludedSchedule, getIncludedTrip, getIncludedService, getIncludedShape, getIncludedStop, getIncludedFacility, getIncludedLiveFacility, getIncludedAlert
     , Filter
+    , StreamData, StreamError(..), getStreamData, getStreamIncluded, updateStream
     , getPredictions
     , predictionVehicle, predictionRoute, predictionSchedule, predictionTrip, predictionStop, predictionAlerts
     , filterPredictionsByRouteTypes, filterPredictionsByRouteIds, filterPredictionsByTripIds, filterPredictionsByDirectionId, filterPredictionsByStopIds, filterPredictionsByLatLng, filterPredictionsByLatLngWithRadius
@@ -102,6 +103,11 @@ Use it like
         includes
 
 @docs Filter
+
+
+# Streaming
+
+@docs StreamData, StreamError, getStreamData, getStreamIncluded, updateStream
 
 
 # Realtime Data
@@ -320,6 +326,7 @@ import JsonApi
 import Mbta exposing (..)
 import Mbta.Decode
 import Mbta.Mixed as Mixed
+import RemoteData
 import Time
 import Url.Builder
 
@@ -666,6 +673,107 @@ filterQueryParameters filters =
                 params
         )
         filters
+
+
+
+-- Streaming
+
+
+type StreamData resource
+    = StreamData
+        { dataField : Mixed.Mixed -> List resource
+        , mixed : RemoteData.RemoteData StreamError Mixed.Mixed
+        }
+
+
+type StreamError
+    = BadOrder String
+    | UnrecognizedEvent String
+
+
+getStreamData : StreamData resource -> RemoteData.RemoteData StreamError (List resource)
+getStreamData (StreamData streamData) =
+    RemoteData.map streamData.dataField streamData.mixed
+
+
+{-| The streaming API doesn't separate the main resources from included data,
+so the main result will show up in this `Included`, too.
+-}
+getStreamIncluded : StreamData resource -> RemoteData.RemoteData StreamError Included
+getStreamIncluded (StreamData streamData) =
+    RemoteData.map Included streamData.mixed
+
+
+updateStream : String -> Decode.Value -> StreamData resource -> StreamData resource
+updateStream eventString dataJson (StreamData streamData) =
+    StreamData
+        { streamData
+            | mixed = updateStreamMixedResult eventString dataJson streamData.mixed
+        }
+
+
+updateStreamMixedResult : String -> Decode.Value -> RemoteData.RemoteData StreamError Mixed.Mixed -> RemoteData.RemoteData StreamError Mixed.Mixed
+updateStreamMixedResult eventString dataJson mixedResult =
+    case ( mixedResult, eventString ) of
+        ( RemoteData.NotAsked, _ ) ->
+            RemoteData.Failure <|
+                BadOrder ("event received while streamResult was NotAsked: " ++ eventString)
+
+        ( RemoteData.Loading, "reset" ) ->
+            dataJson
+                |> streamReset
+                |> RemoteData.fromResult
+
+        ( RemoteData.Loading, _ ) ->
+            RemoteData.Failure <|
+                BadOrder ("first event received was \"" ++ eventString ++ "\" instead of \"reset\"")
+
+        ( RemoteData.Failure e, _ ) ->
+            RemoteData.Failure e
+
+        ( RemoteData.Success _, "reset" ) ->
+            dataJson
+                |> streamReset
+                |> RemoteData.fromResult
+
+        ( RemoteData.Success mixed, "add" ) ->
+            mixed
+                |> streamAdd dataJson
+                |> RemoteData.fromResult
+
+        ( RemoteData.Success mixed, "update" ) ->
+            mixed
+                |> streamUpdate dataJson
+                |> RemoteData.fromResult
+
+        ( RemoteData.Success mixed, "remove" ) ->
+            mixed
+                |> streamRemove dataJson
+                |> RemoteData.fromResult
+
+        ( RemoteData.Success _, _ ) ->
+            RemoteData.Failure <|
+                UnrecognizedEvent eventString
+
+
+streamReset : Decode.Value -> Result StreamError Mixed.Mixed
+streamReset dataJson =
+    Debug.todo ""
+
+
+streamAdd : Decode.Value -> Mixed.Mixed -> Result StreamError Mixed.Mixed
+streamAdd resourceJson mixed =
+    Debug.todo ""
+
+
+streamUpdate : Decode.Value -> Mixed.Mixed -> Result StreamError Mixed.Mixed
+streamUpdate resourceJson mixed =
+    Debug.todo ""
+
+
+streamRemove : Decode.Value -> Mixed.Mixed -> Result StreamError Mixed.Mixed
+streamRemove resourceJson mixed =
+    Debug.todo ""
 
 
 
