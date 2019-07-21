@@ -5,7 +5,7 @@ module Mbta.Api exposing
     , Included
     , getIncludedPrediction, getIncludedVehicle, getIncludedRoute, getIncludedRoutePattern, getIncludedLine, getIncludedSchedule, getIncludedTrip, getIncludedService, getIncludedShape, getIncludedStop, getIncludedFacility, getIncludedLiveFacility, getIncludedAlert
     , Filter
-    , StreamData, StreamError(..), getStreamData, getStreamIncluded, updateStream
+    , StreamData, StreamError(..), getStreamData, updateStream
     , getPredictions, streamPredictions
     , predictionVehicle, predictionRoute, predictionSchedule, predictionTrip, predictionStop, predictionAlerts
     , filterPredictionsByRouteTypes, filterPredictionsByRouteIds, filterPredictionsByTripIds, filterPredictionsByDirectionId, filterPredictionsByStopIds, filterPredictionsByLatLng, filterPredictionsByLatLngWithRadius
@@ -107,7 +107,7 @@ Use it like
 
 # Streaming
 
-@docs StreamData, StreamError, getStreamData, getStreamIncluded, updateStream
+@docs StreamData, StreamError, getStreamData, updateStream
 
 
 # Realtime Data
@@ -698,22 +698,18 @@ type StreamError
     | UnrecognizedEvent String
 
 
-{-| The main resources that you're watching for updates in the stream.
+{-| The streaming API doesn't separate the main resources from included data,
+so the main result will show up in `.included` in addition to `.data`
 -}
-getStreamData : StreamData resource -> RemoteData.RemoteData StreamError (List resource)
+getStreamData : StreamData resource -> RemoteData.RemoteData StreamError (Ok (List resource))
 getStreamData (StreamData streamData) =
-    RemoteData.map streamData.dataField streamData.mixed
-
-
-{-| Any data that you side loaded by specifying `Include` parameters
-
-The streaming API doesn't separate the main resources from included data,
-so the main result will show up in this `Included`, too.
-
--}
-getStreamIncluded : StreamData resource -> RemoteData.RemoteData StreamError Included
-getStreamIncluded (StreamData streamData) =
-    RemoteData.map Included streamData.mixed
+    RemoteData.map
+        (\mixed ->
+            { data = streamData.dataField mixed
+            , included = Included mixed
+            }
+        )
+        streamData.mixed
 
 
 {-| When you get new data coming in through the stream, use this to update the [`StreamData`](#StreamData) in your model.
