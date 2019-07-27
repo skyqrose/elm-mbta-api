@@ -1,11 +1,10 @@
 module Mbta.Api exposing
     ( Host(..)
-    , ApiResult, Ok, Error(..)
+    , Data, ApiError(..), ApiResult, getPrimaryData
     , Include, Relationship, include, andIts
-    , Included
     , getIncludedPrediction, getIncludedVehicle, getIncludedRoute, getIncludedRoutePattern, getIncludedLine, getIncludedSchedule, getIncludedTrip, getIncludedService, getIncludedShape, getIncludedStop, getIncludedFacility, getIncludedLiveFacility, getIncludedAlert
     , Filter
-    , StreamData, StreamError(..), getStreamData, updateStream
+    , StreamState, StreamResult(..), StreamError(..), streamResult, updateStream
     , getPredictions, streamPredictions
     , predictionVehicle, predictionRoute, predictionSchedule, predictionTrip, predictionStop, predictionAlerts
     , filterPredictionsByRouteTypes, filterPredictionsByRouteIds, filterPredictionsByTripIds, filterPredictionsByDirectionId, filterPredictionsByStopIds, filterPredictionsByLatLng, filterPredictionsByLatLngWithRadius
@@ -68,7 +67,7 @@ though note that some calls require at least one filter to be specified.
 
 # Result
 
-@docs ApiResult, Ok, Error
+@docs Data, ApiError, ApiResult, getPrimaryData
 
 
 # Including
@@ -83,10 +82,9 @@ Use it like
         [ Mbta.Api.include Mbta.Api.tripRoute ]
         filters
 
-Any sideloaded resources are put in the [`Included`](#Included) object in the result.
+Sideloaded resources can be looked up in the result with the `getIncluded*` functions below.
 
 @docs Include, Relationship, include, andIts
-@docs Included
 @docs getIncludedPrediction, getIncludedVehicle, getIncludedRoute, getIncludedRoutePattern, getIncludedLine, getIncludedSchedule, getIncludedTrip, getIncludedService, getIncludedShape, getIncludedStop, getIncludedFacility, getIncludedLiveFacility, getIncludedAlert
 
 
@@ -107,7 +105,7 @@ Use it like
 
 # Streaming
 
-@docs StreamData, StreamError, getStreamData, updateStream
+@docs StreamState, StreamResult, StreamError, streamResult, updateStream
 
 
 # Realtime Data
@@ -326,7 +324,6 @@ import JsonApi
 import Mbta exposing (..)
 import Mbta.Decode
 import Mbta.Mixed as Mixed
-import RemoteData
 import Time
 import Url.Builder
 
@@ -373,15 +370,17 @@ type Host
 
 
 {-| -}
-type alias ApiResult data =
-    Result Error (Ok data)
+type Data primary
+    = Data
+        { primaryData : primary
+        , included : Mixed.Mixed
+        }
 
 
 {-| -}
-type alias Ok data =
-    { data : data
-    , included : Included
-    }
+getPrimaryData : Data primary -> primary
+getPrimaryData (Data data) =
+    data.primaryData
 
 
 {-| Sometimes things don't go as planned.
@@ -396,10 +395,16 @@ TODO document cases
 TODO create illegalCall
 
 -}
-type Error
+type ApiError
     = InvalidRequest String
     | HttpError Http.Error
     | DecodeError String
+
+
+{-| TODO what is "primary"
+-}
+type alias ApiResult primary =
+    Result ApiError (Data primary)
 
 
 
@@ -452,7 +457,7 @@ makeUrl host path filters includes =
                 )
 
 
-jsonApiErrorToApiError : JsonApi.Error -> Error
+jsonApiErrorToApiError : JsonApi.Error -> ApiError
 jsonApiErrorToApiError jsonApiError =
     case jsonApiError of
         JsonApi.HttpError httpError ->
@@ -465,14 +470,25 @@ jsonApiErrorToApiError jsonApiError =
             DecodeError (JsonApi.documentErrorToString documentError)
 
 
+jsonApiDocumentToApiData : JsonApi.Document Mixed.Mixed primary -> Data primary
+jsonApiDocumentToApiData document =
+    Data
+        { primaryData = JsonApi.documentData document
+        , included = JsonApi.documentIncluded document
+        }
+
+
 getOne : (ApiResult resource -> msg) -> Host -> JsonApi.ResourceDecoder resource -> String -> List (Include resource) -> String -> Cmd msg
 getOne toMsg host resourceDecoder path includes id =
     let
-        toMsg_ : Result JsonApi.Error (JsonApi.Document Included resource) -> msg
-        toMsg_ =
-            Result.mapError jsonApiErrorToApiError >> toMsg
+        toMsg_ : Result JsonApi.Error (JsonApi.Document Mixed.Mixed resource) -> msg
+        toMsg_ jsonApiResult =
+            jsonApiResult
+                |> Result.mapError jsonApiErrorToApiError
+                |> Result.map jsonApiDocumentToApiData
+                |> toMsg
 
-        documentDecoder : JsonApi.DocumentDecoder Included resource
+        documentDecoder : JsonApi.DocumentDecoder Mixed.Mixed resource
         documentDecoder =
             JsonApi.documentDecoderOne includedDecoder resourceDecoder
     in
@@ -485,11 +501,14 @@ getOne toMsg host resourceDecoder path includes id =
 getList : (ApiResult (List resource) -> msg) -> Host -> JsonApi.ResourceDecoder resource -> String -> List (Include resource) -> List (Filter resource) -> Cmd msg
 getList toMsg host resourceDecoder path includes filters =
     let
-        toMsg_ : Result JsonApi.Error (JsonApi.Document Included (List resource)) -> msg
-        toMsg_ =
-            Result.mapError jsonApiErrorToApiError >> toMsg
+        toMsg_ : Result JsonApi.Error (JsonApi.Document Mixed.Mixed (List resource)) -> msg
+        toMsg_ jsonApiResult =
+            jsonApiResult
+                |> Result.mapError jsonApiErrorToApiError
+                |> Result.map jsonApiDocumentToApiData
+                |> toMsg
 
-        documentDecoder : JsonApi.DocumentDecoder Included (List resource)
+        documentDecoder : JsonApi.DocumentDecoder Mixed.Mixed (List resource)
         documentDecoder =
             JsonApi.documentDecoderMany includedDecoder resourceDecoder
     in
@@ -552,101 +571,89 @@ includeQueryParameter includes =
                 |> List.singleton
 
 
-{-| The data returned in the includes field of an API call.
-Use the getters below to look up a resource by its id
--}
-type Included
-    = Included Mixed.Mixed
-
-
-includedDecoder : JsonApi.IncludedDecoder Included
+includedDecoder : JsonApi.IncludedDecoder Mixed.Mixed
 includedDecoder =
-    { emptyIncluded = Included Mixed.empty
-    , accumulator =
-        JsonApi.map
-            (\mixedAdd ->
-                \(Included mixed) -> Included (mixedAdd mixed)
-            )
-            Mixed.insert
+    { emptyIncluded = Mixed.empty
+    , accumulator = Mixed.insert
     }
 
 
 {-| -}
-getIncludedPrediction : PredictionId -> Included -> Maybe Prediction
-getIncludedPrediction predictionId (Included mixed) =
-    Dict.get predictionId mixed.predictions
+getIncludedPrediction : PredictionId -> Data primary -> Maybe Prediction
+getIncludedPrediction predictionId (Data data) =
+    Dict.get predictionId data.included.predictions
 
 
 {-| -}
-getIncludedVehicle : VehicleId -> Included -> Maybe Vehicle
-getIncludedVehicle vehicleId (Included mixed) =
-    Dict.get vehicleId mixed.vehicles
+getIncludedVehicle : VehicleId -> Data primary -> Maybe Vehicle
+getIncludedVehicle vehicleId (Data data) =
+    Dict.get vehicleId data.included.vehicles
 
 
 {-| -}
-getIncludedRoute : RouteId -> Included -> Maybe Route
-getIncludedRoute routeId (Included mixed) =
-    Dict.get routeId mixed.routes
+getIncludedRoute : RouteId -> Data primary -> Maybe Route
+getIncludedRoute routeId (Data data) =
+    Dict.get routeId data.included.routes
 
 
 {-| -}
-getIncludedRoutePattern : RoutePatternId -> Included -> Maybe RoutePattern
-getIncludedRoutePattern routePatternId (Included mixed) =
-    Dict.get routePatternId mixed.routePatterns
+getIncludedRoutePattern : RoutePatternId -> Data primary -> Maybe RoutePattern
+getIncludedRoutePattern routePatternId (Data data) =
+    Dict.get routePatternId data.included.routePatterns
 
 
 {-| -}
-getIncludedLine : LineId -> Included -> Maybe Line
-getIncludedLine lineId (Included mixed) =
-    Dict.get lineId mixed.lines
+getIncludedLine : LineId -> Data primary -> Maybe Line
+getIncludedLine lineId (Data data) =
+    Dict.get lineId data.included.lines
 
 
 {-| -}
-getIncludedSchedule : ScheduleId -> Included -> Maybe Schedule
-getIncludedSchedule scheduleId (Included mixed) =
-    Dict.get scheduleId mixed.schedules
+getIncludedSchedule : ScheduleId -> Data primary -> Maybe Schedule
+getIncludedSchedule scheduleId (Data data) =
+    Dict.get scheduleId data.included.schedules
 
 
 {-| -}
-getIncludedTrip : TripId -> Included -> Maybe Trip
-getIncludedTrip tripId (Included mixed) =
-    Dict.get tripId mixed.trips
+getIncludedTrip : TripId -> Data primary -> Maybe Trip
+getIncludedTrip tripId (Data data) =
+    Dict.get tripId data.included.trips
 
 
 {-| -}
-getIncludedService : ServiceId -> Included -> Maybe Service
-getIncludedService serviceId (Included mixed) =
-    Dict.get serviceId mixed.services
+getIncludedService : ServiceId -> Data primary -> Maybe Service
+getIncludedService serviceId (Data data) =
+    Dict.get serviceId data.included.services
 
 
 {-| -}
-getIncludedShape : ShapeId -> Included -> Maybe Shape
-getIncludedShape shapeId (Included mixed) =
-    Dict.get shapeId mixed.shapes
+getIncludedShape : ShapeId -> Data primary -> Maybe Shape
+getIncludedShape shapeId (Data data) =
+    Dict.get shapeId data.included.shapes
 
 
 {-| -}
-getIncludedStop : StopId -> Included -> Maybe Stop
-getIncludedStop stopId (Included mixed) =
-    Dict.get stopId mixed.stops
+getIncludedStop : StopId -> Data primary -> Maybe Stop
+getIncludedStop stopId (Data data) =
+    Dict.get stopId data.included.stops
 
 
 {-| -}
-getIncludedFacility : FacilityId -> Included -> Maybe Facility
-getIncludedFacility facilityId (Included mixed) =
-    Dict.get facilityId mixed.facilities
+getIncludedFacility : FacilityId -> Data primary -> Maybe Facility
+getIncludedFacility facilityId (Data data) =
+    Dict.get facilityId data.included.facilities
 
 
 {-| -}
-getIncludedLiveFacility : FacilityId -> Included -> Maybe LiveFacility
-getIncludedLiveFacility facilityId (Included mixed) =
-    Dict.get facilityId mixed.liveFacilities
+getIncludedLiveFacility : FacilityId -> Data primary -> Maybe LiveFacility
+getIncludedLiveFacility facilityId (Data data) =
+    Dict.get facilityId data.included.liveFacilities
 
 
 {-| -}
-getIncludedAlert : AlertId -> Included -> Maybe Alert
-getIncludedAlert alertId (Included mixed) =
-    Dict.get alertId mixed.alerts
+getIncludedAlert : AlertId -> Data primary -> Maybe Alert
+getIncludedAlert alertId (Data data) =
+    Dict.get alertId data.included.alerts
 
 
 
@@ -679,16 +686,18 @@ filterQueryParameters filters =
 -- Streaming
 
 
-{-| The data from a stream.
-
-Put this in your model.
-
+{-| Put this in your model.
 -}
-type StreamData resource
-    = StreamData
+type StreamState resource
+    = StreamState
         { dataField : Mixed.Mixed -> List resource
-        , mixed : RemoteData.RemoteData StreamError Mixed.Mixed
+        , mixedResult : StreamResultInternal
         }
+
+
+type StreamResultInternal
+    = StreamResultInternal_Loading
+    | StreamResultInternal_Loaded (Result StreamError Mixed.Mixed)
 
 
 {-| TODO explain what each variant means
@@ -698,72 +707,88 @@ type StreamError
     | UnrecognizedEvent String
 
 
+{-| See [`updateStream`](#updateStream) for instructions on using streams.
+-}
+type StreamResult resource
+    = Loading
+    | Loaded (Result StreamError (Data (List resource)))
+
+
 {-| The streaming API doesn't separate the main resources from included data,
 so the main result will show up in `.included` in addition to `.data`
 -}
-getStreamData : StreamData resource -> RemoteData.RemoteData StreamError (Ok (List resource))
-getStreamData (StreamData streamData) =
-    RemoteData.map
-        (\mixed ->
-            { data = streamData.dataField mixed
-            , included = Included mixed
-            }
-        )
-        streamData.mixed
+streamResult : StreamState resource -> StreamResult resource
+streamResult (StreamState streamState) =
+    case streamState.mixedResult of
+        StreamResultInternal_Loading ->
+            Loading
+
+        StreamResultInternal_Loaded (Err e) ->
+            Loaded (Err e)
+
+        StreamResultInternal_Loaded (Ok mixed) ->
+            Loaded
+                (Ok
+                    (Data
+                        { primaryData = streamState.dataField mixed
+                        , included = mixed
+                        }
+                    )
+                )
 
 
-{-| When you get new data coming in through the stream, use this to update the [`StreamData`](#StreamData) in your model.
+{-| When you get new data coming in through the stream, use this to update the [`StreamState`](#StreamState) in your model.
 -}
-updateStream : String -> Decode.Value -> StreamData resource -> StreamData resource
-updateStream eventString dataJson (StreamData streamData) =
-    StreamData
-        { streamData
-            | mixed = updateStreamMixedResult eventString dataJson streamData.mixed
+updateStream : String -> Decode.Value -> StreamState resource -> StreamState resource
+updateStream eventString dataJson (StreamState streamState) =
+    StreamState
+        { streamState
+            | mixedResult = updateStreamMixedResult eventString dataJson streamState.mixedResult
         }
 
 
-updateStreamMixedResult : String -> Decode.Value -> RemoteData.RemoteData StreamError Mixed.Mixed -> RemoteData.RemoteData StreamError Mixed.Mixed
+updateStreamMixedResult : String -> Decode.Value -> StreamResultInternal -> StreamResultInternal
 updateStreamMixedResult eventString dataJson mixedResult =
     case ( mixedResult, eventString ) of
-        ( RemoteData.NotAsked, _ ) ->
-            RemoteData.Failure <|
-                BadOrder ("event received while streamResult was NotAsked: " ++ eventString)
-
-        ( RemoteData.Loading, "reset" ) ->
+        ( StreamResultInternal_Loading, "reset" ) ->
             dataJson
                 |> streamReset
-                |> RemoteData.fromResult
+                |> StreamResultInternal_Loaded
 
-        ( RemoteData.Loading, _ ) ->
-            RemoteData.Failure <|
-                BadOrder ("first event received was \"" ++ eventString ++ "\" instead of \"reset\"")
+        ( StreamResultInternal_Loading, _ ) ->
+            ("first event received was \"" ++ eventString ++ "\" instead of \"reset\"")
+                |> BadOrder
+                |> Err
+                |> StreamResultInternal_Loaded
 
-        ( RemoteData.Failure e, _ ) ->
-            RemoteData.Failure e
+        ( StreamResultInternal_Loaded (Err e), _ ) ->
+            mixedResult
 
-        ( RemoteData.Success _, "reset" ) ->
+        ( StreamResultInternal_Loaded (Ok _), "reset" ) ->
             dataJson
                 |> streamReset
-                |> RemoteData.fromResult
+                |> StreamResultInternal_Loaded
 
-        ( RemoteData.Success mixed, "add" ) ->
+        ( StreamResultInternal_Loaded (Ok mixed), "add" ) ->
             mixed
                 |> streamInsert dataJson
-                |> RemoteData.fromResult
+                |> StreamResultInternal_Loaded
 
-        ( RemoteData.Success mixed, "update" ) ->
+        ( StreamResultInternal_Loaded (Ok mixed), "update" ) ->
             mixed
                 |> streamInsert dataJson
-                |> RemoteData.fromResult
+                |> StreamResultInternal_Loaded
 
-        ( RemoteData.Success mixed, "remove" ) ->
+        ( StreamResultInternal_Loaded (Ok mixed), "remove" ) ->
             mixed
                 |> streamRemove dataJson
-                |> RemoteData.fromResult
+                |> StreamResultInternal_Loaded
 
-        ( RemoteData.Success _, _ ) ->
-            RemoteData.Failure <|
-                UnrecognizedEvent eventString
+        ( StreamResultInternal_Loaded (Ok _), _ ) ->
+            eventString
+                |> UnrecognizedEvent
+                |> Err
+                |> StreamResultInternal_Loaded
 
 
 streamReset : Decode.Value -> Result StreamError Mixed.Mixed
@@ -815,11 +840,11 @@ getPredictions toMsg host includes filters =
 
 
 {-| -}
-streamPredictions : Host -> List (Include Prediction) -> List (Filter Prediction) -> ( StreamData Prediction, String )
+streamPredictions : Host -> List (Include Prediction) -> List (Filter Prediction) -> ( StreamState Prediction, String )
 streamPredictions host includes filters =
-    ( StreamData
+    ( StreamState
         { dataField = .predictions >> Dict.values
-        , mixed = RemoteData.Loading
+        , mixedResult = StreamResultInternal_Loading
         }
     , makeUrl host [ "predictions" ] filters includes
     )
@@ -920,11 +945,11 @@ getVehicles toMsg host includes filters =
 
 
 {-| -}
-streamVehicles : Host -> List (Include Vehicle) -> List (Filter Vehicle) -> ( StreamData Vehicle, String )
+streamVehicles : Host -> List (Include Vehicle) -> List (Filter Vehicle) -> ( StreamState Vehicle, String )
 streamVehicles host includes filters =
-    ( StreamData
+    ( StreamState
         { dataField = .vehicles >> Dict.values
-        , mixed = RemoteData.Loading
+        , mixedResult = StreamResultInternal_Loading
         }
     , makeUrl host [ "vehicles" ] filters includes
     )
@@ -1557,11 +1582,11 @@ getAlerts toMsg host includes filters =
 
 
 {-| -}
-streamAlerts : Host -> List (Include Alert) -> List (Filter Alert) -> ( StreamData Alert, String )
+streamAlerts : Host -> List (Include Alert) -> List (Filter Alert) -> ( StreamState Alert, String )
 streamAlerts host includes filters =
-    ( StreamData
+    ( StreamState
         { dataField = .alerts >> Dict.values
-        , mixed = RemoteData.Loading
+        , mixedResult = StreamResultInternal_Loading
         }
     , makeUrl host [ "alerts" ] filters includes
     )
