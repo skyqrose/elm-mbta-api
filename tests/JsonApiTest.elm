@@ -262,10 +262,10 @@ suite =
                     |> JsonApi.decodeDocumentString authorDocumentDecoder
                     |> Expect.equal
                         (Err
-                            (DocumentError
+                            (JsonApiDecodeError
                                 (ResourceError
                                     (ResourceIdError
-                                        { expectedType = "author"
+                                        { expectedType = [ "author" ]
                                         , actualType = "not author"
                                         , actualIdValue = "author1"
                                         }

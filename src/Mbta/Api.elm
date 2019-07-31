@@ -385,23 +385,28 @@ getPrimaryData (Data data) =
 
 {-| Sometimes things don't go as planned.
 
-If we fail to decode the JSON:API format, that will show up as HttpError Http.BadPayload
-If we fail to decode the MBTA types from the JSON:API format, it will be a DecodeError
+  - `InvalidRequest`:
+    Some API calls require certain filters to be set. If they aren't, rather than send a request that won't return results, this error is sent immediately.
+  - `HttpError`:
+    If an HTTP call is made, but fails.
+  - `ApiError`:
+    The API successfully returned, but sent errors instead of data
+  - `DecodeError`:
+    The API successfully returned data, but this library could not decode it. This is either a bug in the API or this library. Please report it.
 
-Either way is a bug in this library or the API. Please report it.
 TODO more reporting directions
-
-TODO document cases
-TODO create illegalCall
+TODO real type (opaque) for DecodeError parameter
 
 -}
 type ApiError
     = InvalidRequest String
     | HttpError Http.Error
+    | ApiError (List Decode.Value)
     | DecodeError String
 
 
 {-| TODO what is "primary"
+TODO remove alias?
 -}
 type alias ApiResult primary =
     Result ApiError (Data primary)
@@ -457,17 +462,15 @@ makeUrl host path filters includes =
                 )
 
 
-jsonApiErrorToApiError : JsonApi.Error -> ApiError
-jsonApiErrorToApiError jsonApiError =
-    case jsonApiError of
+jsonApiErrorToApiError : JsonApi.HttpError -> ApiError
+jsonApiErrorToApiError jsonApiHttpError =
+    case jsonApiHttpError of
         JsonApi.HttpError httpError ->
             HttpError httpError
 
-        JsonApi.NoncompliantJson decodeError ->
-            HttpError (Http.BadBody (Decode.errorToString decodeError))
-
-        JsonApi.DocumentError documentError ->
-            DecodeError (JsonApi.documentErrorToString documentError)
+        JsonApi.DecodeDocumentError decodeDocumentError ->
+            DecodeError
+                (JsonApi.decodeErrorToString JsonApi.documentErrorToString decodeDocumentError)
 
 
 jsonApiDocumentToApiData : JsonApi.Document Mixed.Mixed primary -> Data primary
@@ -480,42 +483,25 @@ jsonApiDocumentToApiData document =
 
 getOne : (ApiResult resource -> msg) -> Host -> JsonApi.ResourceDecoder resource -> String -> List (Include resource) -> String -> Cmd msg
 getOne toMsg host resourceDecoder path includes id =
-    let
-        toMsg_ : Result JsonApi.Error (JsonApi.Document Mixed.Mixed resource) -> msg
-        toMsg_ jsonApiResult =
-            jsonApiResult
-                |> Result.mapError jsonApiErrorToApiError
-                |> Result.map jsonApiDocumentToApiData
-                |> toMsg
-
-        documentDecoder : JsonApi.DocumentDecoder Mixed.Mixed resource
-        documentDecoder =
-            JsonApi.documentDecoderOne includedDecoder resourceDecoder
-    in
-    Http.get
-        { url = makeUrl host [ path, id ] [] includes
-        , expect = JsonApi.expectJsonApi toMsg_ documentDecoder
-        }
+    JsonApi.get
+        (jsonApiResultToApiResult >> toMsg)
+        (JsonApi.documentDecoderOne includedDecoder resourceDecoder)
+        (makeUrl host [ path, id ] [] includes)
 
 
 getList : (ApiResult (List resource) -> msg) -> Host -> JsonApi.ResourceDecoder resource -> String -> List (Include resource) -> List (Filter resource) -> Cmd msg
 getList toMsg host resourceDecoder path includes filters =
-    let
-        toMsg_ : Result JsonApi.Error (JsonApi.Document Mixed.Mixed (List resource)) -> msg
-        toMsg_ jsonApiResult =
-            jsonApiResult
-                |> Result.mapError jsonApiErrorToApiError
-                |> Result.map jsonApiDocumentToApiData
-                |> toMsg
+    JsonApi.get
+        (jsonApiResultToApiResult >> toMsg)
+        (JsonApi.documentDecoderMany includedDecoder resourceDecoder)
+        (makeUrl host [ path ] filters includes)
 
-        documentDecoder : JsonApi.DocumentDecoder Mixed.Mixed (List resource)
-        documentDecoder =
-            JsonApi.documentDecoderMany includedDecoder resourceDecoder
-    in
-    Http.get
-        { url = makeUrl host [ path ] filters includes
-        , expect = JsonApi.expectJsonApi toMsg_ documentDecoder
-        }
+
+jsonApiResultToApiResult : Result JsonApi.HttpError (JsonApi.Document Mixed.Mixed primary) -> ApiResult primary
+jsonApiResultToApiResult jsonApiResult =
+    jsonApiResult
+        |> Result.mapError jsonApiErrorToApiError
+        |> Result.map jsonApiDocumentToApiData
 
 
 
@@ -687,6 +673,11 @@ filterQueryParameters filters =
 
 
 {-| Put this in your model.
+
+Update it with [`updateStream`](#updateStream)
+
+Get data out of it with [`streamResult`](#streamResult)
+
 -}
 type StreamState resource
     = StreamState
@@ -700,22 +691,48 @@ type StreamResultInternal
     | StreamResultInternal_Loaded (Result StreamError Mixed.Mixed)
 
 
-{-| TODO explain what each variant means
+{-|
+
+  - `Stream_InvalidRequest`: same as `InvalidRequest` in [`ApiError`](#ApiError)
+  - `Stream_UnexpectedEvent`:
+    The only valid events are `"reset"`, `"add"`, `"update"`, and `"remove"`,
+    so those are the only events you should call `eventSource.addEventListener` for.
+  - `Stream_UnexpectedEventOrder`:
+    The first event must be a `"reset"`.
+    The parameter is a human-readable message.
+  - `Stream_DecodeError`:
+    We did not understand the data.
+    This could be a bug in the API or this library,
+    or it could be a problem with how you pass the data from JavaScript to [`updateStream`](#updateStream).
+    If it is a bug in the API or library, please report it as described in [`ApiError`](#ApiError)
+    The parameter is a human-readable message.
+
+-- TODO finite list of cases for Stream\_UnexpectedEventOrder? (instead of human-readable message)
+-- TODO opaque type with real information for Stream\_DecodeError, cases for all the finite ways it could fail.
+-- TODO include rescuable data
+-- TODO be picky about add / remove / update prexisting data (bad order), but then rescue
+
 -}
 type StreamError
-    = BadOrder String
-    | UnrecognizedEvent String
+    = Stream_InvalidRequest String
+    | Stream_UnexpectedEvent String
+    | Stream_UnexpectedEventOrder String
+    | Stream_DecodeError String
 
 
-{-| See [`updateStream`](#updateStream) for instructions on using streams.
--}
+{-| -}
 type StreamResult resource
     = Loading
     | Loaded (Result StreamError (Data (List resource)))
 
 
-{-| The streaming API doesn't separate the main resources from included data,
-so the main result will show up in `.included` in addition to `.data`
+{-| The streaming API doesn't separate the main resources from included data.
+Resources from the primary data will also show up if you call `getIncluded*` for it,
+and included resources of the same type as the primary data will show up mixed in with the primary data
+if you include any with e.g.
+`streamPredictions [include (predictionTrip |> andIts tripPredictions)] filters`
+Since only the primary data is tracked for updates,
+its not recommended that you include any data with the same type as the primary resource.
 -}
 streamResult : StreamState resource -> StreamResult resource
 streamResult (StreamState streamState) =
@@ -757,7 +774,7 @@ updateStreamMixedResult eventString dataJson mixedResult =
 
         ( StreamResultInternal_Loading, _ ) ->
             ("first event received was \"" ++ eventString ++ "\" instead of \"reset\"")
-                |> BadOrder
+                |> Stream_UnexpectedEventOrder
                 |> Err
                 |> StreamResultInternal_Loaded
 
@@ -786,7 +803,7 @@ updateStreamMixedResult eventString dataJson mixedResult =
 
         ( StreamResultInternal_Loaded (Ok _), _ ) ->
             eventString
-                |> UnrecognizedEvent
+                |> Stream_UnexpectedEvent
                 |> Err
                 |> StreamResultInternal_Loaded
 

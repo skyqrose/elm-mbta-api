@@ -1,5 +1,5 @@
 module JsonApi exposing
-    ( Document, documentData, documentIncluded, expectJsonApi, decodeDocumentString, decodeDocumentJsonValue
+    ( Document, documentData, documentIncluded, get, expectJsonApi, decodeDocumentString, decodeDocumentValue
     , DocumentDecoder, documentDecoderOne, documentDecoderMany, ResourceDecoder, IdDecoder, idDecoder
     , decode, id, attribute, relationshipOne, relationshipMaybe, relationshipMany, custom
     , map, andThen, oneOf
@@ -7,7 +7,7 @@ module JsonApi exposing
     , mapId, oneOfId
     , decodeIdString, decodeIdValue
     , IncludedDecoder
-    , Error(..), errorToString, DocumentError(..), documentErrorToString, ResourceError(..), resourceErrorToString, IdError, idErrorToString
+    , HttpError(..), httpErrorToString, DecodeError(..), decodeErrorToString, DocumentError(..), documentErrorToString, ResourceError(..), resourceErrorToString, IdError, idErrorToString
     )
 
 {-| This module serves as a middle point between the raw JSON in JSON:API
@@ -51,7 +51,7 @@ TODO I think the bookDecoder is using an old interface for making decoders
 
 # Get a JSON:API document
 
-@docs Document, documentData, documentIncluded, expectJsonApi, decodeDocumentString, decodeDocumentJsonValue
+@docs Document, documentData, documentIncluded, get, expectJsonApi, decodeDocumentString, decodeDocumentValue
 
 
 # Make decoders
@@ -103,7 +103,7 @@ and provide instructions for how to decode a resource and add it to the collecti
 
 # Error Handling
 
-@docs Error, errorToString, DocumentError, documentErrorToString, ResourceError, resourceErrorToString, IdError, idErrorToString
+@docs HttpError, httpErrorToString, DecodeError, decodeErrorToString, DocumentError, documentErrorToString, ResourceError, resourceErrorToString, IdError, idErrorToString
 
 -}
 
@@ -144,45 +144,51 @@ documentIncluded document =
     document.included
 
 
+{-| Calls [`Http.get`](https://package.elm-lang.org/packages/elm/http/2.0.0/Http#get) and decodes the JSON:API document returned
+-}
+get : (Result HttpError (Document included data) -> msg) -> DocumentDecoder included data -> String -> Cmd msg
+get toMsg documentDecoder url =
+    Http.get
+        { url = url
+        , expect = expectJsonApi toMsg documentDecoder
+        }
+
+
 {-| For passing to [`Http.get`](https://package.elm-lang.org/packages/elm/http/2.0.0/Http#get)
 -}
-expectJsonApi : (Result Error (Document included data) -> msg) -> DocumentDecoder included data -> Http.Expect msg
+expectJsonApi : (Result HttpError (Document included data) -> msg) -> DocumentDecoder included data -> Http.Expect msg
 expectJsonApi toMsg documentDecoder =
     let
-        httpToMsg : Result Http.Error (Result DocumentError (Document included data)) -> msg
-        httpToMsg =
-            \httpResult ->
-                httpResult
-                    |> Result.mapError HttpError
-                    |> Result.andThen
-                        (\documentResult ->
-                            documentResult
-                                |> Result.mapError DocumentError
-                        )
-                    |> toMsg
+        httpResultToJsonApiResult : Result Http.Error Decode.Value -> Result HttpError (Document included data)
+        httpResultToJsonApiResult httpResult =
+            case httpResult of
+                Ok jsonValue ->
+                    jsonValue
+                        |> decodeDocumentValue documentDecoder
+                        |> Result.mapError DecodeDocumentError
 
-        jsonDecoder : Decode.Decoder (Result DocumentError (Document included data))
-        jsonDecoder =
-            Untyped.documentDecoder
-                |> Decode.map documentDecoder
+                Err httpError ->
+                    Err (HttpError httpError)
     in
-    Http.expectJson httpToMsg jsonDecoder
+    Http.expectJson (httpResultToJsonApiResult >> toMsg) Decode.value
 
 
-decodeDocumentString : DocumentDecoder included data -> String -> Result Error (Document included data)
+{-| -}
+decodeDocumentString : DocumentDecoder included data -> String -> Result (DecodeError DocumentError) (Document included data)
 decodeDocumentString documentDecoder jsonString =
     jsonString
         |> Decode.decodeString Untyped.documentDecoder
         |> Result.mapError NoncompliantJson
-        |> Result.andThen (documentDecoder >> Result.mapError DocumentError)
+        |> Result.andThen (documentDecoder >> Result.mapError JsonApiDecodeError)
 
 
-decodeDocumentJsonValue : DocumentDecoder included data -> Decode.Value -> Result Error (Document included data)
-decodeDocumentJsonValue documentDecoder jsonValue =
+{-| -}
+decodeDocumentValue : DocumentDecoder included data -> Decode.Value -> Result (DecodeError DocumentError) (Document included data)
+decodeDocumentValue documentDecoder jsonValue =
     jsonValue
         |> Decode.decodeValue Untyped.documentDecoder
         |> Result.mapError NoncompliantJson
-        |> Result.andThen (documentDecoder >> Result.mapError DocumentError)
+        |> Result.andThen (documentDecoder >> Result.mapError JsonApiDecodeError)
 
 
 
@@ -317,7 +323,7 @@ idDecoder typeString idConstructor =
 
         else
             Err
-                { expectedType = typeString
+                { expectedType = [ typeString ]
                 , actualType = untypedResourceId.resourceType
                 , actualIdValue = untypedResourceId.id
                 }
@@ -350,6 +356,8 @@ decode constructor =
 
 This is for the id of the resource being decoded.
 For the id of a related resource, use one of the `relationship` functions below.
+
+TODO better name for idDecoder\_ (and everywhere else that name appears)
 
 -}
 id : IdDecoder id -> ResourceDecoder (id -> rest) -> ResourceDecoder rest
@@ -502,7 +510,7 @@ andThen second first =
 
 {-| If you have a resource object that may be one of multiple types,
 this will choose the appropriate ResourceDecoder based on the JSON:API type of the object
-(the same type as used in [`idDecoder`](#IdDecoder)),
+(the same resource type as used by [`idDecoder`](#IdDecoder)),
 
 Every result must be the same type, so you may want to use [`map`](#map)
 to convert your decoders.
@@ -524,16 +532,9 @@ oneOf decoders =
                 decoder untypedResource
 
             Nothing ->
-                let
-                    allTypes : String
-                    allTypes =
-                        decoders
-                            |> Dict.keys
-                            |> String.join ","
-                in
                 Err
                     (ResourceIdError
-                        { expectedType = "oneOf " ++ allTypes
+                        { expectedType = Dict.keys decoders
                         , actualType = untypedResource.id.resourceType
                         , actualIdValue = untypedResource.id.id
                         }
@@ -541,28 +542,21 @@ oneOf decoders =
 
 
 {-| -}
-decodeResourceString : ResourceDecoder a -> String -> Result ResourceError a
+decodeResourceString : ResourceDecoder a -> String -> Result (DecodeError ResourceError) a
 decodeResourceString resourceDecoder jsonString =
     jsonString
         |> Decode.decodeString Untyped.resourceDecoder
-        |> Result.mapError resourceErrorFromDecodeError
-        |> Result.andThen resourceDecoder
+        |> Result.mapError NoncompliantJson
+        |> Result.andThen (resourceDecoder >> Result.mapError JsonApiDecodeError)
 
 
 {-| -}
-decodeResourceValue : ResourceDecoder a -> Decode.Value -> Result ResourceError a
+decodeResourceValue : ResourceDecoder a -> Decode.Value -> Result (DecodeError ResourceError) a
 decodeResourceValue resourceDecoder jsonValue =
     jsonValue
         |> Decode.decodeValue Untyped.resourceDecoder
-        |> Result.mapError resourceErrorFromDecodeError
-        |> Result.andThen resourceDecoder
-
-
-resourceErrorFromDecodeError : Decode.Error -> ResourceError
-resourceErrorFromDecodeError decodeError =
-    decodeError
-        |> Decode.errorToString
-        |> CustomError
+        |> Result.mapError NoncompliantJson
+        |> Result.andThen (resourceDecoder >> Result.mapError JsonApiDecodeError)
 
 
 
@@ -592,6 +586,9 @@ to convert your decoders.
                 , ( "author", authorDecoder |> map (\author -> id) )
                 ]
 
+-- TODO make it impossible for a conflict between the expected type in the Dict (used) and in the IdDecoder (ignored).
+-- TODO maybe by passing in the constructor instead of an IdDecoder?
+
 -}
 oneOfId : Dict String (IdDecoder a) -> IdDecoder a
 oneOfId decoders =
@@ -601,52 +598,33 @@ oneOfId decoders =
                 decoder untypedId
 
             Nothing ->
-                let
-                    allTypes : String
-                    allTypes =
-                        decoders
-                            |> Dict.keys
-                            |> String.join ","
-                in
                 Err
-                    { expectedType = "oneOf " ++ allTypes
+                    { expectedType = Dict.keys decoders
                     , actualType = untypedId.resourceType
                     , actualIdValue = untypedId.id
                     }
 
 
 {-| -}
-decodeIdString : IdDecoder a -> String -> Result IdError a
-decodeIdString decoder jsonString =
+decodeIdString : IdDecoder a -> String -> Result (DecodeError IdError) a
+decodeIdString idDecoder_ jsonString =
     jsonString
         |> Decode.decodeString Untyped.resourceIdDecoder
-        |> Result.mapError idErrorFromDecodeError
-        |> Result.andThen decoder
+        |> Result.mapError NoncompliantJson
+        |> Result.andThen (idDecoder_ >> Result.mapError JsonApiDecodeError)
 
 
 {-| -}
-decodeIdValue : IdDecoder a -> Decode.Value -> Result IdError a
-decodeIdValue decoder jsonValue =
+decodeIdValue : IdDecoder a -> Decode.Value -> Result (DecodeError IdError) a
+decodeIdValue idDecoder_ jsonValue =
     jsonValue
         |> Decode.decodeValue Untyped.resourceIdDecoder
-        |> Result.mapError idErrorFromDecodeError
-        |> Result.andThen decoder
+        |> Result.mapError NoncompliantJson
+        |> Result.andThen (idDecoder_ >> Result.mapError JsonApiDecodeError)
 
 
 
 -- TODO standardize on `id` vs `resourceId`
-
-
-idErrorFromDecodeError : Decode.Error -> IdError
-idErrorFromDecodeError decodeError =
-    -- TODO a not-hacky way to represent Decode.Error. (resourceErrorFromDecodeError too)
-    { expectedType = ""
-    , actualType = "decode error"
-    , actualIdValue = Decode.errorToString decodeError
-    }
-
-
-
 -- Decoding included resources
 
 
@@ -721,47 +699,68 @@ decodeIncluded { emptyIncluded, accumulator } untypedResources =
 -- TODO tolerate and recover from resource errors. new error type that returns a list of results
 
 
-{-| What went wrong when using [`expectJsonApi`](#expectJsonApi)
+{-| What might go wrong when calling [`get`](#get)
 
-See the error with [`errorToString`](#errorToString)
-
-TODO have a `InvalidJsonApi` case
-
-TODO document cases
+-- TODO maybe name this back to GetError? (the getErrorToString has a confusing name)
 
 -}
-type Error
+type HttpError
     = HttpError Http.Error
-    | NoncompliantJson Decode.Error
-    | DocumentError DocumentError
+    | DecodeDocumentError (DecodeError DocumentError)
 
 
-errorToString : Error -> String
-errorToString error =
+httpErrorToString : HttpError -> String
+httpErrorToString httpError =
+    case httpError of
+        HttpError httpError_ ->
+            Debug.toString httpError_
+
+        DecodeDocumentError decodeDocumentError ->
+            decodeErrorToString documentErrorToString decodeDocumentError
+
+
+{-| When decoding from raw JSON, two things can go wrong:
+
+  - `NoncompliantJson`: The JSON is not in the JSON:API format.
+  - `JsonApiDecodeError`: The client-provided decoder failed to decode the untyped JSON:API data into a typed application-specific type.
+
+`jsonApiDecodeError` is the error type for the thing that was being decoded, one of
+
+  - [`DocumentError`](#DocumentError)
+  - [`ResourceError`](#ResourceError)
+  - [`IdError`](#IdError)
+
+-}
+type DecodeError jsonApiDecodeError
+    = NoncompliantJson Decode.Error
+    | JsonApiDecodeError jsonApiDecodeError
+
+
+decodeErrorToString : (jsonApiDecodeError -> String) -> DecodeError jsonApiDecodeError -> String
+decodeErrorToString jsonApiDecodeErrorToString error =
     case error of
-        HttpError httpError ->
-            Debug.toString httpError
-
         NoncompliantJson decodeError ->
             Decode.errorToString decodeError
 
-        DocumentError documentError ->
-            documentErrorToString documentError
+        JsonApiDecodeError jsonApiDecodeError ->
+            jsonApiDecodeErrorToString jsonApiDecodeError
 
 
 {-| Describes what went wrong while trying to create a [`Document`](#Document)
 
-This will happen if a document has valid JSON:API, but the provided [`DocumentDecoder`](#DocumentDecoder) does not know how to understand it.
+This will happen if a document has valid JSON:API, but the provided [`DocumentDecoder`](#DocumentDecoder) and its [`ResourceDecoder`](#ResourceDecoder)s don't know how to understand it.
 
 This is different from [`Json.Decode.Error`](#https://package.elm-lang.org/packages/elm/json/1.1.3/Json-Decode#Error),
-which might happen if the raw json does not follow the JSON:API spec.
+which might happen if the raw json does not follow the JSON:API spec, and might show up as part of [`DecodeError`](#DecodeError).
 
-If a response has json that does not meet the JSON:API spec, it will be a `HttpError Http.BadBody message`
+Cases:
 
-If a response is valid JSON:API, but the `DocumentDecoder` and its `ResourceDecoder`s fail to turn it into Elm data,
-the other cases will describe what went wrong.
+  - `ExpectedOne`: The [`DocumentDecoder`](#DocumentDecoder) expected the primary resource to be a single resource, but it was a list.
+  - `ExpectedMany`: The [`DocumentDecoder`](#DocumentDecoder) expected the primary resource to be a list of resources, but got a single resource object.
+  - `ApiErrors`: The API returned a document with an `errors` field instead of a `data` field.
+  - `ResourceError`: A resource in the `data` or `included` fields could not be decoded.
 
-TODO document cases
+TODO more information about the resource error: which resource, what index, in data or included, etc,
 
 -}
 type DocumentError
@@ -782,25 +781,35 @@ documentErrorToString documentError =
             "Expected a list of resources but only got one"
 
         ApiErrors errors ->
-            "API returned errors: " ++ Encode.encode 2 (Encode.list identity errors)
+            "API returned errors:\n" ++ Encode.encode 2 (Encode.list identity errors)
 
         ResourceError resourceError ->
             resourceErrorToString resourceError
 
 
-{-| TODO document cases
+{-| When a [`ResourceDecoder`](#ResourceDecoder) fails.
+
+Cases:
+
+  - `ResourceIdError`: The resource's [`IdDecoder`](#IdDecoder) failed to decode the resource's `type` or `id` fields.
+  - `AttributeMissing`: The [`ResourceDecoder`](#ResourceDecoder) expected this attribute to exist, but it didn't.
+  - `AttributeDecodeError`: The given attribute exists, but the [`ResourceDecoder`](#ResourceDecoder)'s [`attribute` decoder](#attribute) failed.
+  - `RelationshipNumberError`: The [`ResourceDecoder`](#ResourceDecoder) expected a different number of relationships at the given name.
+    E.g. expected a list of relationships but it was missing.
+    The parameters are the relationship name and a human-readable message
+  - `RelationshipIdError`: The [`IdDecoder`](#IdDecoder) for the given relationship of the resource failed.
+
+-- TODO include the resource id in the error/string, so it's easier to track down
+-- TODO remove CustomError by making map2, or else document it
+
 -}
 type ResourceError
     = ResourceIdError IdError
     | AttributeMissing String
     | AttributeDecodeError String Decode.Error
-    | RelationshipIdError String IdError
     | RelationshipNumberError String String
+    | RelationshipIdError String IdError
     | CustomError String
-
-
-
--- TODO include the resource id in the error/string, so it's easier to track down
 
 
 {-| -}
@@ -821,14 +830,6 @@ resourceErrorToString error =
                 , Decode.errorToString decodeError
                 ]
 
-        RelationshipIdError relationshipName idError ->
-            String.concat
-                [ "Couldn't decode id of relationship "
-                , relationshipName
-                , ": "
-                , idErrorToString idError
-                ]
-
         RelationshipNumberError relationshipName message ->
             String.concat
                 [ "Error at relationship "
@@ -837,13 +838,25 @@ resourceErrorToString error =
                 , message
                 ]
 
-        CustomError s ->
-            s
+        RelationshipIdError relationshipName idError ->
+            String.concat
+                [ "Couldn't decode id of relationship "
+                , relationshipName
+                , ": "
+                , idErrorToString idError
+                ]
+
+        CustomError message ->
+            message
 
 
-{-| -}
+{-| The [`IdDecoder`](#IdDecoder) didn't know how to decode the type it found.
+
+There could be more than one `expectedType` if it was made with [`oneOf`](#oneOf) or [`oneOfId`](#oneOfId)
+
+-}
 type alias IdError =
-    { expectedType : String
+    { expectedType : List String
     , actualType : String
     , actualIdValue : String
     }
@@ -852,11 +865,23 @@ type alias IdError =
 {-| -}
 idErrorToString : IdError -> String
 idErrorToString idError =
+    let
+        expectedTypeMessage =
+            case idError.expectedType of
+                [] ->
+                    "but the IdDecoder didn't know how to handle any types. Did you pass an empty Dict to oneOfId?"
+
+                [ expectedType ] ->
+                    "as type " ++ expectedType
+
+                multipleTypes ->
+                    "as any of these types: " ++ String.join ", " multipleTypes
+    in
     String.concat
         [ "Tried to decode {type: "
         , idError.actualType
         , ", id: "
         , idError.actualIdValue
-        , "} as type "
-        , idError.expectedType
+        , "} "
+        , expectedTypeMessage
         ]
