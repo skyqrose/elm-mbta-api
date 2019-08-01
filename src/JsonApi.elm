@@ -1,21 +1,24 @@
 module JsonApi exposing
-    ( Document, documentData, documentIncluded, get, expectJsonApi, decodeDocumentString, decodeDocumentValue
+    ( Document, documentData, documentIncluded
+    , get, expectJsonApi, decodeDocumentString, decodeDocumentValue
     , DocumentDecoder, documentDecoderOne, documentDecoderMany, ResourceDecoder, IdDecoder, idDecoder
     , decode, id, attribute, relationshipOne, relationshipMaybe, relationshipMany, custom
     , map, andThen, oneOf
     , decodeResourceString, decodeResourceValue
     , mapId, oneOfId
     , decodeIdString, decodeIdValue
-    , IncludedDecoder
+    , IncludedDecoder, ignoreIncluded
     , HttpError(..), httpErrorToString, DecodeError(..), decodeErrorToString, DocumentError(..), documentErrorToString, ResourceError(..), resourceErrorToString, IdError, idErrorToString
     )
 
-{-| This module serves as a middle point between the raw JSON in JSON:API
-and the Elm types for the data you get out of it.
+{-| This module is for getting and decoding JSON:API data into Elm data.
 
-TODO better summary that gets across this module's role in decoding
+Like working with normal JSON data, you will need to build decoders for your data,
+and decoding into them might fail.
 
-TODO I think the bookDecoder is using an old interface for making decoders
+JSON:API data is not recursive like JSON is,
+so there are separate decoder and error types for each part of the heirarchy:
+documents, resources, and ids.
 
     type BookId
         = BookId String
@@ -31,27 +34,31 @@ TODO I think the bookDecoder is using an old interface for making decoders
         idDecoder "book" BookId
 
     bookDecoder : ResourceDecoder Book
-    bookDecoder resource =
-        decode resource
+    bookDecoder =
+        decode
             |> id bookIdDecoder
             |> relationshipOne "author" authorIdDecoder
             |> attribute "title" Json.Decode.string
 
-    booksDocumentDecoder : DocumentDecoder included (List Book)
+    booksDocumentDecoder : DocumentDecoder () (List Book)
     booksDocumentDecoder =
-        documentDecoderMany bookDecoder
+        documentDecoderMany ignoreIncluded bookDecoder
 
-    getBooks : (Result DocumentError (Document included (List Book)) -> msg) -> Cmd msg
+    getBooks : (Result HttpError (List Book) -> msg) -> Cmd msg
     getBooks toMsg =
-        Http.get
-            { url = url
-            , expect = Http.expectJsonApi toMsg booksDocumentDecoder
-            }
+        get
+            toMsg
+            booksDocumentDecoder
+            booksUrl
+
+Many parts of the JSON:API spec, such as links, metadata, and pagination, are not supported.
+Encoding, creating, and updating JSON:API data is also not supported.
 
 
 # Get a JSON:API document
 
-@docs Document, documentData, documentIncluded, get, expectJsonApi, decodeDocumentString, decodeDocumentValue
+@docs Document, documentData, documentIncluded
+@docs get, expectJsonApi, decodeDocumentString, decodeDocumentValue
 
 
 # Make decoders
@@ -72,7 +79,7 @@ You can make `ResourceDecoder`s using a pipeline, modeled off of [`NoRedInk/elm-
 @docs map, andThen, oneOf
 
 Typically, you will get a whole JSON:API document, and decode the whole thing at once.
-But if you get json for a resource outside of its document,
+But if you get JSON for a resource outside of its document,
 you can decode it with these.
 
 @docs decodeResourceString, decodeResourceValue
@@ -83,7 +90,7 @@ you can decode it with these.
 @docs mapId, oneOfId
 
 Typically, you will get a whole JSON:API document, and decode the whole thing at once.
-But if you get json for an id outside of its document,
+But if you get JSON for an id outside of its document,
 you can decode it with these.
 
 @docs decodeIdString, decodeIdValue
@@ -91,17 +98,12 @@ you can decode it with these.
 
 # Decoding included resources
 
-The `included` field may contain multiple types of resource objects mixed together.
-Elm cannot handle lists with multiple types, so you must define your own collection type,
-and provide instructions for how to decode a resource and add it to the collection.
-
-@docs IncludedDecoder
-
-
-# Decoding resources
+@docs IncludedDecoder, ignoreIncluded
 
 
 # Error Handling
+
+-- TODO include the JSON in the error
 
 @docs HttpError, httpErrorToString, DecodeError, decodeErrorToString, DocumentError, documentErrorToString, ResourceError, resourceErrorToString, IdError, idErrorToString
 
@@ -139,6 +141,8 @@ documentData document =
     document.data
 
 
+{-| get the collection of included resources out of a [`Document`](#Document)
+-}
 documentIncluded : Document included data -> included
 documentIncluded document =
     document.included
@@ -346,6 +350,8 @@ the different `ResourceDecoder` type in this module needs to start its pipelines
 
 [Pipeline](https://package.elm-lang.org/packages/NoRedInk/elm-json-decode-pipeline/latest/Json-Decode-Pipeline)
 
+-- TODO rename succeed
+
 -}
 decode : constructor -> ResourceDecoder constructor
 decode constructor =
@@ -357,7 +363,7 @@ decode constructor =
 This is for the id of the resource being decoded.
 For the id of a related resource, use one of the `relationship` functions below.
 
-TODO better name for idDecoder\_ (and everywhere else that name appears)
+TODO better name for idDecoder\_ (and everywhere else that name appears). Maybe name will become free when Decoders become opaque
 
 -}
 id : IdDecoder id -> ResourceDecoder (id -> rest) -> ResourceDecoder rest
@@ -628,9 +634,9 @@ decodeIdValue idDecoder_ jsonValue =
 -- Decoding included resources
 
 
-{-| This library doesn't know your application's types and needs,
-so you will need to provide your own collection type for included data,
-and a way to add a resource to that collection.
+{-| The `included` field may contain multiple types of resource objects mixed together.
+Elm cannot handle lists with multiple types, so you must define your own collection type,
+and provide instructions for how to decode a resource and add it to the collection.
 
 In JSON:API, the included field may contain resources of multiple different types mixed together,
 so you may wish to make your accumulator with [`oneOf`](#oneOf) to sort them out.
@@ -671,10 +677,21 @@ and use the resulting function to add the new resource to the collection.
                 ]
     }
 
+TODO opaque IncludedDecoder, and ways to build it.
+
 -}
 type alias IncludedDecoder included =
     { emptyIncluded : included
     , accumulator : ResourceDecoder (included -> included)
+    }
+
+
+{-| If you don't care about the included data, this will ignore it
+-}
+ignoreIncluded : IncludedDecoder ()
+ignoreIncluded =
+    { emptyIncluded = ()
+    , accumulator = decode (\() -> ())
     }
 
 
