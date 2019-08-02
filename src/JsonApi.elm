@@ -411,8 +411,8 @@ relationshipOne relationshipName relatedIdDecoder =
     custom
         (\untypedResource ->
             case Dict.get relationshipName untypedResource.relationships of
-                Just (Untyped.RelationshipOne relatedResourceId) ->
-                    relatedIdDecoder relatedResourceId
+                Just (Untyped.RelationshipOne relatedId) ->
+                    relatedIdDecoder relatedId
                         |> Result.mapError (RelationshipIdError relationshipName)
 
                 _ ->
@@ -434,8 +434,8 @@ relationshipMaybe relationshipName relatedIdDecoder =
     custom
         (\untypedResource ->
             case Dict.get relationshipName untypedResource.relationships of
-                Just (Untyped.RelationshipOne relatedResourceId) ->
-                    relatedIdDecoder relatedResourceId
+                Just (Untyped.RelationshipOne relatedId) ->
+                    relatedIdDecoder relatedId
                         |> Result.map Just
                         |> Result.mapError (RelationshipIdError relationshipName)
 
@@ -467,8 +467,8 @@ relationshipMany relationshipName relatedIdDecoder =
     custom
         (\untypedResource ->
             case Dict.get relationshipName untypedResource.relationships of
-                Just (Untyped.RelationshipMany relatedResourceIds) ->
-                    relatedResourceIds
+                Just (Untyped.RelationshipMany relatedIds) ->
+                    relatedIds
                         |> List.map relatedIdDecoder
                         |> Result.Extra.combine
                         |> Result.mapError (RelationshipIdError relationshipName)
@@ -636,7 +636,6 @@ decodeIdValue idDecoder_ jsonValue =
 
 
 
--- TODO standardize on `id` vs `resourceId`
 -- Decoding included resources
 
 
