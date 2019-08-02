@@ -61,14 +61,14 @@ color =
 
 latLng : JsonApi.ResourceDecoder LatLng
 latLng =
-    JsonApi.decode LatLng
+    JsonApi.succeed LatLng
         |> attribute "latitude" Decode.float
         |> attribute "longitude" Decode.float
 
 
 maybeLatLng : JsonApi.ResourceDecoder (Maybe LatLng)
 maybeLatLng =
-    JsonApi.decode Tuple.pair
+    JsonApi.succeed Tuple.pair
         |> attribute "latitude" (Decode.nullable Decode.float)
         |> attribute "longitude" (Decode.nullable Decode.float)
         |> JsonApi.andThen
@@ -121,7 +121,7 @@ predictionId =
 
 prediction : JsonApi.ResourceDecoder Prediction
 prediction =
-    JsonApi.decode Prediction
+    JsonApi.succeed Prediction
         |> id predictionId
         |> relationshipOne "route" routeId
         |> relationshipOne "trip" tripId
@@ -157,7 +157,7 @@ vehicleId =
 
 vehicle : JsonApi.ResourceDecoder Vehicle
 vehicle =
-    JsonApi.decode Vehicle
+    JsonApi.succeed Vehicle
         |> id vehicleId
         |> attribute "label" Decode.string
         |> relationshipOne "route" routeId
@@ -203,7 +203,7 @@ routeId =
 
 route : JsonApi.ResourceDecoder Route
 route =
-    JsonApi.decode Route
+    JsonApi.succeed Route
         |> id routeId
         |> attribute "type" routeType
         |> attribute "short_name" Decode.string
@@ -218,7 +218,7 @@ route =
 
 routeDirections : JsonApi.ResourceDecoder (Maybe RouteDirections)
 routeDirections =
-    JsonApi.decode Tuple.pair
+    JsonApi.succeed Tuple.pair
         |> attribute "direction_names" (Decode.nullable (Decode.list Decode.string))
         |> attribute "direction_destinations" (Decode.nullable (Decode.list Decode.string))
         |> JsonApi.andThen
@@ -247,7 +247,7 @@ routePatternId =
 
 routePattern : JsonApi.ResourceDecoder RoutePattern
 routePattern =
-    JsonApi.decode RoutePattern
+    JsonApi.succeed RoutePattern
         |> id routePatternId
         |> relationshipOne "route" routeId
         |> attribute "direction_id" directionId
@@ -276,7 +276,7 @@ lineId =
 
 line : JsonApi.ResourceDecoder Line
 line =
-    JsonApi.decode Line
+    JsonApi.succeed Line
         |> id lineId
         |> attribute "short_name" Decode.string
         |> attribute "long_name" Decode.string
@@ -292,7 +292,7 @@ scheduleId =
 
 schedule : JsonApi.ResourceDecoder Schedule
 schedule =
-    JsonApi.decode Schedule
+    JsonApi.succeed Schedule
         |> id scheduleId
         |> relationshipOne "route" routeId
         --|> attribute "direction_id" directionId
@@ -329,7 +329,7 @@ tripId =
 
 trip : JsonApi.ResourceDecoder Trip
 trip =
-    JsonApi.decode Trip
+    JsonApi.succeed Trip
         |> id tripId
         |> relationshipOne "service" serviceId
         |> relationshipOne "route" routeId
@@ -364,7 +364,7 @@ serviceId =
 
 service : JsonApi.ResourceDecoder Service
 service =
-    JsonApi.decode Service
+    JsonApi.succeed Service
         |> id serviceId
         |> attribute "description" (Decode.nullable Decode.string)
         |> attribute "schedule_type" (Decode.nullable serviceType)
@@ -406,7 +406,7 @@ serviceTypicality =
 
 changedDates : String -> String -> JsonApi.ResourceDecoder (List ChangedDate)
 changedDates datesAttribute notesAttribute =
-    JsonApi.decode Tuple.pair
+    JsonApi.succeed Tuple.pair
         |> attribute datesAttribute (Decode.list serviceDate)
         |> attribute notesAttribute (Decode.list (Decode.nullable Decode.string))
         |> JsonApi.andThen
@@ -438,7 +438,7 @@ shapeId =
 
 shape : JsonApi.ResourceDecoder Shape
 shape =
-    JsonApi.decode Shape
+    JsonApi.succeed Shape
         |> id shapeId
         |> attribute "name" Decode.string
         |> relationshipOne "route" routeId
@@ -459,7 +459,7 @@ stopId =
 
 stop : JsonApi.ResourceDecoder Stop
 stop =
-    JsonApi.decode Stop
+    JsonApi.succeed Stop
         |> id stopId
         |> attribute "name" Decode.string
         |> attribute "description" (Decode.nullable Decode.string)
@@ -489,7 +489,7 @@ facilityId =
 
 facility : JsonApi.ResourceDecoder Facility
 facility =
-    JsonApi.decode Facility
+    JsonApi.succeed Facility
         |> id facilityId
         |> relationshipOne "stop" stopId
         |> attribute "name" Decode.string
@@ -505,7 +505,7 @@ liveFacilityId =
 
 liveFacility : JsonApi.ResourceDecoder LiveFacility
 liveFacility =
-    JsonApi.decode LiveFacility
+    JsonApi.succeed LiveFacility
         |> id liveFacilityId
         |> attribute "updated_at" Iso8601.decoder
         |> attribute "properties" facilityProperties
@@ -559,7 +559,7 @@ alertId =
 
 alert : JsonApi.ResourceDecoder Alert
 alert =
-    JsonApi.decode Alert
+    JsonApi.succeed Alert
         |> id alertId
         |> attribute "url" (Decode.nullable Decode.string)
         |> attribute "short_header" Decode.string

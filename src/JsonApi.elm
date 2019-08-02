@@ -2,7 +2,7 @@ module JsonApi exposing
     ( Document, documentData, documentIncluded
     , get, expectJsonApi, decodeDocumentString, decodeDocumentValue
     , DocumentDecoder, documentDecoderOne, documentDecoderMany, ResourceDecoder, IdDecoder, idDecoder
-    , decode, id, attribute, relationshipOne, relationshipMaybe, relationshipMany, custom
+    , succeed, id, attribute, relationshipOne, relationshipMaybe, relationshipMany, custom
     , map, andThen, oneOf
     , decodeResourceString, decodeResourceValue
     , mapId, oneOfId
@@ -35,7 +35,7 @@ documents, resources, and ids.
 
     bookDecoder : ResourceDecoder Book
     bookDecoder =
-        decode
+        succeed Book
             |> id bookIdDecoder
             |> relationshipOne "author" authorIdDecoder
             |> attribute "title" Json.Decode.string
@@ -71,7 +71,7 @@ Encoding, creating, and updating JSON:API data is also not supported.
 You can make `ResourceDecoder`s using a pipeline, modeled off of [`NoRedInk/elm-json-decode-pipeline`](Pipeline)
 [Pipeline][https://package.elm-lang.org/packages/NoRedInk/elm-json-decode-pipeline/latest/Json-Decode-Pipeline]
 
-@docs decode, id, attribute, relationshipOne, relationshipMaybe, relationshipMany, custom
+@docs succeed, id, attribute, relationshipOne, relationshipMaybe, relationshipMany, custom
 
 
 # Fancy Resource Decoding
@@ -339,22 +339,28 @@ idDecoder typeString idConstructor =
 
 {-| Start a decoding pipeline.
 
-Note that while [`NoRedInk/elm-json-decode-pipeline`](Pipeline) starts its pipelines with `Json.Decode.succeed`,
-the different `ResourceDecoder` type in this module needs to start its pipelines slightly differently
+Just like [`NoRedInk/elm-json-decode-pipeline`](Pipeline) starts its [`Json.Decode.Decoder`](Decode) pipelines with [`Json.Decode.succeed`](Decodesucceed),
+[`ResourceDecoder`](#ResourceDecoder) pipelines start with `succeed`.
 
     bookDecoder : ResourceDecoder Book
-    bookDecoder resource =
-        decode resource
+    bookDecoder =
+        succeed Book
             |> id bookIdDecoder
             |> attribute "title" Decode.string
 
 [Pipeline](https://package.elm-lang.org/packages/NoRedInk/elm-json-decode-pipeline/latest/Json-Decode-Pipeline)
+[Decoder](https://package.elm-lang.org/packages/elm/json/latest/Json-Decode#Decoder)
+[Decodesucceed](https://package.elm-lang.org/packages/elm/json/latest/Json-Decode#succeed)
 
--- TODO rename succeed
+It's named `succeed` because it can also be used to make a [`ResourceDecoder`](#ResourceDecoder) that ignores its input and always succeeds with the given value.
+
+The type argument is named `constructor` because in its use in a pipeline,
+the first value of the pipeline is the constructor function for the resulting data type,
+which is then applied to later parts of the pieline.
 
 -}
-decode : constructor -> ResourceDecoder constructor
-decode constructor =
+succeed : constructor -> ResourceDecoder constructor
+succeed constructor =
     \untypedResource -> Ok constructor
 
 
@@ -691,7 +697,7 @@ type alias IncludedDecoder included =
 ignoreIncluded : IncludedDecoder ()
 ignoreIncluded =
     { emptyIncluded = ()
-    , accumulator = decode (\() -> ())
+    , accumulator = succeed (\() -> ())
     }
 
 

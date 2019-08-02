@@ -42,7 +42,7 @@ authorIdDecoder =
 
 bookResourceDecoder : ResourceDecoder Book
 bookResourceDecoder =
-    decode Book
+    succeed Book
         |> id bookIdDecoder
         |> relationshipOne "author" authorIdDecoder
         |> attribute "title" Json.Decode.string
@@ -51,7 +51,7 @@ bookResourceDecoder =
 
 authorResourceDecoder : ResourceDecoder Author
 authorResourceDecoder =
-    decode Author
+    succeed Author
         |> id authorIdDecoder
         |> relationshipMany "books" bookIdDecoder
 
