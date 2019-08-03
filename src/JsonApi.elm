@@ -191,7 +191,6 @@ decodeDocumentValue documentDecoder jsonValue =
 
 
 -- Public decoders
--- TODO make these opaque
 
 
 {-| A `DocumentDecoder` knows how to turn JSON:API compliant json data into usable Elm data.
@@ -369,7 +368,7 @@ succeed constructor =
 This is for the id of the resource being decoded.
 For the id of a related resource, use one of the `relationship` functions below.
 
-TODO better name for idDecoder\_ (and everywhere else that name appears). Maybe name will become free when Decoders become opaque
+TODO better name for idDecoder\_ (and everywhere else that name appears). Maybe name will become free with new way to make id decoders
 
 -}
 id : IdDecoder id -> ResourceDecoder (id -> rest) -> ResourceDecoder rest
