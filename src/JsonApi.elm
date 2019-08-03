@@ -3,7 +3,7 @@ module JsonApi exposing
     , get, expectJsonApi, decodeDocumentString, decodeDocumentValue
     , DocumentDecoder, documentDecoderOne, documentDecoderMany, ResourceDecoder, IdDecoder, idDecoder
     , succeed, id, attribute, relationshipOne, relationshipMaybe, relationshipMany, custom
-    , map, andThen, oneOf
+    , map, andThen, oneOf, fail
     , decodeResourceString, decodeResourceValue
     , mapId, oneOfId
     , decodeIdString, decodeIdValue
@@ -76,7 +76,7 @@ You can make `ResourceDecoder`s using a pipeline, modeled off of [`NoRedInk/elm-
 
 # Fancy Resource Decoding
 
-@docs map, andThen, oneOf
+@docs map, andThen, oneOf, fail
 
 Typically, you will get a whole JSON:API document, and decode the whole thing at once.
 But if you get JSON for a resource outside of its document,
@@ -516,7 +516,7 @@ custom resourceDecoder constructorDecoder =
 -- Fancy Resource Decoding
 
 
-{-| Apply a function to the result of a resourceDecoder if it succeeds
+{-| Apply a function to the result of a [`ResourceDecoder`](#ResourceDecoder) if it succeeds
 -}
 map : (a -> b) -> ResourceDecoder a -> ResourceDecoder b
 map f resourceDecoder =
@@ -527,19 +527,18 @@ map f resourceDecoder =
         )
 
 
-{-| Run another resourceDecoder that depends on a previous result.
-
-TODO can you andThen with a real resourceDecoder
-
+{-| Run another [`ResourceDecoder`](#ResourceDecoder) that depends on a previous result.
 -}
-andThen : (a -> Result String b) -> ResourceDecoder a -> ResourceDecoder b
-andThen second first =
+andThen : (a -> ResourceDecoder b) -> ResourceDecoder a -> ResourceDecoder b
+andThen secondDecoder firstDecoder =
     ResourceDecoder
         (\untypedResource ->
             untypedResource
-                |> decodeResource first
+                |> decodeResource firstDecoder
                 |> Result.andThen
-                    (second >> Result.mapError CustomError)
+                    (\first ->
+                        decodeResource (secondDecoder first) untypedResource
+                    )
         )
 
 
@@ -575,6 +574,16 @@ oneOf resourceDecoders =
                             , actualIdValue = untypedResource.id.id
                             }
                         )
+        )
+
+
+{-| A [`ResourceDecoder`](#ResourceDecoder) that always fails with the given message
+-}
+fail : String -> ResourceDecoder a
+fail message =
+    ResourceDecoder
+        (\untypedResource ->
+            Err (Failure message)
         )
 
 
@@ -840,9 +849,9 @@ Cases:
     E.g. expected a list of relationships but it was missing.
     The parameters are the relationship name and a human-readable message
   - `RelationshipIdError`: The [`IdDecoder`](#IdDecoder) for the given relationship of the resource failed.
+  - `Failure`: A custom error message provided to [`fail`](#fail)
 
--- TODO include the resource id in the error/string, so it's easier to track down
--- TODO remove CustomError by making map2, or else document it
+-- TODO include the resource id and json in the error/string, so it's easier to track down
 
 -}
 type ResourceError
@@ -851,7 +860,7 @@ type ResourceError
     | AttributeDecodeError String Decode.Error
     | RelationshipNumberError String String
     | RelationshipIdError String IdError
-    | CustomError String
+    | Failure String
 
 
 {-| -}
@@ -888,7 +897,7 @@ resourceErrorToString error =
                 , idErrorToString idError
                 ]
 
-        CustomError message ->
+        Failure message ->
             message
 
 

@@ -75,7 +75,7 @@ maybeLatLng =
             (\( maybeLat, maybeLng ) ->
                 case ( maybeLat, maybeLng ) of
                     ( Just lat, Just lng ) ->
-                        Ok
+                        JsonApi.succeed
                             (Just
                                 { latitude = lat
                                 , longitude = lng
@@ -83,13 +83,13 @@ maybeLatLng =
                             )
 
                     ( Nothing, Nothing ) ->
-                        Ok Nothing
+                        JsonApi.succeed Nothing
 
                     ( Just lat, Nothing ) ->
-                        Err "longitude is missing but latitude exists"
+                        JsonApi.fail "longitude is missing but latitude exists"
 
                     ( Nothing, Just lng ) ->
-                        Err "latitude is missing but longitude exists"
+                        JsonApi.fail "latitude is missing but longitude exists"
             )
 
 
@@ -225,7 +225,7 @@ routeDirections =
             (\( names, destinations ) ->
                 case ( names, destinations ) of
                     ( Just [ d0_name, d1_name ], Just [ d0_destination, d1_destination ] ) ->
-                        Ok
+                        JsonApi.succeed
                             (Just
                                 { d0 = { name = d0_name, destination = d0_destination }
                                 , d1 = { name = d1_name, destination = d1_destination }
@@ -233,10 +233,10 @@ routeDirections =
                             )
 
                     ( Nothing, Nothing ) ->
-                        Ok Nothing
+                        JsonApi.succeed Nothing
 
                     _ ->
-                        Err "expected exactly 2 direction_names and exactly 2 direction_destinations"
+                        JsonApi.fail "expected exactly 2 direction_names and exactly 2 direction_destinations"
             )
 
 
@@ -412,7 +412,7 @@ changedDates datesAttribute notesAttribute =
         |> JsonApi.andThen
             (\( datesList, notesList ) ->
                 if List.length datesList == List.length notesList then
-                    Ok
+                    JsonApi.succeed
                         (List.map2
                             ChangedDate
                             datesList
@@ -420,9 +420,10 @@ changedDates datesAttribute notesAttribute =
                         )
 
                 else
-                    Err
+                    JsonApi.fail
                         (String.concat
-                            [ datesAttribute
+                            [ "Couldn't match dates to notes. "
+                            , datesAttribute
                             , " and "
                             , notesAttribute
                             , " were different lengths"
