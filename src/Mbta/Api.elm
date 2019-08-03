@@ -365,6 +365,7 @@ type Host
         }
 
 
+
 -- Result
 
 
@@ -373,7 +374,9 @@ type Host
 `primary` is the type of the primary data you're fetching. For example, in [`getRoutes`](#getRoutes), `primary` is `List Route`
 
 Get data out of this object with [`getPrimaryData`](#getPrimaryData) and [the `getIncluded*` functions](#getIncludedPrediction).
-.-}
+.
+
+-}
 type Data primary
     = Data
         { primaryData : primary
@@ -409,8 +412,7 @@ type ApiError
     | DecodeError String
 
 
-{-|
--}
+{-| -}
 type alias ApiResult primary =
     Result ApiError (Data primary)
 
