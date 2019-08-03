@@ -749,6 +749,7 @@ type HttpError
     | DecodeDocumentError (DecodeError DocumentError)
 
 
+{-| -}
 httpErrorToString : HttpError -> String
 httpErrorToString httpError =
     case httpError of
@@ -776,6 +777,7 @@ type DecodeError jsonApiDecodeError
     | JsonApiDecodeError jsonApiDecodeError
 
 
+{-| -}
 decodeErrorToString : (jsonApiDecodeError -> String) -> DecodeError jsonApiDecodeError -> String
 decodeErrorToString jsonApiDecodeErrorToString error =
     case error of
