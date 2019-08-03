@@ -39,6 +39,7 @@ import Json.Decode.Pipeline as Pipeline
 import JsonApi
     exposing
         ( attribute
+        , attributeMaybe
         , custom
         , id
         , relationshipMany
@@ -69,8 +70,8 @@ latLng =
 maybeLatLng : JsonApi.ResourceDecoder (Maybe LatLng)
 maybeLatLng =
     JsonApi.succeed Tuple.pair
-        |> attribute "latitude" (Decode.nullable Decode.float)
-        |> attribute "longitude" (Decode.nullable Decode.float)
+        |> attributeMaybe "latitude" Decode.float
+        |> attributeMaybe "longitude" Decode.float
         |> JsonApi.andThen
             (\( maybeLat, maybeLng ) ->
                 case ( maybeLat, maybeLng ) of
@@ -130,9 +131,9 @@ prediction =
         |> relationshipMaybe "schedule" scheduleId
         |> relationshipMaybe "vehicle" vehicleId
         |> relationshipMany "alert" alertId
-        |> attribute "arrival_time" (Decode.nullable Iso8601.decoder)
-        |> attribute "departure_time" (Decode.nullable Iso8601.decoder)
-        |> attribute "status" (Decode.nullable Decode.string)
+        |> attributeMaybe "arrival_time" Iso8601.decoder
+        |> attributeMaybe "departure_time" Iso8601.decoder
+        |> attributeMaybe "status" Decode.string
         |> attribute "direction_id" directionId
         |> attribute "schedule_relationship" predictionScheduleRelatonship
 
@@ -167,7 +168,7 @@ vehicle =
         |> attribute "current_stop_sequence" stopSequence
         |> attribute "current_status" currentStatus
         |> custom latLng
-        |> attribute "speed" (Decode.nullable Decode.float)
+        |> attributeMaybe "speed" Decode.float
         |> attribute "bearing" Decode.int
         |> attribute "updated_at" Iso8601.decoder
 
@@ -219,8 +220,8 @@ route =
 routeDirections : JsonApi.ResourceDecoder (Maybe RouteDirections)
 routeDirections =
     JsonApi.succeed Tuple.pair
-        |> attribute "direction_names" (Decode.nullable (Decode.list Decode.string))
-        |> attribute "direction_destinations" (Decode.nullable (Decode.list Decode.string))
+        |> attributeMaybe "direction_names" (Decode.list Decode.string)
+        |> attributeMaybe "direction_destinations" (Decode.list Decode.string)
         |> JsonApi.andThen
             (\( names, destinations ) ->
                 case ( names, destinations ) of
@@ -253,7 +254,7 @@ routePattern =
         |> attribute "direction_id" directionId
         |> attribute "name" Decode.string
         |> attribute "typicality" routePatternTypicality
-        |> attribute "time_desc" (Decode.nullable Decode.string)
+        |> attributeMaybe "time_desc" Decode.string
         |> attribute "sort_order" Decode.int
         |> relationshipOne "representative_trip" tripId
 
@@ -366,9 +367,9 @@ service : JsonApi.ResourceDecoder Service
 service =
     JsonApi.succeed Service
         |> id serviceId
-        |> attribute "description" (Decode.nullable Decode.string)
-        |> attribute "schedule_type" (Decode.nullable serviceType)
-        |> attribute "schedule_name" (Decode.nullable Decode.string)
+        |> attributeMaybe "description" Decode.string
+        |> attributeMaybe "schedule_type" serviceType
+        |> attributeMaybe "schedule_name" Decode.string
         |> attribute "schedule_typicality" serviceTypicality
         |> attribute "start_date" serviceDate
         |> attribute "end_date" serviceDate
@@ -463,13 +464,13 @@ stop =
     JsonApi.succeed Stop
         |> id stopId
         |> attribute "name" Decode.string
-        |> attribute "description" (Decode.nullable Decode.string)
+        |> attributeMaybe "description" Decode.string
         |> relationshipMaybe "parent_station" stopId
-        |> attribute "platform_code" (Decode.nullable Decode.string)
-        |> attribute "platform_name" (Decode.nullable Decode.string)
+        |> attributeMaybe "platform_code" Decode.string
+        |> attributeMaybe "platform_name" Decode.string
         |> attribute "location_type" locationType
         |> custom maybeLatLng
-        |> attribute "address" (Decode.nullable Decode.string)
+        |> attributeMaybe "address" Decode.string
         |> attribute "wheelchair_boarding" wheelchairAccessible
 
 
@@ -562,13 +563,13 @@ alert : JsonApi.ResourceDecoder Alert
 alert =
     JsonApi.succeed Alert
         |> id alertId
-        |> attribute "url" (Decode.nullable Decode.string)
+        |> attributeMaybe "url" Decode.string
         |> attribute "short_header" Decode.string
         |> attribute "header" Decode.string
-        |> attribute "description" (Decode.nullable Decode.string)
+        |> attributeMaybe "description" Decode.string
         |> attribute "created_at" Iso8601.decoder
         |> attribute "updated_at" Iso8601.decoder
-        |> attribute "timeframe" (Decode.nullable Decode.string)
+        |> attributeMaybe "timeframe" Decode.string
         |> attribute "active_period" (Decode.list activePeriod)
         |> attribute "severity" Decode.int
         |> attribute "service_effect" Decode.string

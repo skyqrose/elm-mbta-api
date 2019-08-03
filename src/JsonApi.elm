@@ -2,7 +2,7 @@ module JsonApi exposing
     ( Document, documentData, documentIncluded
     , get, expectJsonApi, decodeDocumentString, decodeDocumentValue
     , DocumentDecoder, documentDecoderOne, documentDecoderMany, ResourceDecoder, IdDecoder, idDecoder
-    , succeed, id, attribute, relationshipOne, relationshipMaybe, relationshipMany, custom
+    , succeed, id, attribute, attributeMaybe, relationshipOne, relationshipMaybe, relationshipMany, custom
     , map, andThen, oneOf, fail
     , decodeResourceString, decodeResourceValue
     , mapId, oneOfId
@@ -71,7 +71,7 @@ Encoding, creating, and updating JSON:API data is also not supported.
 You can make `ResourceDecoder`s using a pipeline, modeled off of [`NoRedInk/elm-json-decode-pipeline`](Pipeline)
 [Pipeline][https://package.elm-lang.org/packages/NoRedInk/elm-json-decode-pipeline/latest/Json-Decode-Pipeline]
 
-@docs succeed, id, attribute, relationshipOne, relationshipMaybe, relationshipMany, custom
+@docs succeed, id, attribute, attributeMaybe, relationshipOne, relationshipMaybe, relationshipMany, custom
 
 
 # Fancy Resource Decoding
@@ -395,11 +395,36 @@ attribute attributeName attributeDecoder =
             (\untypedResource ->
                 case Dict.get attributeName untypedResource.attributes of
                     Just attributeJson ->
-                        Decode.decodeValue attributeDecoder attributeJson
+                        attributeJson
+                            |> Decode.decodeValue attributeDecoder
                             |> Result.mapError (AttributeDecodeError attributeName)
 
                     Nothing ->
                         Err (AttributeMissing attributeName)
+            )
+        )
+
+
+{-| Decodes `null` or missing attributes into `Nothing`.
+
+Since attributes can be arbitrary JSON, this function takes a general use [`Json.Decode.Decoder`](https://package.elm-lang.org/packages/elm/json/1.1.3/Json-Decode#Decoder).
+
+If decoding the attribute fails, the whole `ResourceDecoder` will fail, rather than silently returning a `Nothing`.
+
+-}
+attributeMaybe : String -> Decode.Decoder attribute -> ResourceDecoder (Maybe attribute -> rest) -> ResourceDecoder rest
+attributeMaybe attributeName attributeDecoder =
+    custom
+        (ResourceDecoder
+            (\untypedResource ->
+                case Dict.get attributeName untypedResource.attributes of
+                    Just attributeJson ->
+                        attributeJson
+                            |> Decode.decodeValue (Decode.nullable attributeDecoder)
+                            |> Result.mapError (AttributeDecodeError attributeName)
+
+                    Nothing ->
+                        Ok Nothing
             )
         )
 
