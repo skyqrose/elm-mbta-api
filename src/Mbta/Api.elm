@@ -12,7 +12,7 @@ module Mbta.Api exposing
     , vehicleRoute, vehicleTrip, vehicleStop
     , filterVehiclesByIds, filterVehiclesByLabels, filterVehiclesByRouteIds, filterVehiclesByRouteTypes, filterVehiclesByDirectionId, filterVehiclesByTripIds
     , getRoute, getRoutes
-    , routeRoutePatterns, routeLine, routeStop
+    , routeRoutePatterns, routeLine
     , filterRoutesByIds, filterRoutesByRouteTypes, filterRoutesByDirectionId, filterRoutesByStopIds
     , getRoutePattern, getRoutePatterns
     , routePatternRoute, routePatternRepresentativeTrip
@@ -141,7 +141,9 @@ Use it like
 
 ### Includes
 
-@docs routeRoutePatterns, routeLine, routeStop
+@docs routeRoutePatterns, routeLine
+
+`Stop`s can also be included by using [`filterRoutesByStopIds`](#filterRoutesByStopIds)
 
 
 ### Filters
@@ -1035,7 +1037,16 @@ getRoute toMsg host includes (RouteId routeId) =
 {-| -}
 getRoutes : (ApiResult (List Route) -> msg) -> Host -> List (Include Route) -> List (Filter Route) -> Cmd msg
 getRoutes toMsg host includes filters =
-    getList toMsg host Mbta.Decode.route "routes" includes filters
+    let
+        -- if filterRouteByStopIds is specified, include the stops.
+        includesWithStop =
+            if hasFilterKey "stop" filters then
+                Include "stop" :: includes
+
+            else
+                includes
+    in
+    getList toMsg host Mbta.Decode.route "routes" includesWithStop filters
 
 
 {-| -}
@@ -1048,16 +1059,6 @@ routeRoutePatterns =
 routeLine : Relationship Route Line
 routeLine =
     Relationship "line"
-
-
-{-| Only valid when getting a list of routes with [`getRoutes`](#Mbta.Api.getRoutes), and when [`filter stop TODO`](TODO) is used.
-
-If this relationship is given when invalid, the result will be a TODO error
-
--}
-routeStop : Relationship Route Stop
-routeStop =
-    Relationship "stop"
 
 
 {-| -}
@@ -1078,7 +1079,13 @@ filterRoutesByDirectionId directionId =
     filterByDirectionId directionId
 
 
-{-| -}
+{-| If specified, automatically includes the stops in the sideloaded data.
+
+Retrieve them with [`getIncludedStop`](#getIncludedStop).
+
+This is the only way to include stops while fetching routes.
+
+-}
 filterRoutesByStopIds : List StopId -> Filter Route
 filterRoutesByStopIds stopIds =
     filterByList "stop" stopIdToString stopIds
@@ -1851,3 +1858,16 @@ stopIdToString (StopId stopId) =
 facilityIdToString : FacilityId -> String
 facilityIdToString (FacilityId facilityId) =
     facilityId
+
+
+hasFilterKey : String -> List (Filter resource) -> Bool
+hasFilterKey targetKey filters =
+    List.any
+        (\(Filter filterEntries) ->
+            List.any
+                (\( key, values ) ->
+                    key == targetKey
+                )
+                filterEntries
+        )
+        filters
