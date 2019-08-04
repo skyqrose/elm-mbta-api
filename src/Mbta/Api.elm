@@ -7,7 +7,7 @@ module Mbta.Api exposing
     , StreamState, StreamResult(..), StreamError(..), streamResult, updateStream
     , getPredictions, streamPredictions
     , predictionVehicle, predictionRoute, predictionSchedule, predictionTrip, predictionStop, predictionAlerts
-    , filterPredictionsByRouteTypes, filterPredictionsByRouteIds, filterPredictionsByTripIds, filterPredictionsByDirectionId, filterPredictionsByStopIds, filterPredictionsByLatLng, filterPredictionsByLatLngWithRadius
+    , filterPredictionsByRouteTypes, filterPredictionsByRouteIds, filterPredictionsByRoutePatternIds, filterPredictionsByDirectionId, filterPredictionsByTripIds, filterPredictionsByStopIds, filterPredictionsByLatLng, filterPredictionsByLatLngWithRadius
     , getVehicle, getVehicles, streamVehicles
     , vehicleRoute, vehicleTrip, vehicleStop
     , filterVehiclesByIds, filterVehiclesByLabels, filterVehiclesByRouteIds, filterVehiclesByRouteTypes, filterVehiclesByDirectionId, filterVehiclesByTripIds
@@ -16,7 +16,7 @@ module Mbta.Api exposing
     , filterRoutesByIds, filterRoutesByRouteTypes, filterRoutesByDirectionId, filterRoutesByStopIds
     , getRoutePattern, getRoutePatterns
     , routePatternRoute, routePatternRepresentativeTrip
-    , filterRoutePatternsByIds, filterRoutePatternsByRouteIds, filterRoutePatternsByDirectionId
+    , filterRoutePatternsByIds, filterRoutePatternsByRouteIds, filterRoutePatternsByDirectionId, filterRoutePatternsByStopIds
     , getLine, getLines
     , lineRoutes
     , filterLinesByIds
@@ -24,10 +24,10 @@ module Mbta.Api exposing
     , schedulePrediction, scheduleRoute, scheduleTrip, scheduleStop
     , filterSchedulesByRouteIds, filterSchedulesByDirectionId, filterSchedulesByTripIds, filterSchedulesByStopSequence, StopSequenceFilter, filterSchedulesByStopIds, filterSchedulesByServiceDate, filterSchedulesByMinTime, filterSchedulesByMaxTime
     , getTrip, getTrips
-    , tripPredictions, tripVehicle, tripRoute, tripRoutePattern, tripService, tripShape
+    , tripPredictions, tripVehicle, tripRoute, tripRoutePattern, tripService, tripShape, tripStops
     , filterTripsByIds, filterTripsByNames, filterTripsByRouteIds, filterTripsByRoutePatternIds, filterTripsByDirectionId
     , getService, getServices
-    , filterServicesByIds
+    , filterServicesByIds, filterServicesByRouteIds
     , getShape, getShapes
     , shapeRoute, shapeStops
     , filterShapesByRouteIds, filterShapesByDirectionId
@@ -113,7 +113,7 @@ Use it like
 
 ### Filters
 
-@docs filterPredictionsByRouteTypes, filterPredictionsByRouteIds, filterPredictionsByTripIds, filterPredictionsByDirectionId, filterPredictionsByStopIds, filterPredictionsByLatLng, filterPredictionsByLatLngWithRadius
+@docs filterPredictionsByRouteTypes, filterPredictionsByRouteIds, filterPredictionsByRoutePatternIds, filterPredictionsByDirectionId, filterPredictionsByTripIds, filterPredictionsByStopIds, filterPredictionsByLatLng, filterPredictionsByLatLngWithRadius
 
 
 ## [Vehicle](#Mbta.Vehicle)
@@ -163,7 +163,7 @@ Use it like
 
 ### Filters
 
-@docs filterRoutePatternsByIds, filterRoutePatternsByRouteIds, filterRoutePatternsByDirectionId
+@docs filterRoutePatternsByIds, filterRoutePatternsByRouteIds, filterRoutePatternsByDirectionId, filterRoutePatternsByStopIds
 
 
 ## [Line](#Mbta.Line)
@@ -203,7 +203,7 @@ Use it like
 
 ### Includes
 
-@docs tripPredictions, tripVehicle, tripRoute, tripRoutePattern, tripService, tripShape
+@docs tripPredictions, tripVehicle, tripRoute, tripRoutePattern, tripService, tripShape, tripStops
 
 
 ### Filters
@@ -223,7 +223,7 @@ Use it like
 
 ### Filters
 
-@docs filterServicesByIds
+@docs filterServicesByIds, filterServicesByRouteIds
 
 
 ## [Shape](#Mbta.Shape)
@@ -913,15 +913,21 @@ filterPredictionsByRouteIds routeIds =
 
 
 {-| -}
-filterPredictionsByTripIds : List TripId -> Filter Prediction
-filterPredictionsByTripIds tripIds =
-    filterByList "trip" tripIdToString tripIds
+filterPredictionsByRoutePatternIds : List RoutePatternId -> Filter Prediction
+filterPredictionsByRoutePatternIds routePatternIds =
+    filterByList "route_pattern" routePatternIdToString routePatternIds
 
 
 {-| -}
 filterPredictionsByDirectionId : DirectionId -> Filter Prediction
 filterPredictionsByDirectionId directionId =
     filterByDirectionId directionId
+
+
+{-| -}
+filterPredictionsByTripIds : List TripId -> Filter Prediction
+filterPredictionsByTripIds tripIds =
+    filterByList "trip" tripIdToString tripIds
 
 
 {-| -}
@@ -1137,6 +1143,12 @@ filterRoutePatternsByDirectionId directionId =
     filterByDirectionId directionId
 
 
+{-| -}
+filterRoutePatternsByStopIds : List StopId -> Filter RoutePattern
+filterRoutePatternsByStopIds stopIds =
+    filterByList "stop" stopIdToString stopIds
+
+
 
 -- Line
 
@@ -1321,6 +1333,12 @@ tripShape =
 
 
 {-| -}
+tripStops : Relationship Trip Stop
+tripStops =
+    Relationship "stops"
+
+
+{-| -}
 filterTripsByIds : List TripId -> Filter Trip
 filterTripsByIds tripIds =
     filterByList "id" tripIdToString tripIds
@@ -1374,6 +1392,12 @@ getServices toMsg host includes filters =
 filterServicesByIds : List ServiceId -> Filter Service
 filterServicesByIds serviceIds =
     filterByList "id" (\(ServiceId id) -> id) serviceIds
+
+
+{-| -}
+filterServicesByRouteIds : List RouteId -> Filter Service
+filterServicesByRouteIds routeIds =
+    filterByList "route" routeIdToString routeIds
 
 
 
