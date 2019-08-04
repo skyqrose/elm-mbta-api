@@ -8,6 +8,10 @@ import JsonApi exposing (..)
 import Test exposing (..)
 
 
+
+-- TODO go through JsonApi public interface and make sure everything is tested.
+
+
 type BookId
     = BookId String
 

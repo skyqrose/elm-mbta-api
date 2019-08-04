@@ -47,17 +47,7 @@ module Mbta.Api exposing
 
 {-| Make HTTP requests to get data
 
-All of the calls that return a list of data take a list of filters, and a function to provide an empty list of filters. Use it to build your filters like this:
-
-    getPredictions ReceivePredictions
-        host
-        { predictionsFilter
-            | routeType = RouteType_2_CommuterRail
-            , stop = [ StopId "place-sstat" ]
-        }
-
-If you want all results, pass in the empty filter without setting any fields,
-though note that some calls require at least one filter to be specified.
+TODO API docs summary
 
 
 # Configuration
