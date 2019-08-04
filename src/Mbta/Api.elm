@@ -42,7 +42,7 @@ module Mbta.Api exposing
     , filterLiveFacilitiesByIds
     , getAlert, getAlerts, streamAlerts
     , alertRoutes, alertTrips, alertStops, alertFacilities
-    , filterAlertsByIds, filterAlertsByRouteTypes, filterAlertsByRouteIds, filterAlertsByDirectionId, filterAlertsByTripIds, filterAlertsByStopIds, filterAlertsByFacilities, filterAlertsByActivities, filterAlertsByDatetime, AlertDatetimeFilter, filterAlertsByLifecycles, filterAlertsBySeverities
+    , filterAlertsByIds, filterAlertsByRouteTypes, filterAlertsByRouteIds, filterAlertsByDirectionId, filterAlertsByTripIds, filterAlertsByStopIds, filterAlertsByFacilities, filterAlertsByActivities, filterAlertsByActivitiesAll, filterAlertsByDatetime, filterAlertsByDatetimeNow, filterAlertsByLifecycles, filterAlertsBySeverities
     )
 
 {-| Make HTTP requests to get data
@@ -302,7 +302,7 @@ Use it like
 
 ### Filters
 
-@docs filterAlertsByIds, filterAlertsByRouteTypes, filterAlertsByRouteIds, filterAlertsByDirectionId, filterAlertsByTripIds, filterAlertsByStopIds, filterAlertsByFacilities, filterAlertsByActivities, filterAlertsByDatetime, AlertDatetimeFilter, filterAlertsByLifecycles, filterAlertsBySeverities
+@docs filterAlertsByIds, filterAlertsByRouteTypes, filterAlertsByRouteIds, filterAlertsByDirectionId, filterAlertsByTripIds, filterAlertsByStopIds, filterAlertsByFacilities, filterAlertsByActivities, filterAlertsByActivitiesAll, filterAlertsByDatetime, filterAlertsByDatetimeNow, filterAlertsByLifecycles, filterAlertsBySeverities
 
 -}
 
@@ -1587,13 +1587,21 @@ getAlert toMsg host includes (AlertId alertId) =
     getOne toMsg host Mbta.Decode.alert "alerts" includes alertId
 
 
-{-| -}
+{-| By default, alerts are filtered to the [activities](#Mbta.InformedEntityActivity) `[Activity_Board, Activity_Exit, Activity_Ride]`.
+
+If you'd like to receive alerts for all activities, you must explicitly use [`filterAlertsByActivitiesAll`](#filterAlertsByActivitiesAll)
+
+-}
 getAlerts : (ApiResult (List Alert) -> msg) -> Host -> List (Include Alert) -> List (Filter Alert) -> Cmd msg
 getAlerts toMsg host includes filters =
     getList toMsg host Mbta.Decode.alert "alerts" includes filters
 
 
-{-| -}
+{-| By default, alerts are filtered to the [activities](#Mbta.InformedEntityActivity) `[Activity_Board, Activity_Exit, Activity_Ride]`.
+
+If you'd like to receive alerts for all activities, you must explicitly use [`filterAlertsByActivitiesAll`](#filterAlertsByActivitiesAll)
+
+-}
 streamAlerts : Host -> List (Include Alert) -> List (Filter Alert) -> ( StreamState Alert, String )
 streamAlerts host includes filters =
     ( StreamState
@@ -1670,7 +1678,11 @@ filterAlertsByFacilities facilityIds =
     filterByList "facility" facilityIdToString facilityIds
 
 
-{-| -}
+{-| By default, alerts are filtered to the activities `[Activity_Board, Activity_Exit, Activity_Ride]`.
+
+If you'd like to receive alerts for all activities, you must explicitly use [`filterAlertsByActivitiesAll`](#filterAlertsByActivitiesAll)
+
+-}
 filterAlertsByActivities : List InformedEntityActivity -> Filter Alert
 filterAlertsByActivities activities =
     let
@@ -1704,26 +1716,28 @@ filterAlertsByActivities activities =
     filterByList "activity" activityToString activities
 
 
-{-| -}
-filterAlertsByDatetime : AlertDatetimeFilter -> Filter Alert
-filterAlertsByDatetime datetime =
-    let
-        datetimeFilterToString : AlertDatetimeFilter -> String
-        datetimeFilterToString datetimeFilter =
-            case datetimeFilter of
-                Datetime posix ->
-                    Iso8601.fromTime posix
+{-| Receive alerts for all [activites](#Mbta.InformedEntityActivity)
 
-                Now ->
-                    "NOW"
-    in
-    filterByOne "datetime" datetimeFilterToString datetime
+Overrides the default activities filter of `[Activity_Board, Activity_Exit, Activity_Ride]`.
+
+-}
+filterAlertsByActivitiesAll : Filter Alert
+filterAlertsByActivitiesAll =
+    filterByOne "activity" identity "ALL"
 
 
-{-| -}
-type AlertDatetimeFilter
-    = Datetime Time.Posix
-    | Now
+{-| If you want to filter to alerts that are active right now, use [`filterAlertsByNow`](#filterAlertsByNow) instead.
+-}
+filterAlertsByDatetime : Time.Posix -> Filter Alert
+filterAlertsByDatetime posix =
+    filterByOne "datetime" Iso8601.fromTime posix
+
+
+{-| Special case of [`filterAlertsByDatetime`](#filterAlertsByDatetime)
+-}
+filterAlertsByDatetimeNow : Filter Alert
+filterAlertsByDatetimeNow =
+    filterByOne "datetime" identity "NOW"
 
 
 {-| -}
