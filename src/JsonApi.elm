@@ -441,7 +441,7 @@ relationshipOne relationshipName relatedIdDecoder =
         (ResourceDecoder
             (\untypedResource ->
                 case Dict.get relationshipName untypedResource.relationships of
-                    Just (Untyped.RelationshipOne relatedId) ->
+                    Just (Untyped.RelationshipOne (Just relatedId)) ->
                         relatedId
                             |> decodeId relatedIdDecoder
                             |> Result.mapError (RelationshipIdError relationshipName)
@@ -460,6 +460,10 @@ The result will be `Nothing` if
   - There's a relationship without a `data` field.
   - There's a relationship whose data is `null`.
 
+Fails to decode if
+
+  - There's a list of 0 or 1 elements. That represents a to-many relationship.
+
 -}
 relationshipMaybe : String -> IdDecoder relatedId -> ResourceDecoder (Maybe relatedId -> rest) -> ResourceDecoder rest
 relationshipMaybe relationshipName relatedIdDecoder =
@@ -467,20 +471,22 @@ relationshipMaybe relationshipName relatedIdDecoder =
         (ResourceDecoder
             (\untypedResource ->
                 case Dict.get relationshipName untypedResource.relationships of
-                    Just (Untyped.RelationshipOne relatedId) ->
-                        relatedId
-                            |> decodeId relatedIdDecoder
-                            |> Result.map Just
-                            |> Result.mapError (RelationshipIdError relationshipName)
+                    Just (Untyped.RelationshipOne maybeRelatedId) ->
+                        case maybeRelatedId of
+                            Nothing ->
+                                Ok Nothing
 
-                    Just Untyped.RelationshipMissing ->
-                        Ok Nothing
-
-                    Nothing ->
-                        Ok Nothing
+                            Just relatedId ->
+                                relatedId
+                                    |> decodeId relatedIdDecoder
+                                    |> Result.map Just
+                                    |> Result.mapError (RelationshipIdError relationshipName)
 
                     Just (Untyped.RelationshipMany _) ->
                         Err (RelationshipNumberError relationshipName "Expected one or zero relationship but got a list")
+
+                    Nothing ->
+                        Ok Nothing
             )
         )
 
@@ -490,11 +496,11 @@ relationshipMaybe relationshipName relatedIdDecoder =
 Defaults to `[]` if
 
   - There's no relationship with the given name.
+  - There's a relationship without a `data` field.
 
 Fails to decode if
 
-  - There's a relationship without a `data` field.
-  - There's a relationship whose data is `null`.
+  - There's a relationship whose data is `null`. That represents a missing to-one relationship.
 
 -}
 relationshipMany : String -> IdDecoder relatedId -> ResourceDecoder (List relatedId -> rest) -> ResourceDecoder rest
@@ -509,14 +515,11 @@ relationshipMany relationshipName relatedIdDecoder =
                             |> Result.Extra.combine
                             |> Result.mapError (RelationshipIdError relationshipName)
 
-                    Nothing ->
-                        Ok []
-
-                    Just Untyped.RelationshipMissing ->
-                        Err (RelationshipNumberError relationshipName "Expected a list of relationships but it was missing")
-
                     Just (Untyped.RelationshipOne _) ->
                         Err (RelationshipNumberError relationshipName "Expected a list of relationships but only got one")
+
+                    Nothing ->
+                        Ok []
             )
         )
 

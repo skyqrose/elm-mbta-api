@@ -69,13 +69,13 @@ type alias Relationships =
     Dict String Relationship
 
 
-{-| RelationshipMissing
+{-| `RelationshipOne Nothing`
 
     "relationshipName": {
         "data": null
     }
 
-RelationshipOne
+`RelationshipOne (Just resourceId)`
 
     "relationshipName": {
         "data": {
@@ -84,7 +84,13 @@ RelationshipOne
         }
     }
 
-RelationshipMany
+`RelationshipMany []`
+
+    "relationshipName": {
+        "data": []
+    }
+
+`RelationshipMany [...]`
 
     "relationshipName": {
         "data": [
@@ -96,13 +102,15 @@ RelationshipMany
         ]
     }
 
-TODO:
-where does relationshipName: {/_maybe other fields but not data_/} go?
+If a relationship does not have a `data` field,
+i.e. it has a `links` or `meta` field instead,
+it is not representable by this type.
+Instead, it should omitted from the [`Resource`](#Resource)'s `relationships` list.
+If `links` or `meta` are ever supported in the future, this may change.
 
 -}
 type Relationship
-    = RelationshipMissing
-    | RelationshipOne ResourceId
+    = RelationshipOne (Maybe ResourceId)
     | RelationshipMany (List ResourceId)
 
 
@@ -111,19 +119,45 @@ resourceDecoder =
     Decode.succeed Resource
         |> Pipeline.custom resourceIdDecoder
         |> Pipeline.optional "attributes" (Decode.dict Decode.value) Dict.empty
-        |> Pipeline.optional "relationships" (Decode.dict relationshipDecoder) Dict.empty
+        |> Pipeline.optional "relationships" relationshipsDecoder Dict.empty
 
 
-relationshipDecoder : Decode.Decoder Relationship
+relationshipsDecoder : Decode.Decoder Relationships
+relationshipsDecoder =
+    Decode.dict relationshipDecoder
+        |> Decode.map filterDict
+
+
+{-| Removes `Nothing` values
+-}
+filterDict : Dict comparable (Maybe a) -> Dict comparable a
+filterDict dict =
+    Dict.foldl
+        (\key maybeValue newDict ->
+            case maybeValue of
+                Nothing ->
+                    newDict
+
+                Just value ->
+                    Dict.insert key value newDict
+        )
+        Dict.empty
+        dict
+
+
+{-| Returns `Nothing` if the relationship does not have a `data` field.
+-}
+relationshipDecoder : Decode.Decoder (Maybe Relationship)
 relationshipDecoder =
     Decode.oneOf
         [ Decode.field "data" <|
-            Decode.oneOf
-                [ Decode.null RelationshipMissing
-                , Decode.map RelationshipOne resourceIdDecoder
-                , Decode.map RelationshipMany (Decode.list resourceIdDecoder)
-                ]
-        , Decode.succeed RelationshipMissing
+            Decode.map Just <|
+                Decode.oneOf
+                    [ Decode.null (RelationshipOne Nothing)
+                    , Decode.map (RelationshipOne << Just) resourceIdDecoder
+                    , Decode.map RelationshipMany (Decode.list resourceIdDecoder)
+                    ]
+        , Decode.succeed Nothing
         ]
 
 
