@@ -1104,13 +1104,13 @@ filterRoutesByStopIds stopIds =
 {-| -}
 getRoutePattern : (ApiResult RoutePattern -> msg) -> Host -> List (Include RoutePattern) -> RoutePatternId -> Cmd msg
 getRoutePattern toMsg host includes (RoutePatternId routePatternId) =
-    getOne toMsg host Mbta.Decode.routePattern "route-patterns" includes routePatternId
+    getOne toMsg host Mbta.Decode.routePattern "route_patterns" includes routePatternId
 
 
 {-| -}
 getRoutePatterns : (ApiResult (List RoutePattern) -> msg) -> Host -> List (Include RoutePattern) -> List (Filter RoutePattern) -> Cmd msg
 getRoutePatterns toMsg host includes filters =
-    getList toMsg host Mbta.Decode.routePattern "route-patterns" includes filters
+    getList toMsg host Mbta.Decode.routePattern "route_patterns" includes filters
 
 
 {-| -}
