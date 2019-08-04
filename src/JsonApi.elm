@@ -788,7 +788,21 @@ httpErrorToString : HttpError -> String
 httpErrorToString httpError =
     case httpError of
         HttpError httpError_ ->
-            Debug.toString httpError_
+            case httpError_ of
+                Http.BadUrl url ->
+                    "Http.BadUrl " ++ url
+
+                Http.Timeout ->
+                    "Http.Timeout"
+
+                Http.NetworkError ->
+                    "Http.NetworkError"
+
+                Http.BadStatus status ->
+                    "Http.BadStatus " ++ String.fromInt status
+
+                Http.BadBody body ->
+                    "Http.BadBody (could not parse JSON) " ++ body
 
         DecodeDocumentError decodeDocumentError ->
             decodeErrorToString documentErrorToString decodeDocumentError

@@ -817,7 +817,7 @@ streamReset : Decode.Value -> Result StreamError Mixed.Mixed
 streamReset dataJson =
     dataJson
         |> Decode.decodeValue (Decode.list Decode.value)
-        |> Result.mapError (\decodeError -> Debug.todo "decodeError to streamError")
+        |> Result.mapError (Stream_DecodeError << Debug.toString)
         |> Result.andThen
             (\resourceJsons ->
                 List.foldl
@@ -837,7 +837,7 @@ streamInsert : Decode.Value -> Mixed.Mixed -> Result StreamError Mixed.Mixed
 streamInsert resourceJson mixed =
     resourceJson
         |> JsonApi.decodeResourceValue Mixed.insert
-        |> Result.mapError (\resourceError -> Debug.todo "resourceError to streamError")
+        |> Result.mapError (Stream_DecodeError << Debug.toString)
         |> Result.map (\mixedInserter -> mixedInserter mixed)
 
 
@@ -845,7 +845,7 @@ streamRemove : Decode.Value -> Mixed.Mixed -> Result StreamError Mixed.Mixed
 streamRemove idJson mixed =
     idJson
         |> JsonApi.decodeIdValue Mixed.remove
-        |> Result.mapError (\idError -> Debug.todo "idError to streamError")
+        |> Result.mapError (Stream_DecodeError << Debug.toString)
         |> Result.map (\mixedRemover -> mixedRemover mixed)
 
 
