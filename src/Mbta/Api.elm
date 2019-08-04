@@ -1549,16 +1549,6 @@ filterFacilitiesByFacilityTypes facilityTypes =
 
 
 {-| -}
-filterLiveFacilitiesByIds : List FacilityId -> Filter LiveFacility
-filterLiveFacilitiesByIds facilityIds =
-    filterByList "id" facilityIdToString facilityIds
-
-
-
--- LiveFacility
-
-
-{-| -}
 getLiveFacility : (ApiResult LiveFacility -> msg) -> Host -> List (Include LiveFacility) -> FacilityId -> Cmd msg
 getLiveFacility toMsg host includes (FacilityId facilityId) =
     getOne toMsg host Mbta.Decode.liveFacility "live-facilities" includes facilityId
@@ -1574,6 +1564,12 @@ getLiveFacilities toMsg host includes filters =
 liveFacilityFacility : Relationship LiveFacility Facility
 liveFacilityFacility =
     Relationship "facility"
+
+
+{-| -}
+filterLiveFacilitiesByIds : List FacilityId -> Filter LiveFacility
+filterLiveFacilitiesByIds facilityIds =
+    filterByList "id" facilityIdToString facilityIds
 
 
 
