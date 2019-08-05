@@ -147,16 +147,13 @@ suite =
                 """
                 Mbta.Decode.routePattern
 
-            {-
-               disabled due to bug in api. https://app.asana.com/0/695227265423458/1121247532991446
-               , testOne
-                   "with includes"
-                   "https://api-v3.mbta.com/route_patterns/Boat-F1-0-0?include=route,representative_trip"
-                   """
-                   {"data":{"attributes":{"direction_id":0,"name":"Long Wharf - Hingham via Logan Airport & Hull","sort_order":30002000,"time_desc":null,"typicality":1},"id":"Boat-F1-0-0","links":{"self":"/route-patterns/Boat-F1-0-0"},"relationships":{"representative_trip":{"data":[{"id":"Boat-F1-1100-Long-Weekday","type":"trip"}]},"route":{"data":{"id":"Boat-F1","type":"route"}}},"type":"route_pattern"},"included":[{"attributes":{"color":"008EAA","description":"Ferry","direction_destinations":["Hingham or Hull","Long Wharf"],"direction_names":["Outbound","Inbound"],"fare_class":"Ferry","long_name":"Hingham/Hull Ferry","short_name":"","sort_order":30002,"text_color":"FFFFFF","type":4},"id":"Boat-F1","links":{"self":"/routes/Boat-F1"},"relationships":{"line":{"data":null},"route_patterns":{}},"type":"route"},{"attributes":{"bikes_allowed":1,"block_id":"B-08","direction_id":0,"headsign":"Hingham via Logan Airport & Hull","name":"","wheelchair_accessible":1},"id":"Boat-F1-1100-Long-Weekday","links":{"self":"/trips/Boat-F1-1100-Long-Weekday"},"relationships":{"route":{"data":{"id":"Boat-F1","type":"route"}},"route_pattern":{"data":{"id":"Boat-F1-0-0","type":"route_pattern"}},"service":{"data":{"id":"Boat-F1-Weekday","type":"service"}},"shape":{"data":{"id":"b0006","type":"shape"}}},"type":"trip"}],"jsonapi":{"version":"1.0"}}
-                   """
-                   Mbta.Decode.routePattern
-            -}
+            , testOne
+                "with includes"
+                "https://api-v3.mbta.com/route_patterns/Boat-F1-0-0?include=route,representative_trip"
+                """
+                {"data":{"attributes":{"direction_id":0,"name":"Long Wharf - Hingham via Logan Airport & Hull","sort_order":30002000,"time_desc":null,"typicality":1},"id":"Boat-F1-0-0","links":{"self":"/route_patterns/Boat-F1-0-0"},"relationships":{"representative_trip":{"data":{"id":"Boat-F1-1100-Long-FridaySummer","type":"trip"}},"route":{"data":{"id":"Boat-F1","type":"route"}}},"type":"route_pattern"},"included":[{"attributes":{"color":"008EAA","description":"Ferry","direction_destinations":["Hingham or Hull","Long Wharf"],"direction_names":["Outbound","Inbound"],"fare_class":"Ferry","long_name":"Hingham/Hull Ferry","short_name":"","sort_order":30002,"text_color":"FFFFFF","type":4},"id":"Boat-F1","links":{"self":"/routes/Boat-F1"},"relationships":{"line":{"data":null},"route_patterns":{}},"type":"route"},{"attributes":{"bikes_allowed":1,"block_id":"B-08","direction_id":0,"headsign":"Hingham via Logan Airport & Hull","name":"","wheelchair_accessible":1},"id":"Boat-F1-1100-Long-FridaySummer","links":{"self":"/trips/Boat-F1-1100-Long-FridaySummer"},"relationships":{"route":{"data":{"id":"Boat-F1","type":"route"}},"route_pattern":{"data":{"id":"Boat-F1-0-0","type":"route_pattern"}},"service":{"data":{"id":"Boat-F1-FrSmr","type":"service"}},"shape":{"data":{"id":"b0006","type":"shape"}}},"type":"trip"}],"jsonapi":{"version":"1.0"}}
+                """
+                Mbta.Decode.routePattern
             , testMany
                 "multiple"
                 "https://api-v3.mbta.com/route_patterns?filter[route]=225&filter[direction_id]=1"
