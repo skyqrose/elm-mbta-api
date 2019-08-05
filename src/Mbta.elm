@@ -272,8 +272,8 @@ type alias Schedule =
     , stopSequence : StopSequence
     , predictionId : Maybe PredictionId
     , timepoint : Bool
-    , departureTime : Time.Posix
-    , arrivalTime : Time.Posix
+    , departureTime : Maybe Time.Posix
+    , arrivalTime : Maybe Time.Posix
     , pickupType : PickupDropOffType
     , dropOffType : PickupDropOffType
     }
@@ -303,13 +303,13 @@ type alias Trip =
     , serviceId : ServiceId
     , routeId : RouteId
     , directionId : DirectionId
-    , routePatternId : RoutePatternId
+    , routePatternId : Maybe RoutePatternId
     , name : String
     , headsign : String
-    , shapeId : ShapeId
+    , shapeId : Maybe ShapeId
     , wheelchairAccessible : WheelchairAccessible
     , bikesAllowed : BikesAllowed
-    , blockId : BlockId
+    , blockId : Maybe BlockId
     }
 
 

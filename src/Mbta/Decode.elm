@@ -302,8 +302,8 @@ schedule =
         |> attribute "stop_sequence" stopSequence
         |> relationshipMaybe "prediction" predictionId
         |> attribute "timepoint" Decode.bool
-        |> attribute "departure_time" Iso8601.decoder
-        |> attribute "arrival_time" Iso8601.decoder
+        |> attributeMaybe "departure_time" Iso8601.decoder
+        |> attributeMaybe "arrival_time" Iso8601.decoder
         |> attribute "pickup_type" pickupDropOffType
         |> attribute "drop_off_type" pickupDropOffType
 
@@ -335,13 +335,13 @@ trip =
         |> relationshipOne "service" serviceId
         |> relationshipOne "route" routeId
         |> attribute "direction_id" directionId
-        |> relationshipOne "route_pattern" routePatternId
+        |> relationshipMaybe "route_pattern" routePatternId
         |> attribute "name" Decode.string
         |> attribute "headsign" Decode.string
-        |> relationshipOne "shape" shapeId
+        |> relationshipMaybe "shape" shapeId
         |> attribute "wheelchair_accessible" wheelchairAccessible
         |> attribute "bikes_allowed" bikesAllowed
-        |> attribute "block_id" blockId
+        |> attributeMaybe "block_id" blockId
 
 
 bikesAllowed : Decode.Decoder BikesAllowed

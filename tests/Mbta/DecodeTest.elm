@@ -226,6 +226,13 @@ suite =
                 {"data":[{"attributes":{"bikes_allowed":1,"block_id":"A504-97","direction_id":0,"headsign":"Waltham Central Square (Express)","name":"","wheelchair_accessible":1},"id":"40641370","links":{"self":"/trips/40641370"},"relationships":{"route":{"data":{"id":"170","type":"route"}},"route_pattern":{"data":{"id":"170-_-0","type":"route_pattern"}},"service":{"data":{"id":"BUS319-1-Wdy-02","type":"service"}},"shape":{"data":{"id":"1700028","type":"shape"}}},"type":"trip"},{"attributes":{"bikes_allowed":1,"block_id":"A170-57","direction_id":0,"headsign":"Waltham Central Square (Express)","name":"","wheelchair_accessible":1},"id":"40641403","links":{"self":"/trips/40641403"},"relationships":{"route":{"data":{"id":"170","type":"route"}},"route_pattern":{"data":{"id":"170-_-0","type":"route_pattern"}},"service":{"data":{"id":"BUS319-1-Wdy-02","type":"service"}},"shape":{"data":{"id":"1700028","type":"shape"}}},"type":"trip"},{"attributes":{"bikes_allowed":1,"block_id":"A170-58","direction_id":1,"headsign":"Dudley (Express)","name":"","wheelchair_accessible":1},"id":"40641695","links":{"self":"/trips/40641695"},"relationships":{"route":{"data":{"id":"170","type":"route"}},"route_pattern":{"data":{"id":"170-3-1","type":"route_pattern"}},"service":{"data":{"id":"BUS319-1-Wdy-02","type":"service"}},"shape":{"data":{"id":"1700034","type":"shape"}}},"type":"trip"},{"attributes":{"bikes_allowed":1,"block_id":"A170-59","direction_id":1,"headsign":"Dudley (Express)","name":"","wheelchair_accessible":1},"id":"40641696","links":{"self":"/trips/40641696"},"relationships":{"route":{"data":{"id":"170","type":"route"}},"route_pattern":{"data":{"id":"170-3-1","type":"route_pattern"}},"service":{"data":{"id":"BUS319-1-Wdy-02","type":"service"}},"shape":{"data":{"id":"1700034","type":"shape"}}},"type":"trip"}],"jsonapi":{"version":"1.0"}}
                 """
                 Mbta.Decode.trip
+            , testOne
+                "red line shuttle"
+                "https://api-v3.mbta.com/trips/40525584-L1"
+                """
+                {"data":{"attributes":{"bikes_allowed":0,"block_id":"S933_-14-1-L1","direction_id":1,"headsign":"North Quincy","name":"","wheelchair_accessible":1},"id":"40525584-L1","links":{"self":"/trips/40525584-L1"},"relationships":{"route":{"data":{"id":"Shuttle005","type":"route"}},"route_pattern":{"data":null},"service":{"data":{"id":"RTL319-9-Su-01-L","type":"service"}},"shape":{"data":{"id":"QuincyCenterToNorthQuincy-S","type":"shape"}}},"type":"trip"},"jsonapi":{"version":"1.0"}}
+                """
+                Mbta.Decode.trip
             ]
         , describe "service"
             [ testOne
