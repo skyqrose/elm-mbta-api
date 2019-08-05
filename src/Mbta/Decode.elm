@@ -296,7 +296,7 @@ schedule =
     JsonApi.succeed Schedule
         |> id scheduleId
         |> relationshipOne "route" routeId
-        --|> attribute "direction_id" directionId
+        |> attribute "direction_id" directionId
         |> relationshipOne "trip" tripId
         |> relationshipOne "stop" stopId
         |> attribute "stop_sequence" stopSequence
