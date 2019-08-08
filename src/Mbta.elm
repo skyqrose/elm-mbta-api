@@ -432,8 +432,6 @@ If you don't want to handle the different varieties separately,
 or if you're not sure which kind of stop you have,
 some functions are provided below for accessing common fields.
 
--- TODO getIncludedParentStation
-
 -}
 type Stop
     = Stop_0_Stop Stop_Stop

@@ -2,7 +2,7 @@ module Mbta.Api exposing
     ( Host(..)
     , Data, ApiError(..), ApiResult, getPrimaryData
     , Include, Relationship, include, andIts
-    , getIncludedPrediction, getIncludedVehicle, getIncludedRoute, getIncludedRoutePattern, getIncludedLine, getIncludedSchedule, getIncludedTrip, getIncludedService, getIncludedShape, getIncludedStop, getIncludedFacility, getIncludedLiveFacility, getIncludedAlert
+    , getIncludedPrediction, getIncludedVehicle, getIncludedRoute, getIncludedRoutePattern, getIncludedLine, getIncludedSchedule, getIncludedTrip, getIncludedService, getIncludedShape, getIncludedStop, getIncludedParentStation, getIncludedFacility, getIncludedLiveFacility, getIncludedAlert
     , Filter
     , StreamState, StreamResult(..), StreamError(..), streamResult, updateStream
     , getPredictions, streamPredictions
@@ -75,7 +75,7 @@ Use it like
 Sideloaded resources can be looked up in the result with the `getIncluded*` functions below.
 
 @docs Include, Relationship, include, andIts
-@docs getIncludedPrediction, getIncludedVehicle, getIncludedRoute, getIncludedRoutePattern, getIncludedLine, getIncludedSchedule, getIncludedTrip, getIncludedService, getIncludedShape, getIncludedStop, getIncludedFacility, getIncludedLiveFacility, getIncludedAlert
+@docs getIncludedPrediction, getIncludedVehicle, getIncludedRoute, getIncludedRoutePattern, getIncludedLine, getIncludedSchedule, getIncludedTrip, getIncludedService, getIncludedShape, getIncludedStop, getIncludedParentStation, getIncludedFacility, getIncludedLiveFacility, getIncludedAlert
 
 
 # Filtering
@@ -619,6 +619,22 @@ getIncludedShape shapeId (Data data) =
 getIncludedStop : StopId -> Data primary -> Maybe Stop
 getIncludedStop stopId (Data data) =
     Dict.get stopId data.included.stops
+
+
+{-| If you're looking up a stop's parent station,
+this will unwrap the `Stop` into a `Stop_Station` for you.
+
+If the stop exists, but is not a `Stop_Station`, returns `Nothing`.
+
+-}
+getIncludedParentStation : StopId -> Data primary -> Maybe Stop_Station
+getIncludedParentStation stopId (Data data) =
+    case Dict.get stopId data.included.stops of
+        Just (Stop_1_Station stop_station) ->
+            Just stop_station
+
+        _ ->
+            Nothing
 
 
 {-| -}
