@@ -146,7 +146,6 @@ suite =
                 {"data":{"attributes":{"direction_id":0,"name":"Long Wharf - Hingham via Logan Airport & Hull","sort_order":30002000,"time_desc":null,"typicality":1},"id":"Boat-F1-0-0","links":{"self":"/route_patterns/Boat-F1-0-0"},"relationships":{"representative_trip":{"data":{"id":"Boat-F1-1100-Long-FridaySummer","type":"trip"}},"route":{"data":{"id":"Boat-F1","type":"route"}}},"type":"route_pattern"},"jsonapi":{"version":"1.0"}}
                 """
                 Mbta.Decode.routePattern
-
             , testOne
                 "with includes"
                 "https://api-v3.mbta.com/route_patterns/Boat-F1-0-0?include=route,representative_trip"
