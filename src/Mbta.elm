@@ -9,7 +9,7 @@ module Mbta exposing
     , TripId(..), Trip, BikesAllowed(..), BlockId(..)
     , ServiceId(..), Service, ServiceDate, serviceDateFromIso8601, serviceDateToIso8601, ServiceType(..), ServiceTypicality(..), ChangedDate
     , ShapeId(..), Shape
-    , StopId(..), Stop(..), Stop_Stop, Stop_Station, Stop_Entrance, Stop_Node, stopId, stopName, stopDescription, stopWheelchairBoarding, stopLatLng, stopParentStation, StopType(..), stopType
+    , StopId(..), Stop(..), Stop_Stop, Stop_Station, Stop_Entrance, Stop_Node, stopId, stopName, stopDescription, stopWheelchairAccessible, stopLatLng, stopParentStation, StopType(..), stopType
     , FacilityId(..), Facility, LiveFacility, FacilityType(..), FacilityProperties, FacilityPropertyValue(..)
     , AlertId(..), Alert, AlertLifecycle(..), ActivePeriod, InformedEntity, InformedEntityActivity(..)
     )
@@ -54,7 +54,7 @@ though they were changed in some places to make them clearer.
 
 # Stop Data
 
-@docs StopId, Stop, Stop_Stop, Stop_Station, Stop_Entrance, Stop_Node, stopId, stopName, stopDescription, stopWheelchairBoarding, stopLatLng, stopParentStation, StopType, stopType
+@docs StopId, Stop, Stop_Stop, Stop_Station, Stop_Entrance, Stop_Node, stopId, stopName, stopDescription, stopWheelchairAccessible, stopLatLng, stopParentStation, StopType, stopType
 @docs FacilityId, Facility, LiveFacility, FacilityType, FacilityProperties, FacilityPropertyValue
 
 
@@ -432,7 +432,6 @@ If you don't want to handle the different varieties separately,
 or if you're not sure which kind of stop you have,
 some functions are provided below for accessing common fields.
 
--- TODO rename wheelchairBoarding to wheelchairAccessible (with note that the name is different in the API)
 -- TODO childStops : Maybe (List StopId)?
 -- TODO getIncludedParentStation
 
@@ -453,7 +452,7 @@ type alias Stop_Stop =
     { id : StopId
     , name : String
     , description : Maybe String
-    , wheelchairBoarding : WheelchairAccessible
+    , wheelchairAccessible : WheelchairAccessible
     , latLng : LatLng
     , address : Maybe String
     , parentStation : Maybe StopId
@@ -468,7 +467,7 @@ type alias Stop_Station =
     { id : StopId
     , name : String
     , description : Maybe String
-    , wheelchairBoarding : WheelchairAccessible
+    , wheelchairAccessible : WheelchairAccessible
     , latLng : LatLng
     , address : Maybe String
     }
@@ -480,7 +479,7 @@ type alias Stop_Entrance =
     { id : StopId
     , name : String
     , description : Maybe String
-    , wheelchairBoarding : WheelchairAccessible
+    , wheelchairAccessible : WheelchairAccessible
     , latLng : LatLng
     , parentStation : StopId
     }
@@ -492,7 +491,7 @@ type alias Stop_Node =
     { id : StopId
     , name : String
     , description : Maybe String
-    , wheelchairBoarding : WheelchairAccessible
+    , wheelchairAccessible : WheelchairAccessible
     , parentStation : StopId
     }
 
@@ -548,21 +547,21 @@ stopDescription stop =
             stop_node.description
 
 
-{-| -}
-stopWheelchairBoarding : Stop -> WheelchairAccessible
-stopWheelchairBoarding stop =
+{-| In the API, this field is called `wheelchair_boarding`.-}
+stopWheelchairAccessible : Stop -> WheelchairAccessible
+stopWheelchairAccessible stop =
     case stop of
         Stop_0_Stop stop_stop ->
-            stop_stop.wheelchairBoarding
+            stop_stop.wheelchairAccessible
 
         Stop_1_Station stop_station ->
-            stop_station.wheelchairBoarding
+            stop_station.wheelchairAccessible
 
         Stop_2_Entrance stop_entrance ->
-            stop_entrance.wheelchairBoarding
+            stop_entrance.wheelchairAccessible
 
         Stop_3_Node stop_node ->
-            stop_node.wheelchairBoarding
+            stop_node.wheelchairAccessible
 
 
 {-| [`Stop_Node`](#Stop_Node) does not have a `latLng` field.
