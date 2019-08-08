@@ -639,11 +639,15 @@ type FacilityId
     = FacilityId String
 
 
-{-| -}
+{-| Most facilities have both a `long_name` and a `short_name`,
+though it's not technically required.
+If one is missing, it will default to the other name.
+-}
 type alias Facility =
     { id : FacilityId
-    , stopId : StopId
-    , name : String
+    , stopId : Maybe StopId
+    , longName : String
+    , shortName : String
     , facilityType : FacilityType
     , latLng : Maybe LatLng
     , properties : FacilityProperties
