@@ -503,6 +503,7 @@ stopStation =
         |> attribute "wheelchair_boarding" wheelchairAccessible
         |> custom latLng
         |> attributeMaybe "address" Decode.string
+        |> relationshipMany "child_stops" stopId
 
 
 stopEntrance : JsonApi.ResourceDecoder Stop_Entrance

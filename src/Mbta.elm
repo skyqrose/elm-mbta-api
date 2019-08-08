@@ -432,7 +432,6 @@ If you don't want to handle the different varieties separately,
 or if you're not sure which kind of stop you have,
 some functions are provided below for accessing common fields.
 
--- TODO childStops : Maybe (List StopId)?
 -- TODO getIncludedParentStation
 
 -}
@@ -462,6 +461,9 @@ type alias Stop_Stop =
 
 
 {-| A parent station that groups together the other kinds of stops into one building.
+
+The `.childStops` will default to `[]` unless explicitly included with [`Mbta.Api.stopChildStops`](#Mbta.Api.stopChildStops)
+
 -}
 type alias Stop_Station =
     { id : StopId
@@ -470,6 +472,7 @@ type alias Stop_Station =
     , wheelchairAccessible : WheelchairAccessible
     , latLng : LatLng
     , address : Maybe String
+    , childStops : List StopId
     }
 
 
