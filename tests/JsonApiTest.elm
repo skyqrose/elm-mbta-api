@@ -95,7 +95,7 @@ includedDecoder =
           )
         ]
             |> Dict.fromList
-            |> JsonApi.oneOf
+            |> JsonApi.byType
     }
 
 

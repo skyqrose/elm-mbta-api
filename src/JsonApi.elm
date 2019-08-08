@@ -3,9 +3,9 @@ module JsonApi exposing
     , get, expectJsonApi, decodeDocumentString, decodeDocumentValue
     , DocumentDecoder, documentDecoderOne, documentDecoderMany, ResourceDecoder, IdDecoder, idDecoder
     , succeed, id, attribute, attributeMaybe, relationshipOne, relationshipMaybe, relationshipMany, custom
-    , map, andThen, oneOf, fail
+    , map, andThen, oneOf, fail, byType
     , decodeResourceString, decodeResourceValue
-    , mapId, oneOfId
+    , mapId, idDecoderByType
     , decodeIdString, decodeIdValue
     , IncludedDecoder, ignoreIncluded
     , HttpError(..), httpErrorToString, DecodeError(..), decodeErrorToString, DocumentError(..), documentErrorToString, ResourceError(..), resourceErrorToString, IdError, idErrorToString
@@ -76,7 +76,7 @@ You can make `ResourceDecoder`s using a pipeline, modeled off of [`NoRedInk/elm-
 
 # Fancy Resource Decoding
 
-@docs map, andThen, oneOf, fail
+@docs map, andThen, oneOf, fail, byType
 
 Typically, you will get a whole JSON:API document, and decode the whole thing at once.
 But if you get JSON for a resource outside of its document,
@@ -87,7 +87,7 @@ you can decode it with these.
 
 # Fancy Id Decoding
 
-@docs mapId, oneOfId
+@docs mapId, idDecoderByType
 
 Typically, you will get a whole JSON:API document, and decode the whole thing at once.
 But if you get JSON for an id outside of its document,
@@ -570,6 +570,43 @@ andThen secondDecoder firstDecoder =
         )
 
 
+{-| Choose the first decoder that succeeds
+-}
+oneOf : List (ResourceDecoder a) -> ResourceDecoder a
+oneOf resourceDecoders =
+    ResourceDecoder
+        (\untypedResource ->
+            resourceDecoders
+                |> List.foldl
+                    (\resourceDecoder previousResult ->
+                        case previousResult of
+                            Err errors ->
+                                -- Try the next decoder
+                                case decodeResource resourceDecoder untypedResource of
+                                    Err newError ->
+                                        Err (newError :: errors)
+
+                                    Ok resource ->
+                                        Ok resource
+
+                            Ok resource ->
+                                Ok resource
+                    )
+                    (Err [])
+                |> Result.mapError (List.reverse >> OneOf)
+        )
+
+
+{-| A [`ResourceDecoder`](#ResourceDecoder) that always fails with the given message
+-}
+fail : String -> ResourceDecoder a
+fail message =
+    ResourceDecoder
+        (\untypedResource ->
+            Err (Failure message)
+        )
+
+
 {-| If you have a resource object that may be one of multiple types,
 this will choose the appropriate ResourceDecoder based on the JSON:API type of the object
 (the same resource type as used by [`idDecoder`](#IdDecoder)),
@@ -579,15 +616,15 @@ to convert your decoders.
 
     authorIdFromAnyResource : ResourceDecoder AuthorId
     authorIdFromAnyResource =
-        oneOf <|
+        byType <|
             Dict.fromList
                 [ ( "book", bookDecoder |> map (\book -> book.author) )
                 , ( "author", authorDecoder |> map (\author -> id) )
                 ]
 
 -}
-oneOf : Dict String (ResourceDecoder a) -> ResourceDecoder a
-oneOf resourceDecoders =
+byType : Dict String (ResourceDecoder a) -> ResourceDecoder a
+byType resourceDecoders =
     ResourceDecoder
         (\untypedResource ->
             case Dict.get untypedResource.id.resourceType resourceDecoders of
@@ -602,16 +639,6 @@ oneOf resourceDecoders =
                             , actualIdValue = untypedResource.id.id
                             }
                         )
-        )
-
-
-{-| A [`ResourceDecoder`](#ResourceDecoder) that always fails with the given message
--}
-fail : String -> ResourceDecoder a
-fail message =
-    ResourceDecoder
-        (\untypedResource ->
-            Err (Failure message)
         )
 
 
@@ -651,7 +678,7 @@ to convert your decoders.
 
     authorIdFromAnyResource : ResourceDecoder AuthorId
     authorIdFromAnyResource =
-        oneOf <|
+        idDecoderByType <|
             Dict.fromList
                 [ ( "book", bookDecoder |> map (\book -> book.author) )
                 , ( "author", authorDecoder |> map (\author -> id) )
@@ -661,8 +688,8 @@ to convert your decoders.
 -- TODO maybe by passing in the constructor instead of an IdDecoder?
 
 -}
-oneOfId : Dict String (IdDecoder a) -> IdDecoder a
-oneOfId idDecoders =
+idDecoderByType : Dict String (IdDecoder a) -> IdDecoder a
+idDecoderByType idDecoders =
     IdDecoder
         (\untypedId ->
             case Dict.get untypedId.resourceType idDecoders of
@@ -699,7 +726,7 @@ Elm cannot handle lists with multiple types, so you must define your own collect
 and provide instructions for how to decode a resource and add it to the collection.
 
 In JSON:API, the included field may contain resources of multiple different types mixed together,
-so you may wish to make your accumulator with [`oneOf`](#oneOf) to sort them out.
+so you may wish to make your accumulator with [`byType`](#byType) to sort them out.
 
 `included` is the resulting application-specific collection of resources.
 `accumulator` decodes each resource and says how to add it to the collection.
@@ -712,7 +739,7 @@ and use the resulting function to add the new resource to the collection.
         , authors = []
         }
     , accumulator =
-        oneOf <|
+        byType <|
             Dict.fromList
                 [ ( "book"
                   , bookResourceDecoder
@@ -903,6 +930,7 @@ type ResourceError
     | RelationshipNumberError String String
     | RelationshipIdError String IdError
     | Failure String
+    | OneOf (List ResourceError)
 
 
 {-| -}
@@ -942,10 +970,21 @@ resourceErrorToString error =
         Failure message ->
             message
 
+        OneOf errors ->
+            String.concat
+                [ "oneOf tried "
+                , String.fromInt (List.length errors)
+                , " decoders, but they all failed: ["
+                , errors
+                    |> List.map resourceErrorToString
+                    |> String.join "; "
+                , "]"
+                ]
+
 
 {-| The [`IdDecoder`](#IdDecoder) didn't know how to decode the type it found.
 
-There could be more than one `expectedType` if it was made with [`oneOf`](#oneOf) or [`oneOfId`](#oneOfId)
+There could be more than one `expectedType` if it was made with [`byType`](#byType) or [`idDecoderByType`](#idDecoderByType)
 
 -}
 type alias IdError =
@@ -962,7 +1001,7 @@ idErrorToString idError =
         expectedTypeMessage =
             case idError.expectedType of
                 [] ->
-                    "but the IdDecoder didn't know how to handle any types. Did you pass an empty Dict to oneOfId?"
+                    "but the IdDecoder didn't know how to handle any types. Did you pass an empty Dict to byType?"
 
                 [ expectedType ] ->
                     "as type " ++ expectedType

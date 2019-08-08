@@ -184,7 +184,7 @@ insert =
       )
     ]
         |> Dict.fromList
-        |> JsonApi.oneOf
+        |> JsonApi.byType
 
 
 remove : JsonApi.IdDecoder (Mixed -> Mixed)
@@ -321,4 +321,4 @@ remove =
       )
     ]
         |> Dict.fromList
-        |> JsonApi.oneOfId
+        |> JsonApi.idDecoderByType
