@@ -550,7 +550,8 @@ stopDescription stop =
             stop_node.description
 
 
-{-| In the API, this field is called `wheelchair_boarding`.-}
+{-| In the API, this field is called `wheelchair_boarding`.
+-}
 stopWheelchairAccessible : Stop -> WheelchairAccessible
 stopWheelchairAccessible stop =
     case stop of
