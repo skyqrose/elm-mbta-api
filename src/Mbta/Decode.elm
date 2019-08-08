@@ -461,26 +461,78 @@ stopId =
 
 stop : JsonApi.ResourceDecoder Stop
 stop =
-    JsonApi.succeed Stop
+    JsonApi.succeed identity
+        |> attribute "location_type" stopType
+        |> JsonApi.andThen
+            (\stopType_ ->
+                case stopType_ of
+                    StopType_0_Stop ->
+                        JsonApi.map Stop_0_Stop stopStop
+
+                    StopType_1_Station ->
+                        JsonApi.map Stop_1_Station stopStation
+
+                    StopType_2_Entrance ->
+                        JsonApi.map Stop_2_Entrance stopEntrance
+
+                    StopType_3_Node ->
+                        JsonApi.map Stop_3_Node stopNode
+            )
+
+
+stopStop : JsonApi.ResourceDecoder Stop_Stop
+stopStop =
+    JsonApi.succeed Stop_Stop
         |> id stopId
         |> attribute "name" Decode.string
         |> attributeMaybe "description" Decode.string
+        |> attribute "wheelchair_boarding" wheelchairAccessible
+        |> custom latLng
+        |> attributeMaybe "address" Decode.string
         |> relationshipMaybe "parent_station" stopId
         |> attributeMaybe "platform_code" Decode.string
         |> attributeMaybe "platform_name" Decode.string
-        |> attribute "location_type" locationType
-        |> custom maybeLatLng
-        |> attributeMaybe "address" Decode.string
+
+
+stopStation : JsonApi.ResourceDecoder Stop_Station
+stopStation =
+    JsonApi.succeed Stop_Station
+        |> id stopId
+        |> attribute "name" Decode.string
+        |> attributeMaybe "description" Decode.string
         |> attribute "wheelchair_boarding" wheelchairAccessible
+        |> custom latLng
+        |> attributeMaybe "address" Decode.string
 
 
-locationType : Decode.Decoder LocationType
-locationType =
+stopEntrance : JsonApi.ResourceDecoder Stop_Entrance
+stopEntrance =
+    JsonApi.succeed Stop_Entrance
+        |> id stopId
+        |> attribute "name" Decode.string
+        |> attributeMaybe "description" Decode.string
+        |> attribute "wheelchair_boarding" wheelchairAccessible
+        |> custom latLng
+        |> relationshipOne "parent_station" stopId
+
+
+stopNode : JsonApi.ResourceDecoder Stop_Node
+stopNode =
+    JsonApi.succeed Stop_Node
+        |> id stopId
+        |> attribute "name" Decode.string
+        |> attributeMaybe "description" Decode.string
+        |> attribute "wheelchair_boarding" wheelchairAccessible
+        |> relationshipOne "parent_station" stopId
+
+
+stopType : Decode.Decoder StopType
+stopType =
     DecodeHelpers.enum Decode.int
-        [ ( 0, LocationType_0_Stop )
-        , ( 1, LocationType_1_Station )
-        , ( 2, LocationType_2_Entrance )
-        , ( 3, LocationType_3_Node )
+        [ ( 0, StopType_0_Stop )
+        , ( 1, StopType_1_Station )
+        , ( 2, StopType_2_Entrance )
+        , ( 3, StopType_3_Node )
         ]
 
 

@@ -9,7 +9,7 @@ module Mbta exposing
     , TripId(..), Trip, BikesAllowed(..), BlockId(..)
     , ServiceId(..), Service, ServiceDate, serviceDateFromIso8601, serviceDateToIso8601, ServiceType(..), ServiceTypicality(..), ChangedDate
     , ShapeId(..), Shape
-    , StopId(..), Stop, LocationType(..)
+    , StopId(..), Stop(..), Stop_Stop, Stop_Station, Stop_Entrance, Stop_Node, stopId, stopName, stopDescription, stopWheelchairBoarding, stopLatLng, stopParentStation, StopType(..), stopType
     , FacilityId(..), Facility, LiveFacility, FacilityType(..), FacilityProperties, FacilityPropertyValue(..)
     , AlertId(..), Alert, AlertLifecycle(..), ActivePeriod, InformedEntity, InformedEntityActivity(..)
     )
@@ -54,7 +54,7 @@ though they were changed in some places to make them clearer.
 
 # Stop Data
 
-@docs StopId, Stop, LocationType
+@docs StopId, Stop, Stop_Stop, Stop_Station, Stop_Entrance, Stop_Node, stopId, stopName, stopDescription, stopWheelchairBoarding, stopLatLng, stopParentStation, StopType, stopType
 @docs FacilityId, Facility, LiveFacility, FacilityType, FacilityProperties, FacilityPropertyValue
 
 
@@ -418,30 +418,219 @@ type StopId
     = StopId String
 
 
-{-| Nodes will not have a latLng. Other location types will.
+{-| The API has 4 similar but slightly different concepts that all fall under the name "stop".
+
+To get type safety in Elm, you have to know exactly which type you're working with,
+but you should probably know that anyway,
+so this library separates them into 4 different types.
+
+The API doesn't separate them, though, hence the need for this custom type.
+
+The numbers in the variant names correspond to the [`location_type`](StopType) that the API uses to tag the variants.
+
+If you don't want to handle the different varieties separately,
+or if you're not sure which kind of stop you have,
+some functions are provided below for accessing common fields.
+
+-- TODO rename wheelchairBoarding to wheelchairAccessible (with note that the name is different in the API)
+-- TODO childStops : Maybe (List StopId)?
+-- TODO getIncludedParentStation
+
 -}
-type alias Stop =
-    -- TODO format that enforces constraints. E.g. stations can't have a parent_station.
-    -- TODO childStops : Maybe (List StopId)?
+type Stop
+    = Stop_0_Stop Stop_Stop
+    | Stop_1_Station Stop_Station
+    | Stop_2_Entrance Stop_Entrance
+    | Stop_3_Node Stop_Node
+
+
+{-| A place where a vehicle will stop.
+
+Some stops, like subway platforms, belong to a larger [`Stop_Station`](#Stop_Station) indicated by the `parent_station`.
+
+-}
+type alias Stop_Stop =
     { id : StopId
     , name : String
     , description : Maybe String
+    , wheelchairBoarding : WheelchairAccessible
+    , latLng : LatLng
+    , address : Maybe String
     , parentStation : Maybe StopId
     , platformCode : Maybe String
     , platformName : Maybe String
-    , locationType : LocationType
-    , latLng : Maybe LatLng
-    , address : Maybe String
+    }
+
+
+{-| A parent station that groups together the other kinds of stops into one building.
+-}
+type alias Stop_Station =
+    { id : StopId
+    , name : String
+    , description : Maybe String
     , wheelchairBoarding : WheelchairAccessible
+    , latLng : LatLng
+    , address : Maybe String
+    }
+
+
+{-| An entrance to a [`Stop_Station`](#Stop_Station)
+-}
+type alias Stop_Entrance =
+    { id : StopId
+    , name : String
+    , description : Maybe String
+    , wheelchairBoarding : WheelchairAccessible
+    , latLng : LatLng
+    , parentStation : StopId
+    }
+
+
+{-| A generic point within a [`Stop_Station`](#Stop_Station) for wayfinding within the station.
+-}
+type alias Stop_Node =
+    { id : StopId
+    , name : String
+    , description : Maybe String
+    , wheelchairBoarding : WheelchairAccessible
+    , parentStation : StopId
     }
 
 
 {-| -}
-type LocationType
-    = LocationType_0_Stop
-    | LocationType_1_Station
-    | LocationType_2_Entrance
-    | LocationType_3_Node
+stopId : Stop -> StopId
+stopId stop =
+    case stop of
+        Stop_0_Stop stop_stop ->
+            stop_stop.id
+
+        Stop_1_Station stop_station ->
+            stop_station.id
+
+        Stop_2_Entrance stop_entrance ->
+            stop_entrance.id
+
+        Stop_3_Node stop_node ->
+            stop_node.id
+
+
+{-| -}
+stopName : Stop -> String
+stopName stop =
+    case stop of
+        Stop_0_Stop stop_stop ->
+            stop_stop.name
+
+        Stop_1_Station stop_station ->
+            stop_station.name
+
+        Stop_2_Entrance stop_entrance ->
+            stop_entrance.name
+
+        Stop_3_Node stop_node ->
+            stop_node.name
+
+
+{-| -}
+stopDescription : Stop -> Maybe String
+stopDescription stop =
+    case stop of
+        Stop_0_Stop stop_stop ->
+            stop_stop.description
+
+        Stop_1_Station stop_station ->
+            stop_station.description
+
+        Stop_2_Entrance stop_entrance ->
+            stop_entrance.description
+
+        Stop_3_Node stop_node ->
+            stop_node.description
+
+
+{-| -}
+stopWheelchairBoarding : Stop -> WheelchairAccessible
+stopWheelchairBoarding stop =
+    case stop of
+        Stop_0_Stop stop_stop ->
+            stop_stop.wheelchairBoarding
+
+        Stop_1_Station stop_station ->
+            stop_station.wheelchairBoarding
+
+        Stop_2_Entrance stop_entrance ->
+            stop_entrance.wheelchairBoarding
+
+        Stop_3_Node stop_node ->
+            stop_node.wheelchairBoarding
+
+
+{-| [`Stop_Node`](#Stop_Node) does not have a `latLng` field.
+If you want to get a `LatLng` instead of a `Maybe LatLng`,
+then work specifically with [`Stop_Stop`](#Stop_Stop), [`Stop_Station`](#Stop_Station), and [`Stop_Entrace`](#Stop_Entrace) types.
+-}
+stopLatLng : Stop -> Maybe LatLng
+stopLatLng stop =
+    case stop of
+        Stop_0_Stop stop_stop ->
+            Just stop_stop.latLng
+
+        Stop_1_Station stop_station ->
+            Just stop_station.latLng
+
+        Stop_2_Entrance stop_entrance ->
+            Just stop_entrance.latLng
+
+        Stop_3_Node stop_node ->
+            Nothing
+
+
+{-| -}
+stopParentStation : Stop -> Maybe StopId
+stopParentStation stop =
+    case stop of
+        Stop_0_Stop stop_stop ->
+            stop_stop.parentStation
+
+        Stop_1_Station stop_station ->
+            Nothing
+
+        Stop_2_Entrance stop_entrance ->
+            Just stop_entrance.parentStation
+
+        Stop_3_Node stop_node ->
+            Just stop_node.parentStation
+
+
+{-| In the API this is called `location_type`, and is used to tag the different variants of stops
+
+Since Elm has custom types, that's used to tag the fields instead of having a `.stopType` field,
+but `StopType` is still used to filter api requests.
+
+-}
+type StopType
+    = StopType_0_Stop
+    | StopType_1_Station
+    | StopType_2_Entrance
+    | StopType_3_Node
+
+
+{-| Get the [`StopType`](#StopType) that the API used to tag the stop.
+-}
+stopType : Stop -> StopType
+stopType stop =
+    case stop of
+        Stop_0_Stop stop_stop ->
+            StopType_0_Stop
+
+        Stop_1_Station stop_station ->
+            StopType_1_Station
+
+        Stop_2_Entrance stop_entrance ->
+            StopType_2_Entrance
+
+        Stop_3_Node stop_node ->
+            StopType_3_Node
 
 
 {-| -}

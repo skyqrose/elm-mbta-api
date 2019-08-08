@@ -148,7 +148,7 @@ insert =
                 (\stop ->
                     \included ->
                         { included
-                            | stops = AssocList.insert stop.id stop included.stops
+                            | stops = AssocList.insert (stopId stop) stop included.stops
                         }
                 )
       )

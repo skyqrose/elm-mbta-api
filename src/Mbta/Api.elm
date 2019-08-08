@@ -33,7 +33,7 @@ module Mbta.Api exposing
     , filterShapesByRouteIds, filterShapesByDirectionId
     , getStop, getStops
     , stopParentStation, stopChildStops, stopRecommendedTransfers, stopFacilities
-    , filterStopsByIds, filterStopsByLocationTypes, filterStopsByRouteTypes, filterStopsByRouteIds, filterStopsByDirectionId, filterStopsByLatLng, filterStopsByLatLngWithRadius
+    , filterStopsByIds, filterStopsByStopTypes, filterStopsByRouteTypes, filterStopsByRouteIds, filterStopsByDirectionId, filterStopsByLatLng, filterStopsByLatLngWithRadius
     , getFacility, getFacilities
     , facilityStop
     , filterFacilitiesByStopIds, filterFacilitiesByFacilityTypes
@@ -256,7 +256,7 @@ Use it like
 
 ### Filters
 
-@docs filterStopsByIds, filterStopsByLocationTypes, filterStopsByRouteTypes, filterStopsByRouteIds, filterStopsByDirectionId, filterStopsByLatLng, filterStopsByLatLngWithRadius
+@docs filterStopsByIds, filterStopsByStopTypes, filterStopsByRouteTypes, filterStopsByRouteIds, filterStopsByDirectionId, filterStopsByLatLng, filterStopsByLatLngWithRadius
 
 
 ## [Facility](#Mbta.Facility)
@@ -1490,25 +1490,25 @@ filterStopsByIds stopIds =
 
 
 {-| -}
-filterStopsByLocationTypes : List LocationType -> Filter Stop
-filterStopsByLocationTypes locationTypes =
+filterStopsByStopTypes : List StopType -> Filter Stop
+filterStopsByStopTypes stopTypes =
     let
-        locationTypeToString : LocationType -> String
-        locationTypeToString locationType =
-            case locationType of
-                LocationType_0_Stop ->
+        stopTypeToString : StopType -> String
+        stopTypeToString stopType =
+            case stopType of
+                StopType_0_Stop ->
                     "0"
 
-                LocationType_1_Station ->
+                StopType_1_Station ->
                     "1"
 
-                LocationType_2_Entrance ->
+                StopType_2_Entrance ->
                     "2"
 
-                LocationType_3_Node ->
+                StopType_3_Node ->
                     "3"
     in
-    filterByList "location_type" locationTypeToString locationTypes
+    filterByList "location_type" stopTypeToString stopTypes
 
 
 {-| -}
