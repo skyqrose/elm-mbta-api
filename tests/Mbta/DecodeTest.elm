@@ -10,6 +10,10 @@ import Mbta.Mixed as Mixed
 import Test exposing (..)
 
 
+
+-- TODO test an added trip. (Is service missing?)
+
+
 testOne : String -> String -> String -> JsonApi.ResourceDecoder a -> Test
 testOne description url json resourceDecoder =
     test description <|
