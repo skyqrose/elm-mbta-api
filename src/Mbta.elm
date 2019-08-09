@@ -696,13 +696,12 @@ type AlertId
 
 The `banner` field is published by the API, but always `null`, so it's not included here.
 
+The API publishes some relationships (`routes`, `trips`, `stops`, and `facilities`),
+but only if that relationship was [included](#Mbta.Api.alertRoutes),
+and those relationships are redundant with the ids specified in `informedEntities`,
+so they are not included in the root of this `Alert` record.
+
 -}
-
-
-
--- TODO facilities is only included if includes is specified
-
-
 type alias Alert =
     { id : AlertId
     , url : Maybe String
@@ -718,8 +717,6 @@ type alias Alert =
     , lifecycle : AlertLifecycle
     , effect : String
     , cause : String
-
-    --, facilities : Maybe (List FacilityId)
     , informedEntities : List InformedEntity
     }
 
@@ -739,9 +736,9 @@ type alias ActivePeriod =
     }
 
 
-{-| -}
+{-| There is always at least one `activity` and at least one other field.
+-}
 type alias InformedEntity =
-    -- TODO most are probably optional
     { activities : List InformedEntityActivity
     , routeType : Maybe RouteType
     , routeId : Maybe RouteId
