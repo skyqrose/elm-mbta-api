@@ -548,22 +548,25 @@ facility =
         |> id facilityId
         |> relationshipMaybe "stop" stopId
         -- if long_name or short_name fails, use the other
-        |> custom (attributeOneOf ["long_name", "short_name"] Decode.string)
-        |> custom (attributeOneOf ["short_name", "long_name"] Decode.string)
+        |> custom (attributeOneOf [ "long_name", "short_name" ] Decode.string)
+        |> custom (attributeOneOf [ "short_name", "long_name" ] Decode.string)
         |> attribute "type" (Decode.map FacilityType Decode.string)
         |> custom maybeLatLng
         |> attribute "properties" facilityProperties
+
 
 {-| Use the first attribute that works
 -}
 attributeOneOf : List String -> Decode.Decoder a -> JsonApi.ResourceDecoder a
 attributeOneOf attributeNames attributeDecoder =
     attributeNames
-        |> List.map (\attributeName ->
-            JsonApi.succeed identity
-                |> attribute attributeName attributeDecoder
-        )
+        |> List.map
+            (\attributeName ->
+                JsonApi.succeed identity
+                    |> attribute attributeName attributeDecoder
+            )
         |> JsonApi.oneOf
+
 
 liveFacilityId : JsonApi.IdDecoder FacilityId
 liveFacilityId =
