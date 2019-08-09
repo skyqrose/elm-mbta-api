@@ -52,6 +52,13 @@ suite =
                 """
                 Mbta.Decode.prediction
             , testMany
+                "has stopped away and added trip"
+                "https://api-v3.mbta.com/predictions?filter[stop]=place-davis&filter[route]=Red"
+                """
+                {"data":[{"attributes":{"arrival_time":"2019-08-09T14:46:58-04:00","departure_time":"2019-08-09T14:47:57-04:00","direction_id":1,"schedule_relationship":"ADDED","status":null,"stop_sequence":210},"id":"prediction-ADDED-1565187786-70064-210","relationships":{"route":{"data":{"id":"Red","type":"route"}},"stop":{"data":{"id":"70064","type":"stop"}},"trip":{"data":{"id":"ADDED-1565187786","type":"trip"}},"vehicle":{"data":{"id":"R-545F1408","type":"vehicle"}}},"type":"prediction"},{"attributes":{"arrival_time":"2019-08-09T14:50:14-04:00","departure_time":"2019-08-09T14:51:13-04:00","direction_id":0,"schedule_relationship":null,"status":"Stopped 1 stop away","stop_sequence":10},"id":"prediction-40526610-L-70063-10","relationships":{"route":{"data":{"id":"Red","type":"route"}},"stop":{"data":{"id":"70063","type":"stop"}},"trip":{"data":{"id":"40526610-L","type":"trip"}},"vehicle":{"data":{"id":"R-545F0B22","type":"vehicle"}}},"type":"prediction"}],"jsonapi":{"version":"1.0"}}
+                """
+                Mbta.Decode.prediction
+            , testMany
                 "with includes"
                 "https://api-v3.mbta.com/predictions?filter[stop]=place-sstat&filter[direction_id]=0&filter[route]=CR-Worcester,743&include=schedule,stop,route,trip,vehicle,alerts"
                 """
@@ -231,6 +238,13 @@ suite =
                 "https://api-v3.mbta.com/trips/40525584-L1"
                 """
                 {"data":{"attributes":{"bikes_allowed":0,"block_id":"S933_-14-1-L1","direction_id":1,"headsign":"North Quincy","name":"","wheelchair_accessible":1},"id":"40525584-L1","links":{"self":"/trips/40525584-L1"},"relationships":{"route":{"data":{"id":"Shuttle005","type":"route"}},"route_pattern":{"data":null},"service":{"data":{"id":"RTL319-9-Su-01-L","type":"service"}},"shape":{"data":{"id":"QuincyCenterToNorthQuincy-S","type":"shape"}}},"type":"trip"},"jsonapi":{"version":"1.0"}}
+                """
+                Mbta.Decode.trip
+            , testOne
+                "added trip"
+                "https://api-v3.mbta.com/trips/ADDED-1565187786"
+                """
+                {"data":{"attributes":{"bikes_allowed":0,"block_id":null,"direction_id":1,"headsign":"Alewife","name":"","wheelchair_accessible":0},"id":"ADDED-1565187786","links":{"self":"/trips/ADDED-1565187786"},"relationships":{"route":{"data":{"id":"Red","type":"route"}},"route_pattern":{"data":null},"service":{"data":null},"shape":{"data":null}},"type":"trip"},"jsonapi":{"version":"1.0"}}
                 """
                 Mbta.Decode.trip
             ]
