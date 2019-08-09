@@ -1,6 +1,6 @@
 module Mbta exposing
     ( LatLng, DirectionId(..), WheelchairAccessible(..)
-    , PredictionId(..), Prediction, PredictionScheduleRelationship(..)
+    , PredictionId(..), Prediction, PredictionScheduleRelationship(..), PredictionDisplay(..), predictionDisplay
     , VehicleId(..), Vehicle, CurrentStatus(..)
     , RouteType(..), RouteId(..), Route, RouteDirections, RouteDirection, getRouteDirection
     , RoutePatternId(..), RoutePattern, RoutePatternTypicality(..)
@@ -37,7 +37,7 @@ though they were changed in some places to make them clearer.
 
 # Realtime Data
 
-@docs PredictionId, Prediction, PredictionScheduleRelationship
+@docs PredictionId, Prediction, PredictionScheduleRelationship, PredictionDisplay, predictionDisplay
 @docs VehicleId, Vehicle, CurrentStatus
 
 
@@ -105,6 +105,9 @@ type PredictionId
 
 
 {-| In the official docs, `stopSequence` is listed as nullable, but it's always there.
+
+If `arrivalTime` and `departureTime` are both missing, that means the stop is predicted to be skipped.
+
 -}
 type alias Prediction =
     { id : PredictionId
@@ -132,6 +135,132 @@ type PredictionScheduleRelationship
     | ScheduleRelationship_NoData
     | ScheduleRelationship_Skipped
     | ScheduleRelationship_Unscheduled
+
+
+{-| What to show riders on something like a countdown clock.
+
+Calculate it with [`predictionDisplay`](#predictionDisplay)
+
+  - `Status`: A custom string to show
+  - `Boarding`: The vehicle is at the platform. Show `"Boarding"` or `"BRD"`
+  - `Arriving`: Show `"Arriving"` or `"ARR"`
+  - `Approaching`: Show `"Approaching"` or `"1 min"`
+  - `Minutes n`: Show `"1 minute"` or `"1 min"` or `"2 minutes"` or `"2 min"`
+  - `Skipped`: The vehicle will not pick up passengers.
+
+-}
+type PredictionDisplay
+    = Status String
+    | Boarding
+    | Arriving
+    | Approaching
+    | Minutes Int
+    | Skipped
+
+
+{-| Follows MBTA best practices for what to show riders on something like a countdown clock.
+
+If you have the vehicle associated with the prediction, pass it in to check if it's is currently boarding
+
+-}
+predictionDisplay : Time.Posix -> Maybe Vehicle -> Prediction -> PredictionDisplay
+predictionDisplay now maybeVehicle prediction =
+    -- There are lots of cases that might control what we show. Choose the highest priority.
+    Nothing
+        -- If there's a custom status, show that.
+        |> maybeOrElse
+            (Maybe.map Status prediction.status)
+        -- Check if the prediction was cancelled or skipped
+        |> maybeOrElse
+            (if
+                prediction.scheduleRelationship
+                    == ScheduleRelationship_Cancelled
+                    || prediction.scheduleRelationship
+                    == ScheduleRelationship_Skipped
+             then
+                Just Skipped
+
+             else
+                Nothing
+            )
+        -- If the vehicle is at the stop, it might be Boarding
+        |> maybeOrElse
+            (maybeVehicle
+                |> Maybe.andThen
+                    (\vehicle ->
+                        if
+                            Just vehicle.id
+                                == prediction.vehicleId
+                                && vehicle.currentStatus
+                                == StoppedAt
+                                && vehicle.stopId
+                                == prediction.stopId
+                        then
+                            -- Vehicle is at the stop
+                            case ( prediction.arrivalTime, prediction.departureTime ) of
+                                ( Just _, _ ) ->
+                                    -- Not the first stop. Vehicle is definitely taking passengers
+                                    Just Boarding
+
+                                ( Nothing, Just departureTime ) ->
+                                    -- Waiting at first stop. Check if it's departing soon.
+                                    if (Time.posixToMillis departureTime - Time.posixToMillis now) < 90000 then
+                                        Just Boarding
+
+                                    else
+                                        Nothing
+
+                                ( Nothing, Nothing ) ->
+                                    -- Skipped
+                                    Just Skipped
+
+                        else
+                            -- Vehicle is not at the stop
+                            Nothing
+                    )
+            )
+        -- Time based predictions
+        |> maybeOrElse
+            (secondsUntilPrediction now prediction
+                |> Maybe.map
+                    (\seconds ->
+                        if seconds <= 30 then
+                            Arriving
+
+                        else if seconds <= 60 then
+                            Approaching
+
+                        else
+                            -- Round to nearest minute
+                            Minutes ((seconds + 30) // 60)
+                    )
+            )
+        -- If there's no prediction time, the stop was skipped
+        |> Maybe.withDefault Skipped
+
+
+{-| Prioritizes `arrivalTime` over `departureTime` if both are present.
+-}
+secondsUntilPrediction : Time.Posix -> Prediction -> Maybe Int
+secondsUntilPrediction now prediction =
+    prediction.arrivalTime
+        |> maybeOrElse prediction.departureTime
+        |> Maybe.map
+            (\predictionTime ->
+                (Time.posixToMillis predictionTime - Time.posixToMillis now) // 1000
+            )
+
+
+{-| From [Maybe.Extra](https://package.elm-lang.org/packages/elm-community/maybe-extra/latest/Maybe-Extra#orElse)
+-}
+maybeOrElse : Maybe a -> Maybe a -> Maybe a
+maybeOrElse second first =
+    case first of
+        Just _ ->
+            first
+
+        Nothing ->
+            second
 
 
 {-| -}
