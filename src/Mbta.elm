@@ -2,7 +2,7 @@ module Mbta exposing
     ( LatLng, DirectionId(..), WheelchairAccessible(..)
     , PredictionId(..), Prediction, PredictionScheduleRelationship(..)
     , VehicleId(..), Vehicle, CurrentStatus(..)
-    , RouteType(..), RouteId(..), Route, RouteDirections, RouteDirection
+    , RouteType(..), RouteId(..), Route, RouteDirections, RouteDirection, getRouteDirection
     , RoutePatternId(..), RoutePattern, RoutePatternTypicality(..)
     , LineId(..), Line, ScheduleId(..)
     , Schedule, StopSequence(..), PickupDropOffType(..)
@@ -43,7 +43,7 @@ though they were changed in some places to make them clearer.
 
 # Schedule Data
 
-@docs RouteType, RouteId, Route, RouteDirections, RouteDirection
+@docs RouteType, RouteId, Route, RouteDirections, RouteDirection, getRouteDirection
 @docs RoutePatternId, RoutePattern, RoutePatternTypicality
 @docs LineId, Line, ScheduleId
 @docs Schedule, StopSequence, PickupDropOffType
@@ -202,6 +202,17 @@ type alias RouteDirections =
     { d0 : RouteDirection
     , d1 : RouteDirection
     }
+
+
+{-| -}
+getRouteDirection : DirectionId -> RouteDirections -> RouteDirection
+getRouteDirection directionId routeDirections =
+    case directionId of
+        D0 ->
+            routeDirections.d0
+
+        D1 ->
+            routeDirections.d1
 
 
 {-| -}
