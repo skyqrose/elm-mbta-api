@@ -2,7 +2,7 @@ module Mbta.Api exposing
     ( Host(..)
     , Data, ApiError(..), ApiResult, getPrimaryData
     , Include, Relationship, include, andIts
-    , getIncludedPrediction, getIncludedVehicle, getIncludedRoute, getIncludedRoutePattern, getIncludedLine, getIncludedSchedule, getIncludedTrip, getIncludedService, getIncludedShape, getIncludedStop, getIncludedParentStation, getIncludedFacility, getIncludedLiveFacility, getIncludedAlert
+    , getIncludedPrediction, getIncludedVehicle, getIncludedRoute, getIncludedRoutePattern, getIncludedLine, getIncludedSchedule, getIncludedTrip, getIncludedService, getIncludedShape, getIncludedStop, getIncludedStopStop, getIncludedStopStation, getIncludedFacility, getIncludedLiveFacility, getIncludedAlert
     , Filter
     , StreamState, StreamResult(..), StreamError(..), streamResult, updateStream
     , getPredictions, streamPredictions
@@ -75,7 +75,7 @@ Use it like
 Sideloaded resources can be looked up in the result with the `getIncluded*` functions below.
 
 @docs Include, Relationship, include, andIts
-@docs getIncludedPrediction, getIncludedVehicle, getIncludedRoute, getIncludedRoutePattern, getIncludedLine, getIncludedSchedule, getIncludedTrip, getIncludedService, getIncludedShape, getIncludedStop, getIncludedParentStation, getIncludedFacility, getIncludedLiveFacility, getIncludedAlert
+@docs getIncludedPrediction, getIncludedVehicle, getIncludedRoute, getIncludedRoutePattern, getIncludedLine, getIncludedSchedule, getIncludedTrip, getIncludedService, getIncludedShape, getIncludedStop, getIncludedStopStop, getIncludedStopStation, getIncludedFacility, getIncludedLiveFacility, getIncludedAlert
 
 
 # Filtering
@@ -621,14 +621,42 @@ getIncludedStop stopId (Data data) =
     Dict.get stopId data.included.stops
 
 
-{-| If you're looking up a stop's parent station,
+{-| Some relationships always point specifically to a [`Stop_Stop`](#Mbta.Stop_Stop)
+instead of a [`Stop`](#Mbta.Stop) of any kind
+
+These relationships are
+
+  - [`prediction.stopId`](#predictionStop)jj
+  - [`schedule.stopId`](#scheduleStop)
+  - [`trip.stopId`](#tripStops)
+
+If you're looking up a stop from one of these relationships,
+this will unwrap the `Stop` into a `Stop_Stop` for you.
+
+If the stop exists, but is not a `Stop_Stop`, returns `Nothing`.
+
+-}
+getIncludedStopStop : StopId -> Data primary -> Maybe Stop_Stop
+getIncludedStopStop stopId (Data data) =
+    case Dict.get stopId data.included.stops of
+        Just (Stop_0_Stop stop_stop) ->
+            Just stop_stop
+
+        _ ->
+            Nothing
+
+
+{-| The [`stop.parentStation`](#stopParentStation) field of stops
+always points to stops that are [`Stop_Station`](#Mbta.Stop_Station).
+
+If you're looking up a stop's parent station,
 this will unwrap the `Stop` into a `Stop_Station` for you.
 
 If the stop exists, but is not a `Stop_Station`, returns `Nothing`.
 
 -}
-getIncludedParentStation : StopId -> Data primary -> Maybe Stop_Station
-getIncludedParentStation stopId (Data data) =
+getIncludedStopStation : StopId -> Data primary -> Maybe Stop_Station
+getIncludedStopStation stopId (Data data) =
     case Dict.get stopId data.included.stops of
         Just (Stop_1_Station stop_station) ->
             Just stop_station
