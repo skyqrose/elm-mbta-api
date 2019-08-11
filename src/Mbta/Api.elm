@@ -68,9 +68,9 @@ Use it like
 
     Mbta.Api.getTrip
         ReceiveTrip
-        apiConfig
+        apiHost
         [ Mbta.Api.include Mbta.Api.tripRoute ]
-        filters
+        tripId
 
 Sideloaded resources can be looked up in the result with the `getIncluded*` functions below.
 
@@ -84,7 +84,7 @@ Use it like
 
     Mbta.Api.getTrips
         ReceiveTrip
-        apiConfig
+        apiHost
         [ Mbta.filterTripsByRouteIds [ redLineId, orangeLineId ]
         , Mbta.filterTripsByDirectionId Mbta.D0
         ]
