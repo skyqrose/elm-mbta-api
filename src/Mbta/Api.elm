@@ -537,7 +537,7 @@ Uses the `.` syntax from JSON:API's `?include=` options.
 -}
 andIts : Relationship b c -> Relationship a b -> Relationship a c
 andIts (Relationship string1) (Relationship string2) =
-    Relationship (string1 ++ "." ++ string2)
+    Relationship (string2 ++ "." ++ string1)
 
 
 includeQueryParameter : List (Include a) -> List Url.Builder.QueryParameter
