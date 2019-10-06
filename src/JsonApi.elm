@@ -115,7 +115,7 @@ import Http
 import Json.Decode as Decode
 import Json.Encode as Encode
 import JsonApi.Untyped as Untyped
-import Result.Extra
+import ResultHelpers
 
 
 
@@ -255,7 +255,7 @@ documentDecoderMany includedDecoder resourceDecoder =
                         )
                         (data
                             |> List.map (decodeResource resourceDecoder)
-                            |> Result.Extra.combine
+                            |> ResultHelpers.combine
                         )
                         (decodeIncluded includedDecoder included)
                         |> Result.mapError ResourceError
@@ -512,7 +512,7 @@ relationshipMany relationshipName relatedIdDecoder =
                     Just (Untyped.RelationshipMany relatedIds) ->
                         relatedIds
                             |> List.map (decodeId relatedIdDecoder)
-                            |> Result.Extra.combine
+                            |> ResultHelpers.combine
                             |> Result.mapError (RelationshipIdError relationshipName)
 
                     Just (Untyped.RelationshipOne _) ->
