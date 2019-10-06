@@ -489,6 +489,7 @@ stopStop =
         |> relationshipMaybe "parent_station" stopId
         |> attributeMaybe "platform_code" Decode.string
         |> attributeMaybe "platform_name" Decode.string
+        |> relationshipMaybe "zone" zoneId
 
 
 stopStation : JsonApi.ResourceDecoder Stop_Station
@@ -500,6 +501,7 @@ stopStation =
         |> attribute "wheelchair_boarding" wheelchairAccessible
         |> custom latLng
         |> attributeMaybe "address" Decode.string
+        |> relationshipMaybe "zone" zoneId
         |> relationshipMany "child_stops" stopId
 
 
@@ -532,6 +534,11 @@ stopType =
         , ( 2, StopType_2_Entrance )
         , ( 3, StopType_3_Node )
         ]
+
+
+zoneId : JsonApi.IdDecoder ZoneId
+zoneId =
+    JsonApi.idDecoder "zone" ZoneId
 
 
 facilityId : JsonApi.IdDecoder FacilityId

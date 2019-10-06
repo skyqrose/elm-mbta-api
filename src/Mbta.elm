@@ -9,7 +9,7 @@ module Mbta exposing
     , TripId(..), Trip, BikesAllowed(..), BlockId(..)
     , ServiceId(..), Service, ServiceDate, serviceDateFromIso8601, serviceDateToIso8601, ServiceType(..), ServiceTypicality(..), ChangedDate
     , ShapeId(..), Shape
-    , StopId(..), Stop(..), Stop_Stop, Stop_Station, Stop_Entrance, Stop_Node, stopId, stopName, stopDescription, stopWheelchairAccessible, stopLatLng, stopParentStation, StopType(..), stopType
+    , StopId(..), Stop(..), Stop_Stop, Stop_Station, Stop_Entrance, Stop_Node, stopId, stopName, stopDescription, stopWheelchairAccessible, stopLatLng, stopParentStation, StopType(..), stopType, ZoneId(..)
     , FacilityId(..), Facility, LiveFacility, FacilityType(..), FacilityProperties, FacilityPropertyValue(..)
     , AlertId(..), Alert, AlertLifecycle(..), ActivePeriod, InformedEntity, InformedEntityActivity(..)
     )
@@ -54,7 +54,7 @@ though they were changed in some places to make them clearer.
 
 # Stop Data
 
-@docs StopId, Stop, Stop_Stop, Stop_Station, Stop_Entrance, Stop_Node, stopId, stopName, stopDescription, stopWheelchairAccessible, stopLatLng, stopParentStation, StopType, stopType
+@docs StopId, Stop, Stop_Stop, Stop_Station, Stop_Entrance, Stop_Node, stopId, stopName, stopDescription, stopWheelchairAccessible, stopLatLng, stopParentStation, StopType, stopType, ZoneId
 @docs FacilityId, Facility, LiveFacility, FacilityType, FacilityProperties, FacilityPropertyValue
 
 
@@ -595,6 +595,7 @@ type alias Stop_Stop =
     , parentStation : Maybe StopId
     , platformCode : Maybe String
     , platformName : Maybe String
+    , zone : Maybe ZoneId
     }
 
 
@@ -610,6 +611,7 @@ type alias Stop_Station =
     , wheelchairAccessible : WheelchairAccessible
     , latLng : LatLng
     , address : Maybe String
+    , zone : Maybe ZoneId
     , childStops : List StopId
     }
 
@@ -772,6 +774,11 @@ stopType stop =
 
         Stop_3_Node stop_node ->
             StopType_3_Node
+
+
+{-| -}
+type ZoneId
+    = ZoneId String
 
 
 {-| -}
