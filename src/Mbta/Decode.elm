@@ -329,7 +329,7 @@ trip : JsonApi.ResourceDecoder Trip
 trip =
     JsonApi.succeed Trip
         |> id tripId
-        |> relationshipOne "service" serviceId
+        |> relationshipMaybe "service" serviceId
         |> relationshipOne "route" routeId
         |> attribute "direction_id" directionId
         |> relationshipMaybe "route_pattern" routePatternId

@@ -438,7 +438,9 @@ type TripId
 {-| -}
 type alias Trip =
     { id : TripId
-    , serviceId : ServiceId
+
+    -- Added trips don't have a service
+    , serviceId : Maybe ServiceId
     , routeId : RouteId
     , directionId : DirectionId
     , routePatternId : Maybe RoutePatternId
