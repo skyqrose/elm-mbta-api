@@ -30,7 +30,6 @@ module Mbta.Decode exposing
 -}
 
 import Color
-import Color.Convert
 import DecodeHelpers
 import Dict
 import Iso8601
@@ -55,9 +54,7 @@ import Mbta exposing (..)
 
 color : Decode.Decoder Color.Color
 color =
-    Decode.string
-        |> Decode.map Color.Convert.hexToColor
-        |> Decode.andThen DecodeHelpers.fromResult
+    DecodeHelpers.colorDecoder
 
 
 latLng : JsonApi.ResourceDecoder LatLng

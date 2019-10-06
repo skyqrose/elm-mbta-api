@@ -1,9 +1,11 @@
 module DecodeHelpers exposing
     ( all
+    , colorDecoder
     , enum
     , fromResult
     )
 
+import Color
 import Dict
 import Json.Decode as Decode exposing (Decoder)
 
@@ -51,3 +53,90 @@ fromResult result =
 
         Err e ->
             Decode.fail e
+
+
+colorDecoder : Decoder Color.Color
+colorDecoder =
+    Decode.string
+        |> Decode.andThen
+            (\chars ->
+                case String.toList chars of
+                    [ r1, r2, g1, g2, b1, b2 ] ->
+                        case
+                            ( hex2ToInt r1 r2
+                            , hex2ToInt g1 g2
+                            , hex2ToInt b1 b2
+                            )
+                        of
+                            ( Just r, Just g, Just b ) ->
+                                Decode.succeed (Color.rgb255 r g b)
+
+                            _ ->
+                                Decode.fail "Expected color to be in hex /[0-9a-fA-F]{6}/"
+
+                    _ ->
+                        Decode.fail "Expected a color to be in the form \"RRGGBB\""
+            )
+
+
+hex2ToInt : Char -> Char -> Maybe Int
+hex2ToInt char1 char2 =
+    Maybe.map2
+        (\int1 int2 -> int1 * 16 + int2)
+        (hexToInt char1)
+        (hexToInt char2)
+
+
+hexToInt : Char -> Maybe Int
+hexToInt char =
+    case Char.toLower char of
+        '0' ->
+            Just 0
+
+        '1' ->
+            Just 1
+
+        '2' ->
+            Just 2
+
+        '3' ->
+            Just 3
+
+        '4' ->
+            Just 4
+
+        '5' ->
+            Just 5
+
+        '6' ->
+            Just 6
+
+        '7' ->
+            Just 7
+
+        '8' ->
+            Just 8
+
+        '9' ->
+            Just 9
+
+        'a' ->
+            Just 10
+
+        'b' ->
+            Just 11
+
+        'c' ->
+            Just 12
+
+        'd' ->
+            Just 13
+
+        'e' ->
+            Just 14
+
+        'f' ->
+            Just 15
+
+        _ ->
+            Nothing

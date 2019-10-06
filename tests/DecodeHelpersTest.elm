@@ -1,8 +1,10 @@
 module DecodeHelpersTest exposing (suite)
 
+import Color
 import DecodeHelpers
 import Expect
 import Json.Decode as Decode
+import Json.Encode as Encode
 import Test exposing (..)
 
 
@@ -63,5 +65,12 @@ suite =
                         )
                         "{}"
                         |> Expect.equal (Ok [])
+            ]
+        , describe "colorDecoder" <|
+            [ test "0369BF" <|
+                \() ->
+                    Expect.equal
+                        (Decode.decodeValue DecodeHelpers.colorDecoder (Encode.string "0369BF"))
+                        (Ok (Color.rgb255 3 105 191))
             ]
         ]
