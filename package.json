@@ -9,7 +9,7 @@
     "elm": "^0.19.0-no-deps"
   },
   "devDependencies": {
-    "chokidar-cli": "^1.2.2",
+    "chokidar-cli": "^1.2.3",
     "elm-format": "^0.8.1",
     "elm-test": "^0.19.0-rev6"
   }
