@@ -95,6 +95,95 @@ Use it like
 
 # Streaming
 
+The MBTA API uses Server Sent Events for streaming.
+Until Elm gets a library for SSE,
+streaming will require making the EventSource in JavaScript and passing the data through a port.
+
+Create one outgoing port to start the stream and one ingoing port to subscribe to events.
+Use [`streamPredictions`](#streamPredictions) or similar to get
+the url to pass out the port
+and an initial [`StreamState`](#StreamState) to save in your model.
+Then subscribe to the incoming port,
+and use the incoming messages to update the [`StreamState`](#StreamState) in your model with [`updateStream`](#updateStream)
+
+On the javascript side, start the stream with `new EventSource(url)`.
+Add event listeners and forward the events through the port, so that [`updateStream`](#updateStream) can handle them.
+
+There are four `eventName`s you need to subscribe to: `["reset", "add", "update", "remove"]`.
+
+Example code:
+
+    -- Main.elm
+    port module Main exposing (main)
+
+    port startStream : String -> Cmd msg
+
+    port streamEvent : ({ eventName : String, eventData : Decode.Value } -> msg) -> Sub msg
+
+    type alias Model =
+        { streamState : StreamState Mbta.Prediction
+        }
+
+    type Msg
+        = StreamEvent String Json.Decode.Value
+
+    init =
+        let
+            ( initStreamState, streamUrl ) =
+                Mbta.Api.streamPredictions host includes filters
+        in
+        ( { streamState = initStreamState
+          }
+        , startStream streamUrl
+        )
+
+    update msg model =
+        case msg of
+            StreamEvent eventName eventData ->
+                ( { model
+                    | streamState = Mbta.Api.updateStream eventName eventData model.streamState
+                  }
+                , Cmd.none
+                )
+
+    subscriptions =
+        streamEvent \({ eventName, eventData } -> StreamEvent eventName eventData)
+
+
+    // app.js
+    var startEventSource = function (url, eventPort) {
+        var eventNames = ["reset", "add", "update", "remove"];
+        var eventSource = new EventSource(url);
+        for (i = 0; i < eventNames.length; i++) {
+            let eventName = eventNames[i];
+            eventSource.addEventListener(eventName, function (eventData) {
+                eventPort.send({
+                    eventName: eventName,
+                    eventData: JSON.parse(eventData.data),
+                });
+            }, false)
+        }
+        return eventSource
+    }
+    var app = Elm.Main.init();
+    var eventSource = undefined
+    app.ports.startStream.subscribe(function (url) {
+        if (eventSource != undefined) {
+            eventSource.close()
+        }
+        eventSource = startEventSource(url, app.ports.streamEvent)
+    })
+
+To get data out of the [`StreamState`](#StreamState) in your model,
+use [`streamResult`](#streamResult).
+
+Streaming is only available for the resources that the API tracks for changes:
+
+  - [`streamPredictions`](#streamPredictions)
+  - [`streamVehicles`](#streamVehicles)
+  - [`streamAlerts`](#streamAlerts)
+  - TODO live-facilities?
+
 @docs StreamState, StreamResult, StreamError, streamResult, updateStream
 
 
@@ -897,7 +986,8 @@ getPredictions toMsg host includes filters =
     getList toMsg host Mbta.Decode.prediction "predictions" includes filters
 
 
-{-| -}
+{-| [Streaming instructions](#streaming)
+-}
 streamPredictions : Host -> List (Include Prediction) -> List (Filter Prediction) -> ( StreamState Prediction, String )
 streamPredictions host includes filters =
     ( StreamState
@@ -1008,7 +1098,8 @@ getVehicles toMsg host includes filters =
     getList toMsg host Mbta.Decode.vehicle "vehicles" includes filters
 
 
-{-| -}
+{-| [Streaming instructions](#streaming)
+-}
 streamVehicles : Host -> List (Include Vehicle) -> List (Filter Vehicle) -> ( StreamState Vehicle, String )
 streamVehicles host includes filters =
     ( StreamState
@@ -1671,6 +1762,8 @@ getAlerts toMsg host includes filters =
 {-| By default, alerts are filtered to the [activities](#Mbta.InformedEntityActivity) `[Activity_Board, Activity_Exit, Activity_Ride]`.
 
 If you'd like to receive alerts for all activities, you must explicitly use [`filterAlertsByActivitiesAll`](#filterAlertsByActivitiesAll)
+
+[Streaming instructions](#streaming)
 
 -}
 streamAlerts : Host -> List (Include Alert) -> List (Filter Alert) -> ( StreamState Alert, String )
