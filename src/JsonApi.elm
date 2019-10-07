@@ -855,7 +855,13 @@ type DecodeError jsonApiDecodeError
     | JsonApiDecodeError jsonApiDecodeError
 
 
-{-| -}
+{-| Pass in the `toString` function for the type of thing that was being decoded, one of
+
+  - [`documentErrorToString`](#documentErrorToString)
+  - [`resourceErrorToString`](#resourceErrorToString)
+  - [`idErrorToString`](#idErrorToString)
+
+-}
 decodeErrorToString : (jsonApiDecodeError -> String) -> DecodeError jsonApiDecodeError -> String
 decodeErrorToString jsonApiDecodeErrorToString error =
     case error of
