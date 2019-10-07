@@ -603,7 +603,7 @@ type alias Stop_Stop =
 
 {-| A parent station that groups together the other kinds of stops into one building.
 
-The `.childStops` will default to `[]` unless explicitly included with [`Mbta.Api.stopChildStops`](#Mbta.Api.stopChildStops)
+The `.childStops` will default to `[]` unless explicitly included with [`Mbta.Api.stopChildStops`](Mbta-Api#stopChildStops)
 
 -}
 type alias Stop_Station =
@@ -846,7 +846,7 @@ type AlertId
 The `banner` field is published by the API, but always `null`, so it's not included here.
 
 The API publishes some relationships (`routes`, `trips`, `stops`, and `facilities`),
-but only if that relationship was [included](#Mbta.Api.alertRoutes),
+but only if that relationship was [included](Mbta-Api#alertRoutes),
 and those relationships are redundant with the ids specified in `informedEntities`,
 so they are not included in the root of this `Alert` record.
 

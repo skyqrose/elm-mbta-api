@@ -190,7 +190,7 @@ Streaming is only available for the resources that the API tracks for changes:
 # Realtime Data
 
 
-## [Prediction](#Mbta.Prediction)
+## [Prediction](Mbta#Prediction)
 
 @docs getPredictions, streamPredictions
 
@@ -205,7 +205,7 @@ Streaming is only available for the resources that the API tracks for changes:
 @docs filterPredictionsByRouteTypes, filterPredictionsByRouteIds, filterPredictionsByRoutePatternIds, filterPredictionsByDirectionId, filterPredictionsByTripIds, filterPredictionsByStopIds, filterPredictionsByLatLng, filterPredictionsByLatLngWithRadius
 
 
-## [Vehicle](#Mbta.Vehicle)
+## [Vehicle](Mbta#Vehicle)
 
 @docs getVehicle, getVehicles, streamVehicles
 
@@ -223,7 +223,7 @@ Streaming is only available for the resources that the API tracks for changes:
 # Schedule Data
 
 
-## [Route](#Mbta.Route)
+## [Route](Mbta#Route)
 
 @docs getRoute, getRoutes
 
@@ -240,7 +240,7 @@ Streaming is only available for the resources that the API tracks for changes:
 @docs filterRoutesByIds, filterRoutesByRouteTypes, filterRoutesByDirectionId, filterRoutesByStopIds
 
 
-## [RoutePattern](#Mbta.RoutePattern)
+## [RoutePattern](Mbta#RoutePattern)
 
 @docs getRoutePattern, getRoutePatterns
 
@@ -255,7 +255,7 @@ Streaming is only available for the resources that the API tracks for changes:
 @docs filterRoutePatternsByIds, filterRoutePatternsByRouteIds, filterRoutePatternsByDirectionId, filterRoutePatternsByStopIds
 
 
-## [Line](#Mbta.Line)
+## [Line](Mbta#Line)
 
 @docs getLine, getLines
 
@@ -270,7 +270,7 @@ Streaming is only available for the resources that the API tracks for changes:
 @docs filterLinesByIds
 
 
-## [Schedule](#Mbta.Schedule)
+## [Schedule](Mbta#Schedule)
 
 @docs getSchedules
 
@@ -285,7 +285,7 @@ Streaming is only available for the resources that the API tracks for changes:
 @docs filterSchedulesByRouteIds, filterSchedulesByDirectionId, filterSchedulesByTripIds, filterSchedulesByStopSequence, StopSequenceFilter, filterSchedulesByStopIds, filterSchedulesByServiceDate, filterSchedulesByMinTime, filterSchedulesByMaxTime
 
 
-## [Trip](#Mbta.Trip)
+## [Trip](Mbta#Trip)
 
 @docs getTrip, getTrips
 
@@ -300,7 +300,7 @@ Streaming is only available for the resources that the API tracks for changes:
 @docs filterTripsByIds, filterTripsByNames, filterTripsByRouteIds, filterTripsByRoutePatternIds, filterTripsByDirectionId
 
 
-## [Service](#Mbta.Service)
+## [Service](Mbta#Service)
 
 @docs getService, getServices
 
@@ -315,7 +315,7 @@ Streaming is only available for the resources that the API tracks for changes:
 @docs filterServicesByIds, filterServicesByRouteIds
 
 
-## [Shape](#Mbta.Shape)
+## [Shape](Mbta#Shape)
 
 @docs getShape, getShapes
 
@@ -333,7 +333,7 @@ Streaming is only available for the resources that the API tracks for changes:
 # Stop Data
 
 
-## [Stop](#Mbta.Stop)
+## [Stop](Mbta#Stop)
 
 @docs getStop, getStops
 
@@ -348,7 +348,7 @@ Streaming is only available for the resources that the API tracks for changes:
 @docs filterStopsByIds, filterStopsByStopTypes, filterStopsByRouteTypes, filterStopsByRouteIds, filterStopsByDirectionId, filterStopsByLatLng, filterStopsByLatLngWithRadius
 
 
-## [Facility](#Mbta.Facility)
+## [Facility](Mbta#Facility)
 
 @docs getFacility, getFacilities
 
@@ -363,7 +363,7 @@ Streaming is only available for the resources that the API tracks for changes:
 @docs filterFacilitiesByStopIds, filterFacilitiesByFacilityTypes
 
 
-## [Live Facility](#Mbta.Live)
+## [Live Facility](Mbta#Live)
 
 @docs getLiveFacility, getLiveFacilities
 
@@ -381,7 +381,7 @@ Streaming is only available for the resources that the API tracks for changes:
 # Alert Data
 
 
-## [Alert](#Mbta.Alert)
+## [Alert](Mbta#Alert)
 
 @docs getAlert, getAlerts, streamAlerts
 
@@ -716,8 +716,8 @@ getIncludedStop stopId (Data data) =
     Dict.get stopId data.included.stops
 
 
-{-| Some relationships always point specifically to a [`Stop_Stop`](#Mbta.Stop_Stop)
-instead of a [`Stop`](#Mbta.Stop) of any kind
+{-| Some relationships always point specifically to a [`Stop_Stop`](Mbta#Stop_Stop)
+instead of a [`Stop`](Mbta#Stop) of any kind
 
 These relationships are
 
@@ -742,7 +742,7 @@ getIncludedStopStop stopId (Data data) =
 
 
 {-| The [`stop.parentStation`](#stopParentStation) field of stops
-always points to stops that are [`Stop_Station`](#Mbta.Stop_Station).
+always points to stops that are [`Stop_Station`](Mbta#Stop_Station).
 
 If you're looking up a stop's parent station,
 this will unwrap the `Stop` into a `Stop_Station` for you.
@@ -1755,7 +1755,7 @@ getAlert toMsg host includes (AlertId alertId) =
     getOne toMsg host Mbta.Decode.alert "alerts" includes alertId
 
 
-{-| By default, alerts are filtered to the [activities](#Mbta.InformedEntityActivity) `[Activity_Board, Activity_Exit, Activity_Ride]`.
+{-| By default, alerts are filtered to the [activities](Mbta#InformedEntityActivity) `[Activity_Board, Activity_Exit, Activity_Ride]`.
 
 If you'd like to receive alerts for all activities, you must explicitly use [`filterAlertsByActivitiesAll`](#filterAlertsByActivitiesAll)
 
@@ -1765,7 +1765,7 @@ getAlerts toMsg host includes filters =
     getList toMsg host Mbta.Decode.alert "alerts" includes filters
 
 
-{-| By default, alerts are filtered to the [activities](#Mbta.InformedEntityActivity) `[Activity_Board, Activity_Exit, Activity_Ride]`.
+{-| By default, alerts are filtered to the [activities](Mbta#InformedEntityActivity) `[Activity_Board, Activity_Exit, Activity_Ride]`.
 
 If you'd like to receive alerts for all activities, you must explicitly use [`filterAlertsByActivitiesAll`](#filterAlertsByActivitiesAll)
 
@@ -1886,7 +1886,7 @@ filterAlertsByActivities activities =
     filterByList "activity" activityToString activities
 
 
-{-| Receive alerts for all [activites](#Mbta.InformedEntityActivity)
+{-| Receive alerts for all [activites](Mbta#InformedEntityActivity)
 
 Overrides the default activities filter of `[Activity_Board, Activity_Exit, Activity_Ride]`.
 
