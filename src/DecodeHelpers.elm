@@ -3,11 +3,28 @@ module DecodeHelpers exposing
     , colorDecoder
     , enum
     , fromResult
+    , maybeEmptyString
     )
 
 import Color
 import Dict
 import Json.Decode as Decode exposing (Decoder)
+
+
+{-| Decodes "" into Nothing
+-}
+maybeEmptyString : Decoder (Maybe String)
+maybeEmptyString =
+    Decode.string
+        |> Decode.map
+            (\string ->
+                case string of
+                    "" ->
+                        Nothing
+
+                    _ ->
+                        Just string
+            )
 
 
 {-| Map a fixed number of potential values, e.g. string constants, onto elm values

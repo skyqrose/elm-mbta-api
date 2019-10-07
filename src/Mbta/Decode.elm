@@ -204,7 +204,7 @@ route =
     JsonApi.succeed Route
         |> id routeId
         |> attribute "type" routeType
-        |> attribute "short_name" Decode.string
+        |> attribute "short_name" DecodeHelpers.maybeEmptyString
         |> attribute "long_name" Decode.string
         |> attribute "description" Decode.string
         |> attribute "fare_class" Decode.string
@@ -276,7 +276,7 @@ line : JsonApi.ResourceDecoder Line
 line =
     JsonApi.succeed Line
         |> id lineId
-        |> attribute "short_name" Decode.string
+        |> attribute "short_name" DecodeHelpers.maybeEmptyString
         |> attribute "long_name" Decode.string
         |> attribute "sort_order" Decode.int
         |> attribute "color" color
@@ -333,7 +333,7 @@ trip =
         |> relationshipOne "route" routeId
         |> attribute "direction_id" directionId
         |> relationshipMaybe "route_pattern" routePatternId
-        |> attribute "name" Decode.string
+        |> attribute "name" DecodeHelpers.maybeEmptyString
         |> attribute "headsign" Decode.string
         |> relationshipMaybe "shape" shapeId
         |> attribute "wheelchair_accessible" wheelchairAccessible

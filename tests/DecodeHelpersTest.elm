@@ -24,7 +24,21 @@ fruitDecoder =
 suite : Test
 suite =
     describe "DecodeHelpers"
-        [ describe "enum" <|
+        [ describe "maybeEmptyString"
+            [ test "decodes a nonempty string" <|
+                \() ->
+                    "something"
+                        |> Encode.string
+                        |> Decode.decodeValue DecodeHelpers.maybeEmptyString
+                        |> Expect.equal (Ok (Just "something"))
+            , test "turns an empty string into Nothing" <|
+                \() ->
+                    ""
+                        |> Encode.string
+                        |> Decode.decodeValue DecodeHelpers.maybeEmptyString
+                        |> Expect.equal (Ok Nothing)
+            ]
+        , describe "enum"
             [ test "decodes a value" <|
                 \() ->
                     "\"apple\""
@@ -66,7 +80,7 @@ suite =
                         "{}"
                         |> Expect.equal (Ok [])
             ]
-        , describe "colorDecoder" <|
+        , describe "colorDecoder"
             [ test "0369BF" <|
                 \() ->
                     Expect.equal

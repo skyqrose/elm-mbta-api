@@ -314,7 +314,7 @@ type RouteId
 type alias Route =
     { id : RouteId
     , routeType : RouteType
-    , shortName : String
+    , shortName : Maybe String
     , longName : String
     , description : String
     , fareClass : String
@@ -386,7 +386,7 @@ type LineId
 {-| -}
 type alias Line =
     { id : LineId
-    , shortName : String
+    , shortName : Maybe String
     , longName : String
     , sortOrder : Int
     , color : Color.Color
@@ -444,7 +444,7 @@ type alias Trip =
     , routeId : RouteId
     , directionId : DirectionId
     , routePatternId : Maybe RoutePatternId
-    , name : String
+    , name : Maybe String
     , headsign : String
     , shapeId : Maybe ShapeId
     , wheelchairAccessible : WheelchairAccessible
