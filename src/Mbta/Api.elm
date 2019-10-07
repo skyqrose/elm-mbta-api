@@ -427,8 +427,7 @@ import Url.Builder
     Specify another api server.
     e.g. `Default` is equivalent to `CustomHost` with `host = "https://api-v3.mbta.com"` and `basePath = []`
 
-If you use anything except `SameOrigin`, you may need to configure CORS.
--- TODO more specific instructions
+If you use `CustomHost`, you may need to configure CORS on the target server.
 
 -}
 type Host
@@ -474,15 +473,22 @@ getPrimaryData (Data data) =
 {-| Sometimes things don't go as planned.
 
   - `InvalidRequest`:
-    Some API calls require certain filters to be set. If they aren't, rather than send a request that won't return results, this error is sent immediately.
+    Some API calls require certain filters to be set.
+    If they aren't,
+    rather than send a request that won't return results,
+    this error is returned immediately.
   - `HttpError`:
     If an HTTP call is made, but fails.
   - `ApiError`:
     The API successfully returned, but sent errors instead of data
   - `DecodeError`:
-    The API successfully returned data, but this library could not decode it. This is either a bug in the API or this library. Please report it.
+    The API successfully returned data,
+    but this library could not decode it.
+    This is either a bug in the API or this library.
+    Please report it.
+    You can [open an issue on Github](https://github.com/skyqrose/elm-mbta-api/issues).
+    If possible, include the error message, the url, and the JSON it was trying to decode.
 
-TODO more reporting directions
 TODO real type (opaque) for DecodeError parameter
 
 -}
