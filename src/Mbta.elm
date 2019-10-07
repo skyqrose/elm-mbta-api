@@ -16,18 +16,18 @@ module Mbta exposing
 
 {-| The types for all data coming from the MBTA API
 
-To avoid duplicating the [official MBTA API docs](swagger),
+To avoid duplicating the [official MBTA API docs][swagger],
 this documentation does not describe the meaning of this data.
 It just describes any important differences between this library and the API.
 
-The [MBTA GTFS docs](gtfs-mbta) may also be useful for describing what data means,
+The [MBTA GTFS docs][gtfs-mbta] may also be useful for describing what data means,
 though there's less of a direct correspondence between this library and the GTFS format.
 
 Names were generally kept consistent with the API,
 though they were changed in some places to make them clearer.
 
-[swagger][https://api-v3.mbta.com/docs/swagger/index.html#/Vehicle/ApiWeb_VehicleController_index]
-[gtfs-mbta][https://github.com/mbta/gtfs-documentation/blob/master/reference/gtfs.md]
+[swagger]: https://api-v3.mbta.com/docs/swagger/index.html#/Vehicle/ApiWeb_VehicleController_index
+[gtfs-mbta]: https://github.com/mbta/gtfs-documentation/blob/master/reference/gtfs.md
 
 
 # Util
