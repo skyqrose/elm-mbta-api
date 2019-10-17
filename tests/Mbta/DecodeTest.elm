@@ -66,6 +66,13 @@ suite =
                 {"data":[{"attributes":{"arrival_time":null,"departure_time":"2019-10-06T19:01:00-04:00","direction_id":0,"schedule_relationship":"ADDED","status":null,"stop_sequence":1},"id":"prediction-ADDED-1570029711-Oak Grove-02-1","relationships":{"route":{"data":{"id":"Orange","type":"route"}},"stop":{"data":{"id":"Oak Grove-02","type":"stop"}},"trip":{"data":{"id":"ADDED-1570029711","type":"trip"}},"vehicle":{"data":{"id":"O-546053B6","type":"vehicle"}}},"type":"prediction"}],"included":[{"attributes":{"bikes_allowed":0,"block_id":null,"direction_id":0,"headsign":"Forest Hills","name":"","wheelchair_accessible":0},"id":"ADDED-1570029711","links":{"self":"/trips/ADDED-1570029711"},"relationships":{"route":{"data":{"id":"Orange","type":"route"}},"route_pattern":{"data":{"id":"Orange-3-0","type":"route_pattern"}},"service":{"data":null},"shape":{"data":null}},"type":"trip"}],"jsonapi":{"version":"1.0"}}
                 """
                 Mbta.Decode.prediction
+            , testMany
+                "skipped"
+                "https://api-v3.mbta.com/predictions?filter%5Broute%5D=CR-Greenbush&filter%5Bstop%5D=place-qnctr"
+                """
+                {"data":[{"attributes":{"arrival_time":null,"departure_time":null,"direction_id":1,"schedule_relationship":"SKIPPED","status":null,"stop_sequence":8},"id":"prediction-CR-Weekday-Spring-19-074-Quincy Center-8","relationships":{"route":{"data":{"id":"CR-Greenbush","type":"route"}},"stop":{"data":{"id":"Quincy Center","type":"stop"}},"trip":{"data":{"id":"CR-Weekday-Spring-19-074","type":"trip"}},"vehicle":{"data":{"id":"1823","type":"vehicle"}}},"type":"prediction"}]}
+                """
+                Mbta.Decode.prediction
             ]
         , describe "vehicle"
             [ testOne
