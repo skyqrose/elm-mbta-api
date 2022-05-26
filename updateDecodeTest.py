@@ -23,9 +23,20 @@ def addApiKey(apiKey, url):
     else:
         return url
 
+# the raw string if a 200
+# None if a 404
+# otherwise, panics
 def fetch(url):
+    print("fetching " + url)
     url = addApiKey(apiKey, url)
-    return urllib.request.urlopen(url).read().decode("utf-8")
+    try:
+        return urllib.request.urlopen(url).read().decode("utf-8")
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            print("404 for url " + url)
+            return None
+        else:
+            raise e
 
 
 filename = "tests/Mbta/DecodeTest.elm"
@@ -46,11 +57,19 @@ while True:
     newLines.append(line)
     if line.startswith(" " * 16 + "\"http"):
         url = line[17:-2]
-        print("fetching " + url)
+        newData = fetch(url)
+
         quotes = file.readline()
         assert quotes == " " * 16 + "\"\"\"\n"
         newLines.append(quotes)
-        newData = fetch(url)
-        newData = newData.replace("\\", "\\\\") # in polylines, escape them so they can be in Elm strings
+
         oldData = file.readline()
-        newLines.append(" " * 16 + newData + "\n")
+        if newData:
+            newData = newData.replace("\\", "\\\\") # in polylines, escape them so they can be in Elm strings
+            newLines.append(" " * 16 + newData + "\n")
+        else:
+            newLines.append(oldData)
+
+        quotes = file.readline()
+        assert quotes == " " * 16 + "\"\"\"\n"
+        newLines.append(quotes)
