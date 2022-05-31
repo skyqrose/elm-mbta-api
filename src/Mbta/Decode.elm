@@ -494,7 +494,7 @@ stopStop =
         |> attributeMaybe "platform_code" Decode.string
         |> attributeMaybe "platform_name" Decode.string
         |> relationshipMaybe "zone" zoneId
-        |> relationshipMany "recommended_transfers" stopId
+        |> relationshipMany "connecting_stops" stopId
         |> relationshipMany "facilities" facilityId
 
 
@@ -509,7 +509,7 @@ stopStation =
         |> attributeMaybe "address" Decode.string
         |> relationshipMaybe "zone" zoneId
         |> relationshipMany "child_stops" stopId
-        |> relationshipMany "recommended_transfers" stopId
+        |> relationshipMany "connecting_stops" stopId
         |> relationshipMany "facilities" facilityId
 
 

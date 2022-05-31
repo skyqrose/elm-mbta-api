@@ -640,7 +640,7 @@ type Stop
 
 Some stops, like subway platforms, belong to a larger [`Stop_Station`](#Stop_Station) indicated by the `parent_station`.
 
-`.recommendedTransfers` and `.facilityIds` will default to `[]` unless explicitly included with [`Mbta.Api.stopRecommenedTransfers`](Mbta-Api#stopRecommenedTransfers) or [`Mbta.Api.stopFacilities`](Mbta-Api#stopFacilities)
+`.connectingStops` and `.facilityIds` will default to `[]` unless explicitly included with [`Mbta.Api.stopRecommenedTransfers`](Mbta-Api#stopRecommenedTransfers) or [`Mbta.Api.stopFacilities`](Mbta-Api#stopFacilities)
 
 -}
 type alias Stop_Stop =
@@ -654,14 +654,14 @@ type alias Stop_Stop =
     , platformCode : Maybe String
     , platformName : Maybe String
     , zone : Maybe ZoneId
-    , recommendedTransfers : List StopId
+    , connectingStops : List StopId
     , facilityIds : List FacilityId
     }
 
 
 {-| A parent station that groups together the other kinds of stops into one building.
 
-`.childStops`, `.recommendedTransfers`, and `.facilityIds` will default to `[]` unless explicitly included with [`Mbta.Api.stopChildStops`](Mbta-Api#stopChildStops), [`Mbta.Api.stopRecommenedTransfers`](Mbta-Api#stopRecommenedTransfers), or [`Mbta.Api.stopFacilities`](Mbta-Api#stopFacilities)
+`.childStops`, `.connectingStops`, and `.facilityIds` will default to `[]` unless explicitly included with [`Mbta.Api.stopChildStops`](Mbta-Api#stopChildStops), [`Mbta.Api.stopRecommenedTransfers`](Mbta-Api#stopRecommenedTransfers), or [`Mbta.Api.stopFacilities`](Mbta-Api#stopFacilities)
 
 -}
 type alias Stop_Station =
@@ -673,7 +673,7 @@ type alias Stop_Station =
     , address : Maybe String
     , zone : Maybe ZoneId
     , childStops : List StopId
-    , recommendedTransfers : List StopId
+    , connectingStops : List StopId
     , facilityIds : List FacilityId
     }
 

@@ -32,7 +32,7 @@ module Mbta.Api exposing
     , shapeRoute, shapeStops
     , filterShapesByRouteIds, filterShapesByDirectionId
     , getStop, getStops
-    , stopParentStation, stopChildStops, stopRecommendedTransfers, stopFacilities
+    , stopParentStation, stopChildStops, stopConnectingStops, stopFacilities
     , filterStopsByIds, filterStopsByStopTypes, filterStopsByRouteTypes, filterStopsByRouteIds, filterStopsByDirectionId, filterStopsByLatLng, filterStopsByLatLngWithRadius
     , getFacility, getFacilities
     , facilityStop
@@ -340,7 +340,7 @@ Streaming is only available for the resources that the API tracks for changes:
 
 #### Includes
 
-@docs stopParentStation, stopChildStops, stopRecommendedTransfers, stopFacilities
+@docs stopParentStation, stopChildStops, stopConnectingStops, stopFacilities
 
 
 #### Filters
@@ -1637,9 +1637,9 @@ stopChildStops =
 
 
 {-| -}
-stopRecommendedTransfers : Relationship Stop Stop
-stopRecommendedTransfers =
-    Relationship "recommended_transfers"
+stopConnectingStops : Relationship Stop Stop
+stopConnectingStops =
+    Relationship "connecting_stops"
 
 
 {-| -}
