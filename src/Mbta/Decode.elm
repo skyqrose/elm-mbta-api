@@ -203,6 +203,8 @@ route : JsonApi.ResourceDecoder Route
 route =
     JsonApi.succeed Route
         |> id routeId
+        |> relationshipMany "route_patterns" routePatternId
+        |> relationshipMaybe "line" lineId
         |> attribute "type" routeType
         |> attribute "short_name" DecodeHelpers.maybeEmptyString
         |> attribute "long_name" Decode.string
@@ -276,6 +278,7 @@ line : JsonApi.ResourceDecoder Line
 line =
     JsonApi.succeed Line
         |> id lineId
+        |> relationshipMany "routes" routeId
         |> attribute "short_name" DecodeHelpers.maybeEmptyString
         |> attribute "long_name" Decode.string
         |> attribute "sort_order" Decode.int
@@ -333,6 +336,7 @@ trip =
         |> relationshipOne "route" routeId
         |> attribute "direction_id" directionId
         |> relationshipMaybe "route_pattern" routePatternId
+        |> relationshipMany "stops" stopId
         |> attribute "name" DecodeHelpers.maybeEmptyString
         |> attribute "headsign" Decode.string
         |> relationshipMaybe "shape" shapeId
@@ -490,6 +494,8 @@ stopStop =
         |> attributeMaybe "platform_code" Decode.string
         |> attributeMaybe "platform_name" Decode.string
         |> relationshipMaybe "zone" zoneId
+        |> relationshipMany "recommended_transfers" stopId
+        |> relationshipMany "facilities" facilityId
 
 
 stopStation : JsonApi.ResourceDecoder Stop_Station
@@ -503,6 +509,8 @@ stopStation =
         |> attributeMaybe "address" Decode.string
         |> relationshipMaybe "zone" zoneId
         |> relationshipMany "child_stops" stopId
+        |> relationshipMany "recommended_transfers" stopId
+        |> relationshipMany "facilities" facilityId
 
 
 stopEntrance : JsonApi.ResourceDecoder Stop_Entrance

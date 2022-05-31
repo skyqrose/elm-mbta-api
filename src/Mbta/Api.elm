@@ -1,7 +1,7 @@
 module Mbta.Api exposing
     ( Host(..)
     , Data, ApiError(..), ApiResult, getPrimaryData
-    , Include, Relationship, include, andIts
+    , Include, Relationship, include, andIts, customRelationship
     , getIncludedPrediction, getIncludedVehicle, getIncludedRoute, getIncludedRoutePattern, getIncludedLine, getIncludedSchedule, getIncludedTrip, getIncludedService, getIncludedShape, getIncludedStop, getIncludedStopStop, getIncludedStopStation, getIncludedFacility, getIncludedLiveFacility, getIncludedAlert
     , Filter
     , StreamState, StreamResult(..), StreamError(..), streamResult, updateStream
@@ -74,7 +74,7 @@ Use it like
 
 Sideloaded resources can be looked up in the result with the `getIncluded*` functions below.
 
-@docs Include, Relationship, include, andIts
+@docs Include, Relationship, include, andIts, customRelationship
 @docs getIncludedPrediction, getIncludedVehicle, getIncludedRoute, getIncludedRoutePattern, getIncludedLine, getIncludedSchedule, getIncludedTrip, getIncludedService, getIncludedShape, getIncludedStop, getIncludedStopStop, getIncludedStopStation, getIncludedFacility, getIncludedLiveFacility, getIncludedAlert
 
 
@@ -635,6 +635,15 @@ andIts (Relationship string1) (Relationship string2) =
     Relationship (string2 ++ "." ++ string1)
 
 
+{-| If there is a relationship that the API added but this library does not support yet, you can include it with this.
+It can be fetched with `getIncluded*` if you know its id,
+but can't be added to the record of the primary type.
+-}
+customRelationship : String -> Relationship from to
+customRelationship s =
+    Relationship s
+
+
 includeQueryParameter : List (Include a) -> List Url.Builder.QueryParameter
 includeQueryParameter includes =
     case includes of
@@ -1181,7 +1190,10 @@ getRoute toMsg host includes (RouteId routeId) =
     getOne toMsg host Mbta.Decode.route "routes" includes routeId
 
 
-{-| -}
+{-| The API has a `.stop` relationship that is only valid when `filterRoutesByStopIds` is used.
+This function will automatically include it if the filter is used so it can be gotten with [`getIncludedStop`](#getIncludedStop).
+There is no separate `routeStop : Relationship Route Stop` in this library.
+-}
 getRoutes : (ApiResult (List Route) -> msg) -> Host -> List (Include Route) -> List (Filter Route) -> Cmd msg
 getRoutes toMsg host includes filters =
     let
@@ -1594,10 +1606,22 @@ getStop toMsg host includes (StopId stopId) =
     getOne toMsg host Mbta.Decode.stop "stops" includes stopId
 
 
-{-| -}
+{-| The API has a `.route` relationship that is only valid when `filterStopsByRouteIds` is used with exactly one routeId.
+This function will automatically include it in that case so it can be gotten with [`getIncludedRoute`](#getIncludedRoute).
+There is no separate `stopRoute : Relationship Stop Route` in this library.
+-}
 getStops : (ApiResult (List Stop) -> msg) -> Host -> List (Include Stop) -> List (Filter Stop) -> Cmd msg
 getStops toMsg host includes filters =
-    getList toMsg host Mbta.Decode.stop "stops" includes filters
+    let
+        -- if filterStopsByRouteIds is specified, include the stops.
+        includesWithRoute =
+            if hasFilterKey "route" filters then
+                Include "route" :: includes
+
+            else
+                includes
+    in
+    getList toMsg host Mbta.Decode.stop "stops" includesWithRoute filters
 
 
 {-| -}

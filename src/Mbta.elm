@@ -26,6 +26,8 @@ though there's less of a direct correspondence between this library and the GTFS
 Names were generally kept consistent with the API,
 though they were changed in some places to make them clearer.
 
+Some list fields that come from an [`include`](Mbta-Api#Include) will default to [] unless that relationship is included.
+
 [swagger]: https://api-v3.mbta.com/docs/swagger/index.html#/Vehicle/ApiWeb_VehicleController_index
 [gtfs-mbta]: https://github.com/mbta/gtfs-documentation/blob/master/reference/gtfs.md
 
@@ -310,9 +312,12 @@ type RouteId
     = RouteId String
 
 
-{-| -}
+{-| `.routePatternIds` will default to `[]` unless explicitly included with [`Mbta.Api.routeRoutePatterns`](Mbta-Api#routeRoutePatterns)
+-}
 type alias Route =
     { id : RouteId
+    , routePatternIds : List RoutePatternId
+    , lineId : Maybe LineId
     , routeType : RouteType
     , shortName : Maybe String
     , longName : String
@@ -383,9 +388,11 @@ type LineId
     = LineId String
 
 
-{-| -}
+{-| `.routeIds` will default to `[]` unless explicitly included with [`Mbta.Api.lineRoutes`](Mbta-Api#lineRoutes)
+-}
 type alias Line =
     { id : LineId
+    , routeIds : List RouteId
     , shortName : Maybe String
     , longName : String
     , sortOrder : Int
@@ -435,7 +442,8 @@ type TripId
     = TripId String
 
 
-{-| -}
+{-| `.stopIds` will default to `[]` unless explicitly included with [`Mbta.Api.tripStops`](Mbta-Api#tripStops)
+-}
 type alias Trip =
     { id : TripId
 
@@ -444,6 +452,7 @@ type alias Trip =
     , routeId : RouteId
     , directionId : DirectionId
     , routePatternId : Maybe RoutePatternId
+    , stopIds : List StopId
     , name : Maybe String
     , headsign : String
     , shapeId : Maybe ShapeId
@@ -539,7 +548,8 @@ type ShapeId
     = ShapeId String
 
 
-{-| -}
+{-| `.stopIds` should be populated even if not included by [`Mbta.Api.shapeStops`](Mbta-Api#shapeStops)
+-}
 type alias Shape =
     { id : ShapeId
     , name : String
@@ -586,6 +596,8 @@ type Stop
 
 Some stops, like subway platforms, belong to a larger [`Stop_Station`](#Stop_Station) indicated by the `parent_station`.
 
+`.recommendedTransfers` and `.facilityIds` will default to `[]` unless explicitly included with [`Mbta.Api.stopRecommenedTransfers`](Mbta-Api#stopRecommenedTransfers) or [`Mbta.Api.stopFacilities`](Mbta-Api#stopFacilities)
+
 -}
 type alias Stop_Stop =
     { id : StopId
@@ -598,12 +610,14 @@ type alias Stop_Stop =
     , platformCode : Maybe String
     , platformName : Maybe String
     , zone : Maybe ZoneId
+    , recommendedTransfers : List StopId
+    , facilityIds : List FacilityId
     }
 
 
 {-| A parent station that groups together the other kinds of stops into one building.
 
-The `.childStops` will default to `[]` unless explicitly included with [`Mbta.Api.stopChildStops`](Mbta-Api#stopChildStops)
+`.childStops`, `.recommendedTransfers`, and `.facilityIds` will default to `[]` unless explicitly included with [`Mbta.Api.stopChildStops`](Mbta-Api#stopChildStops), [`Mbta.Api.stopRecommenedTransfers`](Mbta-Api#stopRecommenedTransfers), or [`Mbta.Api.stopFacilities`](Mbta-Api#stopFacilities)
 
 -}
 type alias Stop_Station =
@@ -615,6 +629,8 @@ type alias Stop_Station =
     , address : Maybe String
     , zone : Maybe ZoneId
     , childStops : List StopId
+    , recommendedTransfers : List StopId
+    , facilityIds : List FacilityId
     }
 
 
