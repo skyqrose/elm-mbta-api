@@ -124,7 +124,7 @@ prediction =
         |> relationshipOne "route" routeId
         |> relationshipOne "trip" tripId
         |> relationshipOne "stop" stopId
-        |> attribute "stop_sequence" stopSequence
+        |> attributeMaybe "stop_sequence" stopSequence
         |> relationshipMaybe "schedule" scheduleId
         |> relationshipMaybe "vehicle" vehicleId
         |> relationshipMany "alert" alertId

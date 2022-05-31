@@ -150,17 +150,14 @@ type PredictionId
     = PredictionId String
 
 
-{-| In the official docs, `stopSequence` is listed as nullable, but it's always there.
-
-If `arrivalTime` and `departureTime` are both missing, that means the stop is predicted to be skipped.
-
+{-| If `arrivalTime` and `departureTime` are both missing, that means the stop is predicted to be skipped.
 -}
 type alias Prediction =
     { id : PredictionId
     , routeId : RouteId
     , tripId : TripId
     , stopId : StopId
-    , stopSequence : StopSequence
+    , stopSequence : Maybe StopSequence
     , scheduleId : Maybe ScheduleId
     , vehicleId : Maybe VehicleId
     , alertIds : List AlertId
