@@ -50,17 +50,17 @@ module Mbta.Api exposing
 TODO API docs summary
 
 
-# Configuration
+## Configuration
 
 @docs Host
 
 
-# Result
+## Result
 
 @docs Data, ApiError, ApiResult, getPrimaryData
 
 
-# Including
+## Including
 
 Sideload related resources
 
@@ -78,7 +78,7 @@ Sideloaded resources can be looked up in the result with the `getIncluded*` func
 @docs getIncludedPrediction, getIncludedVehicle, getIncludedRoute, getIncludedRoutePattern, getIncludedLine, getIncludedSchedule, getIncludedTrip, getIncludedService, getIncludedShape, getIncludedStop, getIncludedStopStop, getIncludedStopStation, getIncludedFacility, getIncludedLiveFacility, getIncludedAlert
 
 
-# Filtering
+## Filtering
 
 Use it like
 
@@ -93,7 +93,7 @@ Use it like
 @docs Filter
 
 
-# Streaming
+## Streaming
 
 The MBTA API uses Server Sent Events for streaming.
 Until Elm gets a library for SSE,
@@ -187,211 +187,211 @@ Streaming is only available for the resources that the API tracks for changes:
 @docs StreamState, StreamResult, StreamError, streamResult, updateStream
 
 
-# Realtime Data
+## Realtime Data
 
 
-## [Prediction](Mbta#Prediction)
+### [Prediction](Mbta#Prediction)
 
 @docs getPredictions, streamPredictions
 
 
-### Includes
+#### Includes
 
 @docs predictionVehicle, predictionRoute, predictionSchedule, predictionTrip, predictionStop, predictionAlerts
 
 
-### Filters
+#### Filters
 
 @docs filterPredictionsByRouteTypes, filterPredictionsByRouteIds, filterPredictionsByRoutePatternIds, filterPredictionsByDirectionId, filterPredictionsByTripIds, filterPredictionsByStopIds, filterPredictionsByLatLng, filterPredictionsByLatLngWithRadius
 
 
-## [Vehicle](Mbta#Vehicle)
+### [Vehicle](Mbta#Vehicle)
 
 @docs getVehicle, getVehicles, streamVehicles
 
 
-### Includes
+#### Includes
 
 @docs vehicleRoute, vehicleTrip, vehicleStop
 
 
-### Filters
+#### Filters
 
 @docs filterVehiclesByIds, filterVehiclesByLabels, filterVehiclesByRouteIds, filterVehiclesByRouteTypes, filterVehiclesByDirectionId, filterVehiclesByTripIds
 
 
-# Schedule Data
+## Schedule Data
 
 
-## [Route](Mbta#Route)
+### [Route](Mbta#Route)
 
 @docs getRoute, getRoutes
 
 
-### Includes
+#### Includes
 
 @docs routeRoutePatterns, routeLine
 
 `Stop`s can also be included by using [`filterRoutesByStopIds`](#filterRoutesByStopIds)
 
 
-### Filters
+#### Filters
 
 @docs filterRoutesByIds, filterRoutesByRouteTypes, filterRoutesByDirectionId, filterRoutesByStopIds
 
 
-## [RoutePattern](Mbta#RoutePattern)
+### [RoutePattern](Mbta#RoutePattern)
 
 @docs getRoutePattern, getRoutePatterns
 
 
-### Includes
+#### Includes
 
 @docs routePatternRoute, routePatternRepresentativeTrip
 
 
-### Filters
+#### Filters
 
 @docs filterRoutePatternsByIds, filterRoutePatternsByRouteIds, filterRoutePatternsByDirectionId, filterRoutePatternsByStopIds
 
 
-## [Line](Mbta#Line)
+### [Line](Mbta#Line)
 
 @docs getLine, getLines
 
 
-### Includes
+#### Includes
 
 @docs lineRoutes
 
 
-### Filters
+#### Filters
 
 @docs filterLinesByIds
 
 
-## [Schedule](Mbta#Schedule)
+### [Schedule](Mbta#Schedule)
 
 @docs getSchedules
 
 
-### Includes
+#### Includes
 
 @docs schedulePrediction, scheduleRoute, scheduleTrip, scheduleStop
 
 
-### Filters
+#### Filters
 
 @docs filterSchedulesByRouteIds, filterSchedulesByDirectionId, filterSchedulesByTripIds, filterSchedulesByStopSequence, StopSequenceFilter, filterSchedulesByStopIds, filterSchedulesByServiceDate, filterSchedulesByMinTime, filterSchedulesByMaxTime
 
 
-## [Trip](Mbta#Trip)
+### [Trip](Mbta#Trip)
 
 @docs getTrip, getTrips
 
 
-### Includes
+#### Includes
 
 @docs tripPredictions, tripVehicle, tripRoute, tripRoutePattern, tripService, tripShape, tripStops
 
 
-### Filters
+#### Filters
 
 @docs filterTripsByIds, filterTripsByNames, filterTripsByRouteIds, filterTripsByRoutePatternIds, filterTripsByDirectionId
 
 
-## [Service](Mbta#Service)
+### [Service](Mbta#Service)
 
 @docs getService, getServices
 
 
-### Includes
+#### Includes
 
 `Service` does not currently have any relationships to include.
 
 
-### Filters
+#### Filters
 
 @docs filterServicesByIds, filterServicesByRouteIds
 
 
-## [Shape](Mbta#Shape)
+### [Shape](Mbta#Shape)
 
 @docs getShape, getShapes
 
 
-### Includes
+#### Includes
 
 @docs shapeRoute, shapeStops
 
 
-### Filters
+#### Filters
 
 @docs filterShapesByRouteIds, filterShapesByDirectionId
 
 
-# Stop Data
+## Stop Data
 
 
-## [Stop](Mbta#Stop)
+### [Stop](Mbta#Stop)
 
 @docs getStop, getStops
 
 
-### Includes
+#### Includes
 
 @docs stopParentStation, stopChildStops, stopRecommendedTransfers, stopFacilities
 
 
-### Filters
+#### Filters
 
 @docs filterStopsByIds, filterStopsByStopTypes, filterStopsByRouteTypes, filterStopsByRouteIds, filterStopsByDirectionId, filterStopsByLatLng, filterStopsByLatLngWithRadius
 
 
-## [Facility](Mbta#Facility)
+### [Facility](Mbta#Facility)
 
 @docs getFacility, getFacilities
 
 
-### Includes
+#### Includes
 
 @docs facilityStop
 
 
-### Filters
+#### Filters
 
 @docs filterFacilitiesByStopIds, filterFacilitiesByFacilityTypes
 
 
-## [Live Facility](Mbta#Live)
+### [Live Facility](Mbta#Live)
 
 @docs getLiveFacility, getLiveFacilities
 
 
-### Includes
+#### Includes
 
 @docs liveFacilityFacility
 
 
-### Filters
+#### Filters
 
 @docs filterLiveFacilitiesByIds
 
 
-# Alert Data
+## Alert Data
 
 
-## [Alert](Mbta#Alert)
+### [Alert](Mbta#Alert)
 
 @docs getAlert, getAlerts, streamAlerts
 
 
-### Includes
+#### Includes
 
 @docs alertRoutes, alertTrips, alertStops, alertFacilities
 
 
-### Filters
+#### Filters
 
 @docs filterAlertsByIds, filterAlertsByRouteTypes, filterAlertsByRouteIds, filterAlertsByDirectionId, filterAlertsByTripIds, filterAlertsByStopIds, filterAlertsByFacilities, filterAlertsByActivities, filterAlertsByActivitiesAll, filterAlertsByDatetime, filterAlertsByDatetimeNow, filterAlertsByLifecycles, filterAlertsBySeverities
 

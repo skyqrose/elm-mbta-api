@@ -32,35 +32,79 @@ Some list fields that come from an [`include`](Mbta-Api#Include) will default to
 [gtfs-mbta]: https://github.com/mbta/gtfs-documentation/blob/master/reference/gtfs.md
 
 
-# Util
+## Util
 
 @docs LatLng, DirectionId, WheelchairAccessible
 
 
-# Realtime Data
+## Realtime Data
+
+
+### Prediction
 
 @docs PredictionId, Prediction, PredictionScheduleRelationship, PredictionDisplay, predictionDisplay
+
+
+### Vehicle
+
 @docs VehicleId, Vehicle, CurrentStatus
 
 
-# Schedule Data
+## Schedule Data
+
+
+### Route
 
 @docs RouteType, RouteId, Route, RouteDirections, RouteDirection, getRouteDirection
+
+
+### RoutePattern
+
 @docs RoutePatternId, RoutePattern, RoutePatternTypicality
+
+
+### Line
+
 @docs LineId, Line, ScheduleId
+
+
+### Schedule
+
 @docs Schedule, StopSequence, PickupDropOffType
+
+
+### Trip
+
 @docs TripId, Trip, BikesAllowed, BlockId
+
+
+### Service
+
 @docs ServiceId, Service, ServiceDate, serviceDateFromIso8601, serviceDateToIso8601, ServiceType, ServiceTypicality, ChangedDate
+
+
+### Shape
+
 @docs ShapeId, Shape
 
 
-# Stop Data
+## Stop Data
+
+
+### Stop
 
 @docs StopId, Stop, Stop_Stop, Stop_Station, Stop_Entrance, Stop_Node, stopId, stopName, stopDescription, stopWheelchairAccessible, stopLatLng, stopParentStation, StopType, stopType, ZoneId
+
+
+### Facility
+
 @docs FacilityId, Facility, LiveFacility, FacilityType, FacilityProperties, FacilityPropertyValue
 
 
-# Alert Data
+## Alert Data
+
+
+### Alert
 
 @docs AlertId, Alert, AlertLifecycle, ActivePeriod, InformedEntity, InformedEntityActivity
 
